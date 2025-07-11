@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Carpetas de Dropbox{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8">
+  <h2 class="text-2xl font-bold mb-4">Carpetas disponibles en Dropbox</h2>
+  <ul class="list-disc pl-6">
+    {% for carpeta in carpetas %}
+      <li class="py-2 text-gray-700">{{ carpeta }}</li>
+    {% else %}
+      <li class="py-2 text-red-500">No se encontraron carpetas.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
