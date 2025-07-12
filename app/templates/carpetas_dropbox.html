@@ -1,15 +1,53 @@
 {% extends "base.html" %}
 {% block title %}Carpetas de Dropbox{% endblock %}
 
-{% block content %}
-<div class="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8">
-  <h2 class="text-2xl font-bold mb-4">Carpetas disponibles en Dropbox</h2>
-  <ul class="list-disc pl-6">
-    {% for carpeta in carpetas %}
-      <li class="py-2 text-gray-700">{{ carpeta }}</li>
-    {% else %}
-      <li class="py-2 text-red-500">No se encontraron carpetas.</li>
+{% macro render_tree(tree, parent="") %}
+<ul class="ml-4 border-l-2 border-gray-200 pl-2">
+  {# Archivos del nivel actual #}
+  {% if tree._archivos %}
+    {% for archivo in tree._archivos %}
+      <li class="text-gray-600"><span class="mr-1">📄</span>{{ archivo }}</li>
     {% endfor %}
-  </ul>
+  {% endif %}
+  {# Subcarpetas #}
+  {% for carpeta, data in tree._subcarpetas.items() %}
+    <li class="mb-2">
+      <div class="flex items-center cursor-pointer" onclick="toggleFolder('{{ parent ~ '/' ~ carpeta }}')">
+        <span id="icon-{{ parent ~ '/' ~ carpeta }}" class="transition-transform mr-1">▶️</span>
+        <span class="font-semibold text-blue-700">{{ carpeta }}</span>
+      </div>
+      <div id="folder-{{ parent ~ '/' ~ carpeta }}" style="display: none;">
+        {{ render_tree(data, parent ~ '/' ~ carpeta) }}
+      </div>
+    </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
+  <h2 class="text-2xl font-bold mb-4">Estructura de Dropbox</h2>
+  {% if estructura %}
+    {{ render_tree(estructura) }}
+  {% else %}
+    <p class="text-red-500">No se encontraron carpetas.</p>
+  {% endif %}
 </div>
+
+<script>
+function toggleFolder(folderId) {
+    const div = document.getElementById('folder-' + folderId);
+    const icon = document.getElementById('icon-' + folderId);
+    if (!div) return;
+    if (div.style.display === "none") {
+        div.style.display = "block";
+        if (icon) icon.style.transform = "rotate(90deg)";
+    } else {
+        div.style.display = "none";
+        if (icon) icon.style.transform = "rotate(0deg)";
+    }
+}
+</script>
 {% endblock %}
