@@ -3,18 +3,25 @@
 
 {% macro render_tree(tree, parent="") %}
 <ul class="ml-4 border-l-2 border-gray-200 pl-2">
-  {# Archivos del nivel actual #}
+  {# Mostrar archivos del nivel actual #}
   {% if tree._archivos %}
     {% for archivo in tree._archivos %}
       <li class="text-gray-600"><span class="mr-1">📄</span>{{ archivo }}</li>
     {% endfor %}
   {% endif %}
-  {# Subcarpetas #}
+  {# Mostrar subcarpetas #}
   {% for carpeta, data in tree._subcarpetas.items() %}
     <li class="mb-2">
       <div class="flex items-center cursor-pointer" onclick="toggleFolder('{{ parent ~ '/' ~ carpeta }}')">
         <span id="icon-{{ parent ~ '/' ~ carpeta }}" class="transition-transform mr-1">▶️</span>
         <span class="font-semibold text-blue-700">{{ carpeta }}</span>
+      </div>
+      <div class="flex space-x-2 mt-1">
+        <form action="{{ url_for('listar_dropbox.crear_carpeta') }}" method="post" class="flex items-center">
+          <input type="hidden" name="padre" value="{{ parent ~ '/' ~ carpeta }}">
+          <input type="text" name="nombre" placeholder="Nueva subcarpeta" class="border px-1 py-0.5 text-xs rounded" required>
+          <button type="submit" class="ml-1 text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-700">Crear</button>
+        </form>
       </div>
       <div id="folder-{{ parent ~ '/' ~ carpeta }}" style="display: none;">
         {{ render_tree(data, parent ~ '/' ~ carpeta) }}
@@ -24,11 +31,30 @@
 </ul>
 {% endmacro %}
 
-
-
 {% block content %}
 <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
   <h2 class="text-2xl font-bold mb-4">Estructura de Dropbox</h2>
+
+  {# Mensajes flash de éxito/error #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-4">
+        {% for category, message in messages %}
+          <div class="p-2 rounded {{ 'bg-green-100 text-green-800' if category=='success' else 'bg-red-100 text-red-800' }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {# Formulario para crear carpeta raíz #}
+  <form action="{{ url_for('listar_dropbox.crear_carpeta') }}" method="post" class="flex mb-6">
+    <input type="hidden" name="padre" value="">
+    <input type="text" name="nombre" placeholder="Nueva carpeta raíz" class="border px-2 py-1 rounded-l" required>
+    <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded-r hover:bg-blue-800">Crear carpeta raíz</button>
+  </form>
+
   {% if estructura %}
     {{ render_tree(estructura) }}
   {% else %}

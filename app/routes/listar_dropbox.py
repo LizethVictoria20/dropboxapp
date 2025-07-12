@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, current_app
+from flask import Blueprint, render_template, current_app, request, redirect, url_for, flash
 import dropbox
 
 bp = Blueprint("listar_dropbox", __name__)
@@ -48,3 +48,22 @@ def obtener_estructura_dropbox(path="", dbx=None):
 def carpetas_dropbox():
     estructura = obtener_estructura_dropbox()
     return render_template("carpetas_dropbox.html", estructura=estructura)
+
+
+
+@bp.route("/crear_carpeta", methods=["POST"])
+def crear_carpeta():
+    nombre = request.form.get("nombre")
+    padre = request.form.get("padre", "")
+    if not nombre:
+        flash("El nombre de la carpeta es obligatorio.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    # Construir la ruta en Dropbox
+    ruta = padre.rstrip("/") + "/" + nombre if padre else "/" + nombre
+    try:
+        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx.files_create_folder_v2(ruta)
+        flash(f"Carpeta '{ruta}' creada correctamente.", "success")
+    except dropbox.exceptions.ApiError as e:
+        flash(f"Error creando carpeta: {e}", "error")
+    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
