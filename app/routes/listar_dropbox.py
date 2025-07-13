@@ -239,11 +239,20 @@ def mover_archivo_modal():
     carpeta_actual = request.form.get("carpeta_actual")
     nueva_carpeta = request.form.get("nueva_carpeta")
 
-    # Busca el archivo en la BD usando dropbox_path actual
     old_dropbox_path = f"{carpeta_actual}/{archivo_nombre}".replace('//', '/')
     archivo = Archivo.query.filter_by(dropbox_path=old_dropbox_path).first()
     if not archivo:
         flash("Archivo no encontrado", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    if not nueva_carpeta or nueva_carpeta.strip() == "":
+        flash("Debes seleccionar una carpeta de destino.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    nuevo_destino = f"{nueva_carpeta}/{archivo.nombre}"
+
+    if archivo.dropbox_path == nuevo_destino:
+        flash("El destino no puede ser igual al origen.", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
     dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
@@ -256,8 +265,11 @@ def mover_archivo_modal():
             raise e
 
     # Mueve el archivo en Dropbox
-    nuevo_destino = f"{nueva_carpeta}/{archivo.nombre}"
-    dbx.files_move_v2(archivo.dropbox_path, nuevo_destino, allow_shared_folder=True, autorename=True)
+    try:
+        dbx.files_move_v2(archivo.dropbox_path, nuevo_destino, allow_shared_folder=True, autorename=True)
+    except dropbox.exceptions.ApiError as e:
+        flash("No se pudo mover el archivo en Dropbox: " + str(e), "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
     # Actualiza en BD
     archivo.dropbox_path = nuevo_destino

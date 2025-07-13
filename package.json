@@ -1,0 +1,20 @@
+{
+  "name": "mydropboxapp",
+  "version": "1.0.0",
+  "description": "## Requisitos - Python 3.8+ - PostgreSQL - Dropbox API key",
+  "main": "tailwind.config.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-css": "tailwindcss -i ./app/static/css/tailwind-input.css -o ./app/static/css/tailwind.css --watch",
+    "build-css-prod": "tailwindcss -i ./app/static/css/tailwind-input.css -o ./app/static/css/tailwind.css --minify"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
