@@ -1,12 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Carpetas de Dropbox{% endblock %}
 
-{% macro render_tree(tree, parent="") %}
+{% macro render_tree(tree, parent="", usuario_id="") %}
 <ul class="ml-4 border-l-2 border-gray-200 pl-2">
   {# Mostrar archivos del nivel actual #}
   {% if tree._archivos %}
     {% for archivo in tree._archivos %}
-      <li class="text-gray-600"><span class="mr-1">📄</span>{{ archivo }}</li>
+      <li class="text-gray-600 flex items-center">
+        <span class="mr-1">📄</span>{{ archivo }}
+        <button type="button"
+          onclick="openMoveModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
+          class="bg-yellow-400 text-xs px-2 py-1 rounded hover:bg-yellow-500 ml-2">
+          Mover
+        </button>
+      </li>
     {% endfor %}
   {% endif %}
   {# Mostrar subcarpetas #}
@@ -24,7 +31,7 @@
         </form>
       </div>
       <div id="folder-{{ parent ~ '/' ~ carpeta }}" style="display: none;">
-        {{ render_tree(data, parent ~ '/' ~ carpeta) }}
+        {{ render_tree(data, parent ~ '/' ~ carpeta, usuario_id) }}
       </div>
     </li>
   {% endfor %}
@@ -55,11 +62,39 @@
     <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded-r hover:bg-blue-800">Crear carpeta raíz</button>
   </form>
 
-  {% if estructura %}
-    {{ render_tree(estructura) }}
-  {% else %}
-    <p class="text-red-500">No se encontraron carpetas.</p>
-  {% endif %}
+  {% for usuario_id, estructura in estructuras_usuarios.items() %}
+    <h3 class="text-lg font-bold mb-2">Carpetas de {{ usuarios[usuario_id].email }}</h3>
+    {% if estructura._subcarpetas %}
+      {{ render_tree(estructura, '', usuario_id) }}
+    {% else %}
+      <p class="text-red-500">No se encontraron carpetas para este usuario.</p>
+    {% endif %}
+  {% endfor %}
+
+
+</div>
+<!-- Modal para mover archivo -->
+<div id="moveModal" class="hidden fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40">
+  <div class="bg-white rounded-xl p-6 shadow-lg w-full max-w-lg relative">
+    <button onclick="closeMoveModal()" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+    <h3 class="text-xl font-semibold mb-4">Mover archivo: <span id="moveFileName"></span></h3>
+    <form id="moveForm" method="post" action="{{ url_for('listar_dropbox.mover_archivo_modal') }}">
+      <input type="hidden" name="archivo_nombre" id="moveArchivoNombre">
+      <input type="hidden" name="carpeta_actual" id="moveCarpetaActual">
+      <div class="mb-4">
+        <label class="block mb-1">Selecciona carpeta destino</label>
+        <div id="destinoTree" class="max-h-60 overflow-y-auto border rounded bg-gray-50 p-2">
+          <!-- Aquí se renderiza el árbol de carpetas destino vía JS -->
+        </div>
+        <input type="hidden" name="nueva_carpeta" id="nuevaCarpetaSeleccionada" required>
+        <div id="selectedFolder" class="text-green-700 mt-2 text-xs"></div>
+      </div>
+      <div class="flex justify-end space-x-2">
+        <button type="button" onclick="closeMoveModal()" class="px-3 py-1 rounded bg-gray-300">Cancelar</button>
+        <button type="submit" class="px-3 py-1 rounded bg-blue-600 text-white">Mover</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script>
@@ -74,6 +109,80 @@ function toggleFolder(folderId) {
         div.style.display = "none";
         if (icon) icon.style.transform = "rotate(0deg)";
     }
+}
+</script>
+<script>
+let estructurasUsuarios = {{ estructuras_usuarios_json|safe }};
+console.log(estructurasUsuarios);
+
+let selectedUserId = null;
+
+function openMoveModal(archivo, carpetaActual, usuarioId) {
+  document.getElementById('moveModal').classList.remove('hidden');
+  document.getElementById('moveArchivoNombre').value = archivo;
+  document.getElementById('moveCarpetaActual').value = carpetaActual;
+  document.getElementById('moveFileName').innerText = archivo;
+  document.getElementById('nuevaCarpetaSeleccionada').value = '';
+  document.getElementById('selectedFolder').innerText = '';
+  selectedUserId = usuarioId;
+  // Renderizar el árbol expandible y ponerlo en el div
+  if (estructurasUsuarios[usuarioId]) {
+    document.getElementById('destinoTree').innerHTML = renderDestinoTreeExpandible(estructurasUsuarios[usuarioId], '');
+  } else {
+    document.getElementById('destinoTree').innerHTML = '<div class="text-red-500 text-sm">No hay carpetas disponibles para este usuario.</div>';
+  }
+}
+
+
+function closeMoveModal() {
+  document.getElementById('moveModal').classList.add('hidden');
+}
+
+// Árbol expandible de carpetas
+function renderDestinoTreeExpandible(tree, path) {
+  // Devuelve HTML con subcarpetas expandibles
+  let html = '<ul class="ml-2">';
+  for (const [carpeta, data] of Object.entries(tree._subcarpetas || {})) {
+    const fullPath = path + '/' + carpeta;
+    const hasSub = data._subcarpetas && Object.keys(data._subcarpetas).length > 0;
+    const nodeId = 'node-' + btoa(fullPath).replace(/=/g,''); // ID único y seguro para cada rama
+
+    html += `<li>
+      <span class="text-blue-700 cursor-pointer hover:underline" onclick="selectDestino('${fullPath}')">${carpeta}</span>
+      ${hasSub ? `<span class="ml-2 text-xs text-gray-500 cursor-pointer" onclick="toggleDestinoSubcarpetas('${nodeId}', this)">[+]</span>` : ''}
+      <div id="${nodeId}" class="subcarpetas hidden">
+        ${hasSub ? renderDestinoTreeExpandible(data, fullPath) : ''}
+      </div>
+    </li>`;
+  }
+  html += '</ul>';
+  return html;
+}
+
+function selectDestino(path) {
+  document.getElementById('nuevaCarpetaSeleccionada').value = path;
+  document.getElementById('selectedFolder').innerText = "Destino: " + path;
+}
+
+function toggleSubcarpetas(el) {
+  const sub = el.parentElement.querySelector('.subcarpetas');
+  if (sub.classList.contains('hidden')) {
+    sub.classList.remove('hidden');
+    el.textContent = '[-]';
+  } else {
+    sub.classList.add('hidden');
+    el.textContent = '[+]';
+  }
+}
+function toggleDestinoSubcarpetas(nodeId, el) {
+  const sub = document.getElementById(nodeId);
+  if (sub.classList.contains('hidden')) {
+    sub.classList.remove('hidden');
+    el.textContent = '[-]';
+  } else {
+    sub.classList.add('hidden');
+    el.textContent = '[+]';
+  }
 }
 </script>
 {% endblock %}

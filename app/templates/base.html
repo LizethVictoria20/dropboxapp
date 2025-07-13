@@ -7,6 +7,15 @@
 </head>
 <body class="bg-gray-100 text-gray-900">
   <div class="container mx-auto mt-10">
+    <nav class="bg-blue-100 p-4 mb-8 rounded flex space-x-6 justify-center shadow">
+      <a href="{{ url_for('listar_dropbox.subir_archivo') }}"
+        class="text-blue-800 font-semibold hover:text-blue-600 transition">Subir archivo</a>
+      <a href="{{ url_for('listar_dropbox.carpetas_dropbox') }}"
+        class="text-blue-800 font-semibold hover:text-blue-600 transition">Ver carpetas</a>
+      <a href="{{ url_for('listar_dropbox.subir_archivo') }}"
+        class="text-blue-800 font-semibold hover:text-blue-600 transition">Ver archivos</a>
+</nav>
+
     {% block content %}{% endblock %}
   </div>
 </body>

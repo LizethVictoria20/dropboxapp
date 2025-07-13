@@ -49,8 +49,29 @@ def obtener_estructura_dropbox(path="", dbx=None):
 
 @bp.route("/carpetas_dropbox")
 def carpetas_dropbox():
-    estructura = obtener_estructura_dropbox()
-    return render_template("carpetas_dropbox.html", estructura=estructura)
+    estructuras_usuarios = {}
+    usuarios_dict = {u.id: u for u in User.query.all()}
+    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+
+    for user in usuarios_dict.values():
+        if not user.dropbox_folder_path:
+            user.dropbox_folder_path = f"/{user.email}"
+            try:
+                dbx.files_create_folder_v2(user.dropbox_folder_path)
+            except dropbox.exceptions.ApiError as e:
+                if "conflict" not in str(e):
+                    raise e
+            db.session.commit()
+        path = user.dropbox_folder_path
+        estructura = obtener_estructura_dropbox(path=path)
+        estructuras_usuarios[user.id] = estructura
+
+    return render_template(
+        "carpetas_dropbox.html",
+        estructuras_usuarios=estructuras_usuarios,
+        usuarios=usuarios_dict,
+        estructuras_usuarios_json=json.dumps(estructuras_usuarios)
+    )
 
 
 
@@ -142,3 +163,104 @@ def subir_archivo():
 
     flash("Archivo subido y registrado para el usuario seleccionado.", "success")
     return redirect(url_for("listar_dropbox.subir_archivo"))
+  
+  
+  
+@bp.route('/mover_archivo/<archivo_nombre>/<path:carpeta_actual>', methods=['GET', 'POST'])
+def mover_archivo(archivo_nombre, carpeta_actual):
+    from app.models import Archivo, User
+
+    # Busca el archivo en la base de datos usando dropbox_path
+    old_dropbox_path = f"{carpeta_actual}/{archivo_nombre}".replace('//', '/')
+    archivo = Archivo.query.filter_by(dropbox_path=old_dropbox_path).first()
+    if not archivo:
+        flash("No se encontró el archivo en la base de datos.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    if request.method == 'GET':
+        usuarios = User.query.all()
+        categorias = list(CATEGORIAS.keys())
+        return render_template(
+            "mover_archivo.html",
+            archivo=archivo,
+            usuarios=usuarios,
+            categorias=categorias,
+            categorias_json=json.dumps(CATEGORIAS)
+        )
+
+    # POST: procesar movimiento
+    usuario_id = request.form.get("usuario_id")
+    categoria = request.form.get("categoria")
+    subcategoria = request.form.get("subcategoria")
+    usuario = User.query.get(usuario_id)
+    if not usuario:
+        flash("Selecciona un usuario válido.", "error")
+        return redirect(url_for("listar_dropbox.mover_archivo", archivo_nombre=archivo_nombre, carpeta_actual=carpeta_actual))
+
+    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    # Crear carpetas destino si no existen
+    carpeta_usuario = usuario.dropbox_folder_path or f"/{usuario.email}"
+    try:
+        dbx.files_create_folder_v2(carpeta_usuario)
+    except dropbox.exceptions.ApiError as e:
+        if "conflict" not in str(e):
+            raise e
+    usuario.dropbox_folder_path = carpeta_usuario
+    db.session.commit()
+    ruta_categoria = f"{carpeta_usuario}/{categoria}"
+    try:
+        dbx.files_create_folder_v2(ruta_categoria)
+    except dropbox.exceptions.ApiError as e:
+        if "conflict" not in str(e):
+            raise e
+    ruta_subcat = f"{ruta_categoria}/{subcategoria}"
+    try:
+        dbx.files_create_folder_v2(ruta_subcat)
+    except dropbox.exceptions.ApiError as e:
+        if "conflict" not in str(e):
+            raise e
+
+    # Mover archivo en Dropbox
+    nuevo_destino = f"{ruta_subcat}/{archivo.nombre}"
+    dbx.files_move_v2(archivo.dropbox_path, nuevo_destino, allow_shared_folder=True, autorename=True)
+
+    # Actualiza en BD
+    archivo.dropbox_path = nuevo_destino
+    archivo.categoria = categoria
+    archivo.subcategoria = subcategoria
+    archivo.usuario_id = usuario.id
+    db.session.commit()
+    flash("Archivo movido correctamente.", "success")
+    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+@bp.route('/mover_archivo_modal', methods=['POST'])
+def mover_archivo_modal():
+    archivo_nombre = request.form.get("archivo_nombre")
+    carpeta_actual = request.form.get("carpeta_actual")
+    nueva_carpeta = request.form.get("nueva_carpeta")
+
+    # Busca el archivo en la BD usando dropbox_path actual
+    old_dropbox_path = f"{carpeta_actual}/{archivo_nombre}".replace('//', '/')
+    archivo = Archivo.query.filter_by(dropbox_path=old_dropbox_path).first()
+    if not archivo:
+        flash("Archivo no encontrado", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+
+    # Asegura que exista la carpeta destino
+    try:
+        dbx.files_create_folder_v2(nueva_carpeta)
+    except dropbox.exceptions.ApiError as e:
+        if "conflict" not in str(e):
+            raise e
+
+    # Mueve el archivo en Dropbox
+    nuevo_destino = f"{nueva_carpeta}/{archivo.nombre}"
+    dbx.files_move_v2(archivo.dropbox_path, nuevo_destino, allow_shared_folder=True, autorename=True)
+
+    # Actualiza en BD
+    archivo.dropbox_path = nuevo_destino
+    db.session.commit()
+    flash("Archivo movido correctamente.", "success")
+    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
