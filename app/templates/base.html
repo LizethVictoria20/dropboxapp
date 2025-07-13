@@ -14,6 +14,15 @@
         class="text-blue-800 font-semibold hover:text-blue-600 transition">Ver carpetas</a>
       <a href="{{ url_for('listar_dropbox.subir_archivo') }}"
         class="text-blue-800 font-semibold hover:text-blue-600 transition">Ver archivos</a>
+        <a href="{{ url_for('users.listar_beneficiarios') }}"
+          class="text-blue-800 font-semibold hover:text-blue-600 transition">
+          Beneficiarios
+        </a>
+        <a href="{{ url_for('users.crear_beneficiario') }}"
+          class="text-blue-800 font-semibold hover:text-blue-600 transition">
+          Crear beneficiario
+        </a>
+
 </nav>
 
     {% block content %}{% endblock %}

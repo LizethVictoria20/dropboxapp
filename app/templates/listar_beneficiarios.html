@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Titulares y Beneficiarios{% endblock %}
+
+{% macro render_tree(tree, parent="") %}
+<ul class="ml-4 border-l-2 border-gray-200 pl-2">
+  {% if tree._archivos %}
+    {% for archivo in tree._archivos %}
+      <li class="text-gray-600 flex items-center">
+        <span class="mr-1">📄</span>{{ archivo }}
+      </li>
+    {% endfor %}
+  {% endif %}
+  {% for carpeta, data in tree._subcarpetas.items() %}
+    <li class="mb-2">
+      <div class="flex items-center cursor-pointer" onclick="toggleFolder('{{ parent ~ '/' ~ carpeta }}')">
+        <span id="icon-{{ parent ~ '/' ~ carpeta }}" class="transition-transform mr-1">▶️</span>
+        <span class="font-semibold text-blue-700">{{ carpeta }}</span>
+      </div>
+      <div id="folder-{{ parent ~ '/' ~ carpeta }}" style="display: none;">
+        {{ render_tree(data, parent ~ '/' ~ carpeta) }}
+      </div>
+    </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto bg-white rounded-xl shadow-md p-8">
+  <h2 class="text-2xl font-bold mb-4">Titulares y sus Beneficiarios</h2>
+
+  {% for titular in titulares %}
+    <div class="mb-8 border-b pb-6">
+      <h3 class="text-lg font-bold text-indigo-700">{{ titular.nombre }} ({{ titular.email }})</h3>
+      <div class="ml-4 mb-4">
+        <span class="font-medium">Carpetas de titular:</span>
+        {% if estructuras_titulares[titular.id]._subcarpetas %}
+          {{ render_tree(estructuras_titulares[titular.id]) }}
+        {% else %}
+          <p class="text-gray-400">No tiene carpetas.</p>
+        {% endif %}
+      </div>
+      {% if titular.beneficiarios %}
+        <div class="ml-8">
+          <span class="font-medium">Beneficiarios:</span>
+          {% for ben in titular.beneficiarios %}
+            <div class="ml-4 mt-2 mb-4 border-l pl-4">
+              <h4 class="text-blue-600 font-semibold">{{ ben.nombre }} ({{ ben.email }})</h4>
+              {% if estructuras_beneficiarios[ben.id]._subcarpetas %}
+                {{ render_tree(estructuras_beneficiarios[ben.id]) }}
+              {% else %}
+                <p class="text-gray-400">No tiene carpetas.</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="ml-8 text-sm text-gray-500">No tiene beneficiarios.</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+<script>
+function toggleFolder(folderId) {
+    const div = document.getElementById('folder-' + folderId);
+    const icon = document.getElementById('icon-' + folderId);
+    if (!div) return;
+    if (div.style.display === "none") {
+        div.style.display = "block";
+        if (icon) icon.style.transform = "rotate(90deg)";
+    } else {
+        div.style.display = "none";
+        if (icon) icon.style.transform = "rotate(0deg)";
+    }
+}
+</script>
+{% endblock %}

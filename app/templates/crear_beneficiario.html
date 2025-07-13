@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Crear Beneficiario{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white rounded-xl shadow-md p-8">
+  <h2 class="text-2xl font-bold mb-4">Crear beneficiario</h2>
+  <form method="post">
+    <label>Nombre</label>
+    <input type="text" name="nombre" required>
+    <label>Email</label>
+    <input type="email" name="email" required>
+    <label>Fecha de nacimiento</label>
+    <input type="date" name="fecha_nacimiento">
+    <label>Titular</label>
+    <select name="titular_id" required>
+      {% for titular in titulares %}
+        <option value="{{ titular.id }}">{{ titular.nombre }} ({{ titular.email }})</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Crear beneficiario</button>
+  </form>
+</div>
+{% endblock %}

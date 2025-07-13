@@ -1,10 +1,30 @@
 from . import db
+from datetime import datetime
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     dropbox_folder_path = db.Column(db.String, nullable=True)
+    nombre = db.Column(db.String(120), nullable=True)
+    es_beneficiario = db.Column(db.Boolean, default=False)
+    titular_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    beneficiarios = db.relationship('User', backref=db.backref('titular', remote_side=[id]), lazy=True)
+    dropbox_folder_path = db.Column(db.String, nullable=True)
+
+class Beneficiario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    fecha_nacimiento = db.Column(db.Date, nullable=True)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    titular_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    dropbox_folder_path = db.Column(db.String, nullable=True)
+    
+    titular = db.relationship('User', backref=db.backref('beneficiarios_ben', lazy=True))
+
+    def __repr__(self):
+        return f"<Beneficiario {self.nombre} ({self.email}) de titular {self.titular_id}>"
 
 class Folder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
