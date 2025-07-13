@@ -2,61 +2,186 @@
 {% block title %}Subir archivo{% endblock %}
 
 {% block content %}
-<div class="max-w-lg mx-auto bg-white rounded-xl shadow-md p-8 mt-10">
-  <h2 class="text-2xl font-bold mb-4">Subir archivo por categoría</h2>
-  <form action="{{ url_for('listar_dropbox.subir_archivo') }}" method="post" enctype="multipart/form-data">
-    <div class="mb-4">
-      <label class="block font-medium mb-2">Categoría</label>
-      <select name="categoria" id="categoria" class="w-full border px-2 py-1 rounded" required onchange="updateSubcategorias()">
-        <option value="">Selecciona una categoría</option>
-        {% for cat in categorias %}
-          <option value="{{ cat }}">{{ cat }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="mb-4">
-      <label class="block font-medium mb-2">Subcategoría</label>
-      <select name="subcategoria" id="subcategoria" class="w-full border px-2 py-1 rounded" required>
-        <option value="">Selecciona primero una categoría</option>
-      </select>
-    </div>
-    <div class="mb-4">
-      <label class="block font-medium mb-2">Usuario</label>
-      <select name="usuario_id" required class="w-full border px-2 py-1 rounded">
-        <option value="">Selecciona un usuario</option>
-        {% for usuario in usuarios %}
-          <option value="{{ usuario.id }}">{{ usuario.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
+<div class="max-w-4xl mx-auto bg-gray-50 min-h-screen p-6">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-blue-900 mb-2">Subida de documentos</h1>
+    <p class="text-gray-600">Elige un documento y súbelo a la carpeta de tu caso; carga cada archivo por separado para que podamos procesarlo correctamente.</p>
+  </div>
 
-    <div class="mb-4">
-      <label class="block font-medium mb-2">Archivo</label>
-      <input type="file" name="archivo" required class="w-full">
-    </div>
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Subir archivo</button>
-  </form>
+  <!-- Upload Section -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold text-blue-900 mb-6">Subir archivos</h2>
+    
+    <form action="{{ url_for('listar_dropbox.subir_archivo') }}" method="post" enctype="multipart/form-data">
+      <!-- Upload Area -->
+      <div class="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center bg-white hover:border-gray-400 transition-colors duration-200 cursor-pointer mb-6" onclick="document.getElementById('archivo').click()">
+        <div class="flex flex-col items-center">
+          <!-- Upload Icon -->
+          <div class="w-16 h-16 mb-4">
+            <svg class="w-full h-full text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+          </div>
+          <p class="text-lg font-medium text-gray-700 mb-2">Selecciona un archivo para importar</p>
+          <p class="text-sm text-gray-500 mb-4">o arrastra y suelta aquí</p>
+          <button type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+            </svg>
+            Examinar archivos
+          </button>
+        </div>
+      </div>
+      
+      <!-- Hidden file input -->
+      <input type="file" name="archivo" id="archivo" required class="hidden">
+      
+      <!-- File info -->
+      <div class="flex items-start mb-6">
+        <div class="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-0.5">
+          <svg class="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <div class="text-sm text-gray-600">
+          <p><strong>Formatos aceptados:</strong> PDF, DOC, DOCX, XLS, XLSX, CSV, JPG, JPEG, PNG, MP4, MOV, MP3</p>
+          <p><strong>Tamaño máximo de archivo:</strong> 50MB</p>
+        </div>
+      </div>
+
+      <!-- Owner Selection -->
+      <div class="mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">¿A quién pertenece este documento?</h3>
+        <select name="usuario_id" required class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900">
+          <option value="">-- Seleccionar titular o beneficiario --</option>
+          <optgroup label="Titulares">
+            {% for usuario in titulares %}
+              <option value="user-{{ usuario.id }}">{{ usuario.nombre or usuario.email }}</option>
+            {% endfor %}
+          </optgroup>
+          <optgroup label="Beneficiarios">
+            {% for ben in beneficiarios %}
+              <option value="beneficiario-{{ ben.id }}">{{ ben.nombre }} ({{ ben.email }})</option>
+            {% endfor %}
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- Important Section -->
+      <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h4 class="text-sm font-medium text-blue-800">Importante</h4>
+            <div class="mt-2 text-sm text-blue-700">
+              <p class="font-medium">Elija el tipo de documento o archivo que desea cargar.</p>
+              <p class="mt-1">Seleccione una de las opciones a continuación para que podamos clasificar su información correctamente.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Selection -->
+      <div class="mb-6">
+        <select name="categoria" id="categoria" class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900" required onchange="updateSubcategorias()">
+          <option value="" class="text-gray-500">-- Seleccionar etiqueta --</option>
+          
+          <optgroup label="Documentos personales" class="text-gray-400 font-medium">
+            <option value="Pasaporte" class="text-gray-900">Pasaporte</option>
+            <option value="Documento de identidad" class="text-gray-900">Documento de identidad</option>
+            <option value="Licencia de conducir" class="text-gray-900">Licencia de conducir</option>
+            <option value="Permiso de residencia" class="text-gray-900">Permiso de residencia</option>
+            <option value="Certificado de nacimiento" class="text-gray-900">Certificado de nacimiento</option>
+          </optgroup>
+          
+          <optgroup label="Documentos financieros" class="text-gray-400 font-medium">
+            <option value="Factura" class="text-gray-900">Factura</option>
+            <option value="Recibo de pago" class="text-gray-900">Recibo de pago</option>
+            <option value="Estado de cuenta bancario" class="text-gray-900">Estado de cuenta bancario</option>
+            <option value="Documento fiscal" class="text-gray-900">Documento fiscal</option>
+            <option value="Nómina" class="text-gray-900">Nómina</option>
+          </optgroup>
+          
+          <optgroup label="Documentos legales" class="text-gray-400 font-medium">
+            <option value="Contrato" class="text-gray-900">Contrato</option>
+            <option value="Poder notarial" class="text-gray-900">Poder notarial</option>
+            <option value="Certificado legal" class="text-gray-900">Certificado legal</option>
+          </optgroup>
+          
+          <optgroup label="Otros documentos" class="text-gray-400 font-medium">
+            <option value="Documento médico" class="text-gray-900">Documento médico</option>
+            <option value="Documento educativo" class="text-gray-900">Documento educativo</option>
+            <option value="Documento de propiedad" class="text-gray-900">Documento de propiedad</option>
+            <option value="Documento técnico" class="text-gray-900">Documento técnico</option>
+            <option value="Otro" class="text-gray-900">Otro</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- Subcategory Selection (initially hidden) -->
+      <div class="mb-6" id="subcategoria-container" style="display: none;">
+        <select name="subcategoria" id="subcategoria" class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900" required>
+          <option value="" class="text-gray-500">Selecciona primero una categoría</option>
+        </select>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex justify-end space-x-4">
+        <button type="button" class="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          Cancelar
+        </button>
+        <button type="submit" class="inline-flex items-center px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          Importar archivo
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script>
 const categorias = {{ categorias_json|safe }};
+
 function updateSubcategorias() {
   const cat = document.getElementById('categoria').value;
   const subcatSelect = document.getElementById('subcategoria');
+  const subcatContainer = document.getElementById('subcategoria-container');
+  
   subcatSelect.innerHTML = '';
+  
   if(categorias[cat]) {
+    subcatContainer.style.display = 'block';
     categorias[cat].forEach(function(subcat){
       const opt = document.createElement('option');
       opt.value = subcat;
       opt.innerText = subcat;
+      opt.className = 'text-gray-900';
       subcatSelect.appendChild(opt);
     });
   } else {
+    subcatContainer.style.display = 'none';
     const opt = document.createElement('option');
     opt.value = '';
     opt.innerText = 'Selecciona primero una categoría';
+    opt.className = 'text-gray-500';
     subcatSelect.appendChild(opt);
   }
 }
+
+// File input handler
+document.getElementById('archivo').addEventListener('change', function(e) {
+  if (e.target.files.length > 0) {
+    const fileName = e.target.files[0].name;
+    // You can add visual feedback here if needed
+    console.log('File selected:', fileName);
+  }
+});
 </script>
 {% endblock %}

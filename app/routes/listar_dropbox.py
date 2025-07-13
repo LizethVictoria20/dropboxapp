@@ -1,7 +1,7 @@
 from flask import Blueprint, json, render_template, current_app, request, redirect, url_for, flash
 from app.categorias import CATEGORIAS
 import dropbox
-from app.models import Archivo, User
+from app.models import Archivo, Beneficiario, User
 from app import db
 
 bp = Blueprint("listar_dropbox", __name__)
@@ -97,12 +97,14 @@ def crear_carpeta():
 @bp.route("/subir_archivo", methods=["GET", "POST"])
 def subir_archivo():
     if request.method == "GET":
-        usuarios = User.query.all()
+        titulares = User.query.all()
+        beneficiarios = Beneficiario.query.all()
         return render_template(
             "subir_archivo.html",
             categorias=CATEGORIAS.keys(),
             categorias_json=json.dumps(CATEGORIAS),
-            usuarios=usuarios
+            titulares=titulares,
+            beneficiarios=beneficiarios
         )
 
     usuario_id = request.form.get("usuario_id")
