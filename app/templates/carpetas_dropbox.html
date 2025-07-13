@@ -13,6 +13,11 @@
           class="bg-yellow-400 text-xs px-2 py-1 rounded hover:bg-yellow-500 ml-2">
           Mover
         </button>
+        <button type="button"
+          onclick="openRenameModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
+          class="bg-blue-400 text-xs px-2 py-1 rounded hover:bg-blue-500 ml-2">
+          Renombrar
+      </button>
       </li>
     {% endfor %}
   {% endif %}
@@ -92,6 +97,26 @@
       <div class="flex justify-end space-x-2">
         <button type="button" onclick="closeMoveModal()" class="px-3 py-1 rounded bg-gray-300">Cancelar</button>
         <button type="submit" class="px-3 py-1 rounded bg-blue-600 text-white">Mover</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Modal para renombrar archivo -->
+<div id="renameModal" class="hidden fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40">
+  <div class="bg-white rounded-xl p-6 shadow-lg w-full max-w-sm relative">
+    <button onclick="closeRenameModal()" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+    <h3 class="text-xl font-semibold mb-4">Renombrar archivo</h3>
+    <form id="renameForm" method="post" action="{{ url_for('listar_dropbox.renombrar_archivo') }}">
+      <input type="hidden" name="archivo_nombre_actual" id="renameArchivoNombreActual">
+      <input type="hidden" name="carpeta_actual" id="renameCarpetaActual">
+      <input type="hidden" name="usuario_id" id="renameUsuarioId">
+      <div class="mb-4">
+        <label class="block mb-1">Nuevo nombre</label>
+        <input type="text" name="nuevo_nombre" id="nuevoNombre" class="border px-2 py-1 rounded w-full" required>
+      </div>
+      <div class="flex justify-end space-x-2">
+        <button type="button" onclick="closeRenameModal()" class="px-3 py-1 rounded bg-gray-300">Cancelar</button>
+        <button type="submit" class="px-3 py-1 rounded bg-blue-600 text-white">Renombrar</button>
       </div>
     </form>
   </div>
@@ -185,4 +210,19 @@ function toggleDestinoSubcarpetas(nodeId, el) {
   }
 }
 </script>
+<script>
+  function openRenameModal(archivo, carpetaActual, usuarioId) {
+  document.getElementById('renameModal').classList.remove('hidden');
+  document.getElementById('renameArchivoNombreActual').value = archivo;
+  document.getElementById('renameCarpetaActual').value = carpetaActual;
+  document.getElementById('renameUsuarioId').value = usuarioId;
+  document.getElementById('nuevoNombre').value = archivo; // valor inicial
+}
+
+function closeRenameModal() {
+  document.getElementById('renameModal').classList.add('hidden');
+}
+
+</script>
+
 {% endblock %}

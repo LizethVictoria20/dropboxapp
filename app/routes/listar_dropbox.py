@@ -264,3 +264,38 @@ def mover_archivo_modal():
     db.session.commit()
     flash("Archivo movido correctamente.", "success")
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+
+@bp.route('/renombrar_archivo', methods=['POST'])
+def renombrar_archivo():
+    from app.models import Archivo
+    archivo_nombre_actual = request.form.get("archivo_nombre_actual")
+    carpeta_actual = request.form.get("carpeta_actual")
+    usuario_id = request.form.get("usuario_id")
+    nuevo_nombre = request.form.get("nuevo_nombre")
+
+    if not (archivo_nombre_actual and carpeta_actual and usuario_id and nuevo_nombre):
+        flash("Faltan datos para renombrar.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    old_path = f"{carpeta_actual}/{archivo_nombre_actual}".replace('//', '/')
+    new_path = f"{carpeta_actual}/{nuevo_nombre}".replace('//', '/')
+
+    archivo = Archivo.query.filter_by(dropbox_path=old_path).first()
+    if not archivo:
+        flash("Archivo no encontrado en la base de datos.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    try:
+        dbx.files_move_v2(old_path, new_path, allow_shared_folder=True, autorename=True)
+    except Exception as e:
+        flash(f"Error renombrando en Dropbox: {e}", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    archivo.nombre = nuevo_nombre
+    archivo.dropbox_path = new_path
+    db.session.commit()
+
+    flash("Archivo renombrado correctamente.", "success")
+    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
