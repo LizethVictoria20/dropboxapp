@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8">
+  <h2 class="text-2xl font-bold mb-4">Archivos subidos</h2>
+  <table class="w-full">
+    <thead>
+      <tr>
+        <th>Nombre</th><th>Categoría</th><th>Subcategoría</th><th>Ruta Dropbox</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for archivo in archivos %}
+        <tr>
+          <td>{{ archivo.nombre }}</td>
+          <td>{{ archivo.categoria }}</td>
+          <td>{{ archivo.subcategoria }}</td>
+          <td>{{ archivo.dropbox_path }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

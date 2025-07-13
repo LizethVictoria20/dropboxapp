@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Subir archivo{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white rounded-xl shadow-md p-8 mt-10">
+  <h2 class="text-2xl font-bold mb-4">Subir archivo por categoría</h2>
+  <form action="{{ url_for('listar_dropbox.subir_archivo') }}" method="post" enctype="multipart/form-data">
+    <div class="mb-4">
+      <label class="block font-medium mb-2">Categoría</label>
+      <select name="categoria" id="categoria" class="w-full border px-2 py-1 rounded" required onchange="updateSubcategorias()">
+        <option value="">Selecciona una categoría</option>
+        {% for cat in categorias %}
+          <option value="{{ cat }}">{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-4">
+      <label class="block font-medium mb-2">Subcategoría</label>
+      <select name="subcategoria" id="subcategoria" class="w-full border px-2 py-1 rounded" required>
+        <option value="">Selecciona primero una categoría</option>
+      </select>
+    </div>
+    <div class="mb-4">
+      <label class="block font-medium mb-2">Usuario</label>
+      <select name="usuario_id" required class="w-full border px-2 py-1 rounded">
+        <option value="">Selecciona un usuario</option>
+        {% for usuario in usuarios %}
+          <option value="{{ usuario.id }}">{{ usuario.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-medium mb-2">Archivo</label>
+      <input type="file" name="archivo" required class="w-full">
+    </div>
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Subir archivo</button>
+  </form>
+</div>
+
+<script>
+const categorias = {{ categorias_json|safe }};
+function updateSubcategorias() {
+  const cat = document.getElementById('categoria').value;
+  const subcatSelect = document.getElementById('subcategoria');
+  subcatSelect.innerHTML = '';
+  if(categorias[cat]) {
+    categorias[cat].forEach(function(subcat){
+      const opt = document.createElement('option');
+      opt.value = subcat;
+      opt.innerText = subcat;
+      subcatSelect.appendChild(opt);
+    });
+  } else {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.innerText = 'Selecciona primero una categoría';
+    subcatSelect.appendChild(opt);
+  }
+}
+</script>
+{% endblock %}
