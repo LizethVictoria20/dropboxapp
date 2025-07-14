@@ -3,6 +3,7 @@ from app.categorias import CATEGORIAS
 import dropbox
 from app.models import Archivo, Beneficiario, User
 from app import db
+import unicodedata
 
 bp = Blueprint("listar_dropbox", __name__)
 
@@ -92,6 +93,10 @@ def crear_carpeta():
         flash(f"Error creando carpeta: {e}", "error")
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
+def normaliza(nombre):
+    nfkd = unicodedata.normalize('NFKD', nombre or '')
+    solo_ascii = u"".join([c for c in nfkd if not unicodedata.combining(c)])
+    return solo_ascii.upper().strip().replace(" ", "_")
 
 @bp.route("/subir_archivo", methods=["GET", "POST"])
 def subir_archivo():
@@ -195,6 +200,35 @@ def subir_archivo():
         print("ERROR subiendo archivo a Dropbox:", e)
         flash("Error al subir archivo a Dropbox.", "error")
         return redirect(url_for("listar_dropbox.subir_archivo"))
+    
+    nombre_evidencia = categoria.upper().replace(" ", "_")
+    nombre_original = archivo.filename
+    ext = ""
+    if "." in nombre_original:
+        ext = "." + nombre_original.rsplit(".", 1)[1].lower()
+
+    # TITULAR (no es beneficiario)
+    if hasattr(usuario, "es_beneficiario") and not usuario.es_beneficiario:
+        nombre_titular = normaliza(usuario.nombre or usuario.email.split('@')[0])
+        nombre_final = f"{nombre_evidencia}_TITULAR_{nombre_titular}{ext}"
+
+    # BENEFICIARIO
+    elif hasattr(usuario, "es_beneficiario") and usuario.es_beneficiario:
+        nombre_ben = normaliza(usuario.nombre)
+        # Relación a titular (ajusta según tu modelo)
+        if hasattr(usuario, "titular") and usuario.titular:
+            nombre_titular = normaliza(usuario.titular.nombre)
+        else:
+            nombre_titular = "SIN_TITULAR"
+        nombre_final = f"{nombre_evidencia}_BENEFICIARIO_{nombre_ben}_TITULAR_{nombre_titular}{ext}"
+    else:
+        nombre_final = f"{nombre_evidencia}_SINROL_{normaliza(usuario.nombre or usuario.email.split('@')[0])}{ext}"
+
+    print("DEBUG | Nombre final para guardar/subir:", nombre_final)
+
+    # --- SUBE EL ARCHIVO ---
+    dropbox_dest = f"{ruta_subcat}/{nombre_final}"
+    dbx.files_upload(archivo.read(), dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
 
     # Guardar en la base de datos
     nuevo_archivo = Archivo(
