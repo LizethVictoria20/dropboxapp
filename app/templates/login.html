@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Accede al portal | Inmigración OK Abogados{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen">
+
+  <!-- Lado Izquierdo: Fondo con Bienvenida -->
+  <div class="hidden lg:flex flex-col justify-between w-1/2 bg-blue-900 relative">
+    <div class="absolute inset-0">
+      <img src="{{ url_for('static', filename='img/ny-skyline.jpg') }}" alt="City" class="object-cover w-full h-full opacity-80">
+      <div class="absolute inset-0 bg-blue-900 opacity-70"></div>
+    </div>
+    <div class="relative z-10 flex flex-col h-full justify-center p-16">
+      <img src="{{ url_for('static', filename='img/logo-ik-blanco.png') }}" alt="Logo" class="h-14 mb-8">
+      <div class="bg-white bg-opacity-10 rounded-xl p-8 mb-12">
+        <h2 class="text-3xl font-extrabold text-white mb-4 leading-tight">
+          Bienvenido al sistema de recepción de evidencias y documentos de Inmigración Ok abogados.
+        </h2>
+        <p class="text-white text-lg opacity-90">
+          Comparta sus documentos y archivos con nuestro equipo por medio de esta plataforma.
+        </p>
+      </div>
+      <div class="flex space-x-4">
+        <a href="#" class="text-white hover:text-blue-200 text-2xl"><i class="fab fa-youtube"></i></a>
+        <a href="#" class="text-white hover:text-blue-200 text-2xl"><i class="fab fa-facebook"></i></a>
+        <a href="#" class="text-white hover:text-blue-200 text-2xl"><i class="fab fa-instagram"></i></a>
+        <a href="#" class="text-white hover:text-blue-200 text-2xl"><i class="fab fa-tiktok"></i></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lado Derecho: Formulario -->
+  <div class="flex-1 flex flex-col justify-center items-center bg-white">
+    <div class="w-full max-w-md">
+      <h2 class="text-2xl md:text-3xl font-extrabold text-blue-900 mb-2 text-center">Accede al portal</h2>
+      <p class="text-gray-600 text-center mb-8">Inicia sesión para gestionar los documentos de tu caso.</p>
+      <form method="post" class="bg-white shadow-lg rounded-2xl p-8 space-y-5">
+        <div>
+          <label for="email" class="block text-gray-700 font-semibold mb-1">Email</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+              <i class="fas fa-user"></i>
+            </span>
+            <input name="email" id="email" type="email" placeholder="Ingresa tu usuario o email" required
+              class="pl-10 pr-3 py-3 w-full rounded-md border border-gray-200 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 text-base">
+          </div>
+        </div>
+        <div>
+          <label for="password" class="block text-gray-700 font-semibold mb-1">Contraseña</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+              <i class="fas fa-lock"></i>
+            </span>
+            <input name="password" id="password" type="password" placeholder="Ingresa tu contraseña" required
+              class="pl-10 pr-3 py-3 w-full rounded-md border border-gray-200 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 text-base">
+          </div>
+        </div>
+        <div class="flex items-center">
+          <input id="remember" name="remember" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+          <label for="remember" class="ml-2 block text-gray-600 text-sm">Mantener sesión iniciada</label>
+        </div>
+        <button type="submit"
+          class="w-full py-3 rounded-lg bg-blue-700 text-white font-semibold text-lg hover:bg-blue-800 transition flex items-center justify-center">
+          Iniciar sesión
+          <span class="ml-2"><i class="fas fa-arrow-right"></i></span>
+        </button>
+        <div class="text-right">
+          <a href="#" class="text-blue-700 text-sm hover:underline">¿Olvidaste tu contraseña?</a>
+        </div>
+        <div class="text-center text-gray-700 text-sm mt-4">
+          ¿No tienes una cuenta? <a href="{{ url_for('auth.register') }}" class="font-bold text-blue-700 hover:underline">Regístrate</a>
+        </div>
+      </form>
+      <div class="mt-10 flex justify-center space-x-6 text-sm text-gray-500">
+        <a href="#" class="hover:underline">PQR</a>
+        <a href="#" class="hover:underline">Privacidad</a>
+        <a href="#" class="hover:underline">Ayuda</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Font Awesome CDN for icons (coloca esto en tu base.html) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}

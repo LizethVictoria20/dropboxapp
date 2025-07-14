@@ -14,16 +14,12 @@
       {{ success }}
     </div>
   {% endif %}
-  <form method="POST">
-    <div class="mb-4">
-      <label for="email" class="block font-medium mb-2">Correo electrónico</label>
-      <input type="email" name="email" id="email" required class="w-full px-3 py-2 border rounded">
-    </div>
-    <div class="mb-4">
-      <label for="password" class="block font-medium mb-2">Contraseña</label>
-      <input type="password" name="password" id="password" required class="w-full px-3 py-2 border rounded">
-    </div>
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Crear usuario</button>
+  <form method="post">
+    <input name="nombre" type="text" placeholder="Nombre" required>
+    <input name="email" type="email" placeholder="Correo" required>
+    <input name="password" type="password" placeholder="Contraseña" required>
+    <button type="submit">Registrar</button>
   </form>
+
 </div>
 {% endblock %}
