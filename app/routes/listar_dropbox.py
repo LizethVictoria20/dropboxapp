@@ -283,27 +283,49 @@ def mover_archivo_modal():
 @bp.route('/renombrar_archivo', methods=['POST'])
 def renombrar_archivo():
     from app.models import Archivo
+    print("🚩 ¡Llegué a la función renombrar_archivo!")
+
     archivo_nombre_actual = request.form.get("archivo_nombre_actual")
     carpeta_actual = request.form.get("carpeta_actual")
     usuario_id = request.form.get("usuario_id")
     nuevo_nombre = request.form.get("nuevo_nombre")
 
+    # --- Normalización robusta de path ---
+    def join_dropbox_path(parent, name):
+        if not parent or parent in ('/', '', None):
+            return f"/{name}"
+        return f"{parent.rstrip('/')}/{name}"
+
+    old_path = join_dropbox_path(carpeta_actual, archivo_nombre_actual)
+    new_path = join_dropbox_path(carpeta_actual, nuevo_nombre)
+
+    # --- Log antes de buscar archivo ---
+    print("DEBUG | archivo_nombre_actual:", archivo_nombre_actual)
+    print("DEBUG | carpeta_actual:", carpeta_actual)
+    print("DEBUG | usuario_id:", usuario_id)
+    print("DEBUG | nuevo_nombre:", nuevo_nombre)
+    print("DEBUG | old_path:", old_path)
+    print("DEBUG | new_path:", new_path)
+    all_paths = [a.dropbox_path for a in Archivo.query.all()]
+    print("DEBUG | Paths en base:", all_paths)
+
     if not (archivo_nombre_actual and carpeta_actual and usuario_id and nuevo_nombre):
+        print("DEBUG | Faltan datos para renombrar")
         flash("Faltan datos para renombrar.", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
-    old_path = f"{carpeta_actual}/{archivo_nombre_actual}".replace('//', '/')
-    new_path = f"{carpeta_actual}/{nuevo_nombre}".replace('//', '/')
-
     archivo = Archivo.query.filter_by(dropbox_path=old_path).first()
     if not archivo:
+        print(f"DEBUG | Archivo no encontrado en la base para path: {old_path}")
         flash("Archivo no encontrado en la base de datos.", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
     dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
     try:
+        print(f"DEBUG | Renombrando en Dropbox: {old_path} -> {new_path}")
         dbx.files_move_v2(old_path, new_path, allow_shared_folder=True, autorename=True)
     except Exception as e:
+        print(f"DEBUG | Error renombrando en Dropbox: {e}")
         flash(f"Error renombrando en Dropbox: {e}", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
@@ -311,5 +333,58 @@ def renombrar_archivo():
     archivo.dropbox_path = new_path
     db.session.commit()
 
+    print(f"DEBUG | Renombrado exitoso: {old_path} -> {new_path}")
     flash("Archivo renombrado correctamente.", "success")
+    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+
+def sincronizar_dropbox_a_bd():
+    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+
+    # Empieza en la raíz (puedes pasar path de usuario para hacerlo individual)
+    res = dbx.files_list_folder(path="", recursive=True)
+    nuevos = 0
+
+    # Obtén todos los paths que ya tienes en la base para comparar rápido
+    paths_existentes = set([a.dropbox_path for a in Archivo.query.all()])
+
+    for entry in res.entries:
+        if isinstance(entry, dropbox.files.FileMetadata):
+            dropbox_path = entry.path_display
+
+            if dropbox_path in paths_existentes:
+                continue  # Ya está sincronizado
+
+            # Lógica para extraer usuario/carpeta/categoría/subcategoría según tu estructura
+            # Ejemplo para estructura: /usuario/categoria/subcategoria/archivo
+            partes = dropbox_path.strip("/").split("/")
+            if len(partes) < 2:
+                continue  # Ignora archivos fuera de estructura esperada
+
+            # Determina usuario
+            posible_email = partes[0]
+            usuario = User.query.filter_by(email=posible_email).first()
+            usuario_id = usuario.id if usuario else None
+
+            # Determina categoría y subcategoría si existen
+            categoria = partes[1] if len(partes) > 2 else ""
+            subcategoria = partes[2] if len(partes) > 3 else ""
+
+            nuevo_archivo = Archivo(
+                nombre=entry.name,
+                categoria=categoria,
+                subcategoria=subcategoria,
+                dropbox_path=dropbox_path,
+                usuario_id=usuario_id
+            )
+            db.session.add(nuevo_archivo)
+            nuevos += 1
+
+    db.session.commit()
+    print(f"Sincronización completa: {nuevos} archivos nuevos agregados a la base de datos.")
+
+@bp.route("/sincronizar_dropbox")
+def sincronizar_dropbox():
+    sincronizar_dropbox_a_bd()
+    flash("¡Sincronización completada!", "success")
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
