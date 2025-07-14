@@ -93,12 +93,17 @@ def crear_carpeta():
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
 
-
 @bp.route("/subir_archivo", methods=["GET", "POST"])
 def subir_archivo():
+    from app.models import User, Beneficiario, Archivo
+    import json
+
     if request.method == "GET":
+        print("GET: Mostrando formulario de subida")
         titulares = User.query.all()
         beneficiarios = Beneficiario.query.all()
+        print("Usuarios en DB:", [u.email for u in titulares])
+        print("Beneficiarios en DB:", [b.email for b in beneficiarios])
         return render_template(
             "subir_archivo.html",
             categorias=CATEGORIAS.keys(),
@@ -107,65 +112,105 @@ def subir_archivo():
             beneficiarios=beneficiarios
         )
 
+    print("POST: Procesando subida de archivo")
     usuario_id = request.form.get("usuario_id")
-    usuario = User.query.get(usuario_id)
+    print("usuario_id recibido:", usuario_id)
+    usuario = None
+    if usuario_id and usuario_id.startswith("user-"):
+        real_id = int(usuario_id[5:])
+        usuario = User.query.get(real_id)
+        print(f"Es titular (User), id extraído: {real_id}")
+    elif usuario_id and usuario_id.startswith("beneficiario-"):
+        real_id = int(usuario_id[13:])
+        usuario = Beneficiario.query.get(real_id)
+        print(f"Es beneficiario, id extraído: {real_id}")
+    else:
+        print("usuario_id inválido:", usuario_id)
+        usuario = None
+
     if not usuario:
+        print("ERROR: Usuario no encontrado o inválido")
         flash("Selecciona un usuario válido.", "error")
         return redirect(url_for("listar_dropbox.subir_archivo"))
 
     categoria = request.form.get("categoria")
     subcategoria = request.form.get("subcategoria")
     archivo = request.files.get("archivo")
+    print("Categoría recibida:", categoria)
+    print("Subcategoría recibida:", subcategoria)
+    print("Archivo recibido:", archivo.filename if archivo else None)
+
     if not (categoria and subcategoria and archivo):
+        print("ERROR: Faltan campos obligatorios")
         flash("Completa todos los campos", "error")
         return redirect(url_for("listar_dropbox.subir_archivo"))
 
     dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
-    # 1. Carpeta raíz de usuario (usa email o dropbox_folder_path)
-    if usuario.dropbox_folder_path:
+    # Carpeta raíz de usuario/beneficiario
+    if hasattr(usuario, "dropbox_folder_path") and usuario.dropbox_folder_path:
         carpeta_usuario = usuario.dropbox_folder_path
+        print("Carpeta raíz ya existe:", carpeta_usuario)
     else:
         carpeta_usuario = f"/{usuario.email}"
+        print("Creando carpeta raíz para usuario:", carpeta_usuario)
         try:
             dbx.files_create_folder_v2(carpeta_usuario)
+            print("Carpeta raíz creada en Dropbox")
         except dropbox.exceptions.ApiError as e:
             if "conflict" not in str(e):
+                print("ERROR al crear carpeta raíz en Dropbox:", e)
                 raise e
-        usuario.dropbox_folder_path = carpeta_usuario
-        db.session.commit()
+            print("La carpeta raíz ya existía en Dropbox")
+        if hasattr(usuario, "dropbox_folder_path"):
+            usuario.dropbox_folder_path = carpeta_usuario
+            db.session.commit()
+            print("Ruta raíz guardada en DB:", carpeta_usuario)
 
-    # 2. Crear categoría y subcategoría dentro de carpeta usuario
+    # Crear categoría y subcategoría
     ruta_categoria = f"{carpeta_usuario}/{categoria}"
     try:
         dbx.files_create_folder_v2(ruta_categoria)
+        print("Carpeta categoría creada:", ruta_categoria)
     except dropbox.exceptions.ApiError as e:
         if "conflict" not in str(e):
+            print("ERROR al crear carpeta categoría:", e)
             raise e
+        print("La carpeta categoría ya existía:", ruta_categoria)
     ruta_subcat = f"{ruta_categoria}/{subcategoria}"
     try:
         dbx.files_create_folder_v2(ruta_subcat)
+        print("Carpeta subcategoría creada:", ruta_subcat)
     except dropbox.exceptions.ApiError as e:
         if "conflict" not in str(e):
+            print("ERROR al crear carpeta subcategoría:", e)
             raise e
+        print("La carpeta subcategoría ya existía:", ruta_subcat)
 
-    # 3. Subir archivo a esa ruta
+    # Subir archivo
     dropbox_dest = f"{ruta_subcat}/{archivo.filename}"
-    dbx.files_upload(archivo.read(), dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
+    try:
+        dbx.files_upload(archivo.read(), dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
+        print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
+    except Exception as e:
+        print("ERROR subiendo archivo a Dropbox:", e)
+        flash("Error al subir archivo a Dropbox.", "error")
+        return redirect(url_for("listar_dropbox.subir_archivo"))
 
-    # 4. Guarda en base de datos
+    # Guardar en la base de datos
     nuevo_archivo = Archivo(
         nombre=archivo.filename,
         categoria=categoria,
         subcategoria=subcategoria,
         dropbox_path=dropbox_dest,
-        usuario_id=usuario.id
+        usuario_id=getattr(usuario, "id", None)
     )
     db.session.add(nuevo_archivo)
     db.session.commit()
+    print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
 
     flash("Archivo subido y registrado para el usuario seleccionado.", "success")
     return redirect(url_for("listar_dropbox.subir_archivo"))
-  
+
   
   
 @bp.route('/mover_archivo/<archivo_nombre>/<path:carpeta_actual>', methods=['GET', 'POST'])

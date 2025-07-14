@@ -88,45 +88,21 @@
 
       <!-- Category Selection -->
       <div class="mb-6">
-        <select name="categoria" id="categoria" class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900" required onchange="updateSubcategorias()">
-          <option value="" class="text-gray-500">-- Seleccionar etiqueta --</option>
-          
-          <optgroup label="Documentos personales" class="text-gray-400 font-medium">
-            <option value="Pasaporte" class="text-gray-900">Pasaporte</option>
-            <option value="Documento de identidad" class="text-gray-900">Documento de identidad</option>
-            <option value="Licencia de conducir" class="text-gray-900">Licencia de conducir</option>
-            <option value="Permiso de residencia" class="text-gray-900">Permiso de residencia</option>
-            <option value="Certificado de nacimiento" class="text-gray-900">Certificado de nacimiento</option>
-          </optgroup>
-          
-          <optgroup label="Documentos financieros" class="text-gray-400 font-medium">
-            <option value="Factura" class="text-gray-900">Factura</option>
-            <option value="Recibo de pago" class="text-gray-900">Recibo de pago</option>
-            <option value="Estado de cuenta bancario" class="text-gray-900">Estado de cuenta bancario</option>
-            <option value="Documento fiscal" class="text-gray-900">Documento fiscal</option>
-            <option value="Nómina" class="text-gray-900">Nómina</option>
-          </optgroup>
-          
-          <optgroup label="Documentos legales" class="text-gray-400 font-medium">
-            <option value="Contrato" class="text-gray-900">Contrato</option>
-            <option value="Poder notarial" class="text-gray-900">Poder notarial</option>
-            <option value="Certificado legal" class="text-gray-900">Certificado legal</option>
-          </optgroup>
-          
-          <optgroup label="Otros documentos" class="text-gray-400 font-medium">
-            <option value="Documento médico" class="text-gray-900">Documento médico</option>
-            <option value="Documento educativo" class="text-gray-900">Documento educativo</option>
-            <option value="Documento de propiedad" class="text-gray-900">Documento de propiedad</option>
-            <option value="Documento técnico" class="text-gray-900">Documento técnico</option>
-            <option value="Otro" class="text-gray-900">Otro</option>
-          </optgroup>
+        <label class="block text-gray-700 font-semibold mb-1" for="categoria">Categoría</label>
+        <select name="categoria" id="categoria" required
+          class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900">
+          <option value="">-- Selecciona una categoría --</option>
+          <!-- JS agrega el resto -->
         </select>
       </div>
 
       <!-- Subcategory Selection (initially hidden) -->
       <div class="mb-6" id="subcategoria-container" style="display: none;">
-        <select name="subcategoria" id="subcategoria" class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900" required>
-          <option value="" class="text-gray-500">Selecciona primero una categoría</option>
+        <label class="block text-gray-700 font-semibold mb-1" for="subcategoria">Subcategoría</label>
+        <select name="subcategoria" id="subcategoria"
+          class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900">
+          <option value="">Selecciona primero una categoría</option>
+          <!-- JS agrega el resto -->
         </select>
       </div>
 
@@ -148,41 +124,53 @@
 
 <script>
 const categorias = {{ categorias_json|safe }};
+console.log("Categorias cargadas:", categorias);
 
-function updateSubcategorias() {
-  const cat = document.getElementById('categoria').value;
+// Pobla categorías al cargar la página
+window.addEventListener('DOMContentLoaded', () => {
+  const catSelect = document.getElementById('categoria');
+  for (const cat in categorias) {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.innerText = cat;
+    catSelect.appendChild(opt);
+  }
+});
+
+// Actualiza subcategorías al cambiar la categoría
+document.getElementById('categoria').addEventListener('change', function() {
+  const cat = this.value;
   const subcatSelect = document.getElementById('subcategoria');
   const subcatContainer = document.getElementById('subcategoria-container');
-  
   subcatSelect.innerHTML = '';
-  
-  if(categorias[cat]) {
+  if (categorias[cat]) {
     subcatContainer.style.display = 'block';
     subcatSelect.required = true;
-    categorias[cat].forEach(function(subcat){
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.innerText = '-- Selecciona una subcategoría --';
+    subcatSelect.appendChild(emptyOpt);
+    categorias[cat].forEach(function(subcat) {
       const opt = document.createElement('option');
       opt.value = subcat;
       opt.innerText = subcat;
-      opt.className = 'text-gray-900';
       subcatSelect.appendChild(opt);
     });
   } else {
     subcatContainer.style.display = 'none';
-    subcatSelect.required = false; // <--- desactiva si oculto
+    subcatSelect.required = false;
     const opt = document.createElement('option');
     opt.value = '';
     opt.innerText = 'Selecciona primero una categoría';
-    opt.className = 'text-gray-500';
     subcatSelect.appendChild(opt);
   }
-}
+});
 
-// File input handler
+// File input handler (opcional, solo para feedback)
 document.getElementById('archivo').addEventListener('change', function(e) {
   if (e.target.files.length > 0) {
     const fileName = e.target.files[0].name;
-    // You can add visual feedback here if needed
-    console.log('File selected:', fileName);
+    console.log('Archivo seleccionado:', fileName);
   }
 });
 </script>
