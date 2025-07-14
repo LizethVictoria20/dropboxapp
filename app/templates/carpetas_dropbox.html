@@ -336,6 +336,7 @@ function openMoveModal(archivo, carpetaActual, usuarioId) {
   } else {
     document.getElementById('destinoTree').innerHTML = '<div class="text-red-500 text-sm p-4 text-center">No hay carpetas disponibles para este usuario.</div>';
   }
+  document.querySelector('#moveForm button[type="submit"]').disabled = true;
 }
 
 function closeMoveModal() {
@@ -381,6 +382,8 @@ function selectDestino(path) {
   const selectedDiv = document.getElementById('selectedFolder');
   selectedDiv.classList.remove('hidden');
   selectedDiv.querySelector('span').innerText = `Destino seleccionado: ${path}`;
+
+  document.querySelector('#moveForm button[type="submit"]').disabled = false;
 }
 
 function toggleDestinoSubcarpetas(nodeId, el) {
@@ -410,12 +413,14 @@ function closeRenameModal() {
 document.getElementById('moveForm').onsubmit = function(e) {
   const dest = document.getElementById('nuevaCarpetaSeleccionada').value;
   if (!dest || dest.trim() === '') {
-    alert("Selecciona una carpeta de destino.");
+    document.getElementById('selectedFolder').classList.remove('hidden');
+    document.getElementById('selectedFolder').querySelector('span').innerText = "⚠️ Selecciona una carpeta de destino.";
     e.preventDefault();
     return false;
   }
   return true;
 }
+
 
 </script>
 
