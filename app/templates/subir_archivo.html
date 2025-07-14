@@ -158,6 +158,7 @@ function updateSubcategorias() {
   
   if(categorias[cat]) {
     subcatContainer.style.display = 'block';
+    subcatSelect.required = true;
     categorias[cat].forEach(function(subcat){
       const opt = document.createElement('option');
       opt.value = subcat;
@@ -167,6 +168,7 @@ function updateSubcategorias() {
     });
   } else {
     subcatContainer.style.display = 'none';
+    subcatSelect.required = false; // <--- desactiva si oculto
     const opt = document.createElement('option');
     opt.value = '';
     opt.innerText = 'Selecciona primero una categoría';
