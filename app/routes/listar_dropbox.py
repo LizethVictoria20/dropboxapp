@@ -89,19 +89,18 @@ def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
 @login_required
 def carpetas_dropbox():
     estructuras_usuarios = {}
-    usuarios_dict = {u.id: u for u in User.query.all()}
     dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
 
-    # Filtra carpetas según el rol
+    # Determina qué usuarios cargar
     if current_user.rol == "admin":
-        carpetas_db = Folder.query.all()
+        usuarios = User.query.all()
     else:
-        # Solo carpetas públicas Y SOLO DEL USUARIO LOGUEADO
-        carpetas_db = Folder.query.filter_by(es_publica=True, user_id=current_user.id).all()
+        # Solo el usuario actual (cliente ve solo sus carpetas)
+        usuarios = [current_user]
 
-    rutas_visibles = set([f.dropbox_path for f in carpetas_db])
+    usuarios_dict = {u.id: u for u in usuarios}
 
-    for user in usuarios_dict.values():
+    for user in usuarios:
         if not user.dropbox_folder_path:
             user.dropbox_folder_path = f"/{user.email}"
             try:
@@ -110,6 +109,7 @@ def carpetas_dropbox():
                 if "conflict" not in str(e):
                     raise e
             db.session.commit()
+
         path = user.dropbox_folder_path
         estructura = obtener_estructura_dropbox(path=path)
         estructuras_usuarios[user.id] = estructura
