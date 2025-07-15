@@ -1,7 +1,8 @@
 from flask import Blueprint, json, render_template, current_app, request, redirect, url_for, flash
+from flask_login import current_user, login_required
 from app.categorias import CATEGORIAS
 import dropbox
-from app.models import Archivo, Beneficiario, User
+from app.models import Archivo, Beneficiario, Folder, User
 from app import db
 import unicodedata
 
@@ -47,12 +48,58 @@ def obtener_estructura_dropbox(path="", dbx=None):
 
     return estructura
 
+def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
+    """
+    Recorta el árbol (estructura) dejando solo las subcarpetas cuya ruta esté en rutas_visibles.
+    - estructura: dict con formato {'_archivos': [...], '_subcarpetas': { ... }}
+    - rutas_visibles: set con paths permitidos
+    - prefix: path base actual (ej: /user@email.com)
+    - usuario_email: email para manejo especial de raíz
+    """
+    if not estructura:
+        return estructura
+    nueva_estructura = {"_archivos": [], "_subcarpetas": {}}
+    # Archivos siempre se muestran si el padre es visible
+    if prefix in rutas_visibles:
+        nueva_estructura["_archivos"] = estructura.get("_archivos", [])
+    else:
+        nueva_estructura["_archivos"] = []
+
+    for subcarpeta, contenido in estructura.get("_subcarpetas", {}).items():
+        # Si estamos en el path raíz del usuario y el subnivel es el email, unwrap (evita doble email)
+        if prefix.rstrip("/") == f"/{usuario_email}" and subcarpeta == usuario_email:
+            # Desempaqueta ese nivel y sigue con los hijos directos
+            for sub_subcarpeta, sub_contenido in contenido.get("_subcarpetas", {}).items():
+                ruta_actual = prefix.rstrip("/") + "/" + sub_subcarpeta
+                if ruta_actual in rutas_visibles:
+                    nueva_estructura["_subcarpetas"][sub_subcarpeta] = filtra_arbol_por_rutas(
+                        sub_contenido, rutas_visibles, ruta_actual, usuario_email
+                    )
+            continue
+
+        ruta_actual = prefix.rstrip("/") + "/" + subcarpeta
+        if ruta_actual in rutas_visibles:
+            nueva_estructura["_subcarpetas"][subcarpeta] = filtra_arbol_por_rutas(
+                contenido, rutas_visibles, ruta_actual, usuario_email
+            )
+    return nueva_estructura
+
 
 @bp.route("/carpetas_dropbox")
+@login_required
 def carpetas_dropbox():
     estructuras_usuarios = {}
     usuarios_dict = {u.id: u for u in User.query.all()}
     dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+
+    # Filtra carpetas según el rol
+    if current_user.rol == "admin":
+        carpetas_db = Folder.query.all()
+    else:
+        # Solo carpetas públicas Y SOLO DEL USUARIO LOGUEADO
+        carpetas_db = Folder.query.filter_by(es_publica=True, user_id=current_user.id).all()
+
+    rutas_visibles = set([f.dropbox_path for f in carpetas_db])
 
     for user in usuarios_dict.values():
         if not user.dropbox_folder_path:
@@ -71,6 +118,7 @@ def carpetas_dropbox():
         "carpetas_dropbox.html",
         estructuras_usuarios=estructuras_usuarios,
         usuarios=usuarios_dict,
+        usuario_actual=current_user,
         estructuras_usuarios_json=json.dumps(estructuras_usuarios)
     )
 

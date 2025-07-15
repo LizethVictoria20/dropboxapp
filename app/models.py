@@ -39,8 +39,16 @@ class Folder(db.Model):
     name = db.Column(db.String, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     dropbox_path = db.Column(db.String, nullable=True)
+    es_publica = db.Column(db.Boolean, default=True)
+    
 from datetime import datetime
 from . import db
+
+class FolderPermiso(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    folder_id = db.Column(db.Integer, db.ForeignKey('folder.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    puede_ver = db.Column(db.Boolean, default=True)
 
 class Archivo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
