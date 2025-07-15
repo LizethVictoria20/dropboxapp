@@ -177,7 +177,7 @@ def normaliza(nombre):
 
 @bp.route("/subir_archivo", methods=["GET", "POST"])
 def subir_archivo():
-    from app.models import User, Beneficiario, Archivo
+    from app.models import User, Beneficiario, Archivo, Folder
     import json
 
     if request.method == "GET":
@@ -195,153 +195,174 @@ def subir_archivo():
         )
 
     print("POST: Procesando subida de archivo")
+    
+    # Obtener datos del formulario
     usuario_id = request.form.get("usuario_id")
-    print("usuario_id recibido:", usuario_id)
-    usuario = None
-    if usuario_id and usuario_id.startswith("user-"):
-        real_id = int(usuario_id[5:])
-        usuario = User.query.get(real_id)
-        print(f"Es titular (User), id extraído: {real_id}")
-    elif usuario_id and usuario_id.startswith("beneficiario-"):
-        real_id = int(usuario_id[13:])
-        usuario = Beneficiario.query.get(real_id)
-        print(f"Es beneficiario, id extraído: {real_id}")
-    else:
-        print("usuario_id inválido:", usuario_id)
-        usuario = None
-
-    if not usuario:
-        print("ERROR: Usuario no encontrado o inválido")
-        flash("Selecciona un usuario válido.", "error")
-        return redirect(url_for("listar_dropbox.subir_archivo"))
-
     categoria = request.form.get("categoria")
     subcategoria = request.form.get("subcategoria")
     archivo = request.files.get("archivo")
+    
+    print("usuario_id recibido:", usuario_id)
     print("Categoría recibida:", categoria)
     print("Subcategoría recibida:", subcategoria)
     print("Archivo recibido:", archivo.filename if archivo else None)
 
-    if not (categoria and subcategoria and archivo):
+    # Validar campos obligatorios
+    if not (usuario_id and categoria and subcategoria and archivo):
         print("ERROR: Faltan campos obligatorios")
-        flash("Completa todos los campos", "error")
+        flash("Completa todos los campos obligatorios", "error")
         return redirect(url_for("listar_dropbox.subir_archivo"))
 
-    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
-    # Carpeta raíz de usuario/beneficiario
-    if hasattr(usuario, "dropbox_folder_path") and usuario.dropbox_folder_path:
-        carpeta_usuario = usuario.dropbox_folder_path
-        print("Carpeta raíz ya existe:", carpeta_usuario)
-    else:
-        carpeta_usuario = f"/{usuario.email}"
-        print("Creando carpeta raíz para usuario:", carpeta_usuario)
+    # Validar y obtener usuario/beneficiario
+    usuario = None
+    try:
+        print(f"DEBUG: Procesando usuario_id: '{usuario_id}' (tipo: {type(usuario_id)})")
+        print(f"DEBUG: usuario_id.startswith('user-'): {usuario_id.startswith('user-')}")
+        print(f"DEBUG: usuario_id.startswith('beneficiario-'): {usuario_id.startswith('beneficiario-')}")
+        
+        if usuario_id.startswith("user-"):
+            real_id = int(usuario_id[5:])
+            usuario = User.query.get(real_id)
+            print(f"Es titular (User), id extraído: {real_id}, usuario encontrado: {usuario is not None}")
+        elif usuario_id.startswith("beneficiario-"):
+            real_id = int(usuario_id[13:])
+            usuario = Beneficiario.query.get(real_id)
+            print(f"Es beneficiario, id extraído: {real_id}, beneficiario encontrado: {usuario is not None}")
+        else:
+            print(f"usuario_id inválido: '{usuario_id}' (no tiene prefijo válido)")
+            flash("Formato de usuario inválido. Debe seleccionar un usuario del formulario.", "error")
+            return redirect(url_for("listar_dropbox.subir_archivo"))
+    except (ValueError, IndexError) as e:
+        print(f"Error al procesar usuario_id: {e}")
+        flash("Error al procesar el usuario seleccionado", "error")
+        return redirect(url_for("listar_dropbox.subir_archivo"))
+
+    if not usuario:
+        print("ERROR: Usuario no encontrado o inválido")
+        flash("Usuario no encontrado en la base de datos", "error")
+        return redirect(url_for("listar_dropbox.subir_archivo"))
+
+    # Leer el archivo una sola vez
+    archivo_content = archivo.read()
+    archivo.seek(0)  # Resetear el puntero del archivo para futuras lecturas
+
+    try:
+        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        
+        # Carpeta raíz de usuario/beneficiario
+        if hasattr(usuario, "dropbox_folder_path") and usuario.dropbox_folder_path:
+            carpeta_usuario = usuario.dropbox_folder_path
+            print("Carpeta raíz ya existe:", carpeta_usuario)
+        else:
+            carpeta_usuario = f"/{usuario.email}"
+            print("Creando carpeta raíz para usuario:", carpeta_usuario)
+            try:
+                dbx.files_create_folder_v2(carpeta_usuario)
+                print("Carpeta raíz creada en Dropbox")
+            except dropbox.exceptions.ApiError as e:
+                if "conflict" not in str(e):
+                    print("ERROR al crear carpeta raíz en Dropbox:", e)
+                    raise e
+                print("La carpeta raíz ya existía en Dropbox")
+            
+            # Guardar ruta en la base de datos
+            if hasattr(usuario, "dropbox_folder_path"):
+                usuario.dropbox_folder_path = carpeta_usuario
+                db.session.commit()
+                print("Ruta raíz guardada en DB:", carpeta_usuario)
+
+        # Crear categoría y subcategoría
+        ruta_categoria = f"{carpeta_usuario}/{categoria}"
         try:
-            dbx.files_create_folder_v2(carpeta_usuario)
-            print("Carpeta raíz creada en Dropbox")
+            dbx.files_create_folder_v2(ruta_categoria)
+            print("Carpeta categoría creada:", ruta_categoria)
+            
+            # Guardar carpeta categoría en la base de datos
+            carpeta_cat = Folder(
+                name=categoria,
+                user_id=getattr(usuario, "id", None),
+                dropbox_path=ruta_categoria,
+                es_publica=True
+            )
+            db.session.add(carpeta_cat)
+            
         except dropbox.exceptions.ApiError as e:
             if "conflict" not in str(e):
-                print("ERROR al crear carpeta raíz en Dropbox:", e)
+                print("ERROR al crear carpeta categoría:", e)
                 raise e
-            print("La carpeta raíz ya existía en Dropbox")
-        if hasattr(usuario, "dropbox_folder_path"):
-            usuario.dropbox_folder_path = carpeta_usuario
-            db.session.commit()
-            print("Ruta raíz guardada en DB:", carpeta_usuario)
+            print("La carpeta categoría ya existía:", ruta_categoria)
+            
+        ruta_subcat = f"{ruta_categoria}/{subcategoria}"
+        try:
+            dbx.files_create_folder_v2(ruta_subcat)
+            print("Carpeta subcategoría creada:", ruta_subcat)
+            
+            # Guardar carpeta subcategoría en la base de datos
+            carpeta_subcat = Folder(
+                name=subcategoria,
+                user_id=getattr(usuario, "id", None),
+                dropbox_path=ruta_subcat,
+                es_publica=True
+            )
+            db.session.add(carpeta_subcat)
+            
+        except dropbox.exceptions.ApiError as e:
+            if "conflict" not in str(e):
+                print("ERROR al crear carpeta subcategoría:", e)
+                raise e
+            print("La carpeta subcategoría ya existía:", ruta_subcat)
 
-    # Crear categoría y subcategoría
-    ruta_categoria = f"{carpeta_usuario}/{categoria}"
-    try:
-        dbx.files_create_folder_v2(ruta_categoria)
-        print("Carpeta categoría creada:", ruta_categoria)
-        
-        # Guardar carpeta categoría en la base de datos
-        carpeta_cat = Folder(
-            name=categoria,
-            user_id=getattr(usuario, "id", None),
-            dropbox_path=ruta_categoria,
-            es_publica=True  # Por defecto las carpetas son públicas
-        )
-        db.session.add(carpeta_cat)
-        
-    except dropbox.exceptions.ApiError as e:
-        if "conflict" not in str(e):
-            print("ERROR al crear carpeta categoría:", e)
-            raise e
-        print("La carpeta categoría ya existía:", ruta_categoria)
-        
-    ruta_subcat = f"{ruta_categoria}/{subcategoria}"
-    try:
-        dbx.files_create_folder_v2(ruta_subcat)
-        print("Carpeta subcategoría creada:", ruta_subcat)
-        
-        # Guardar carpeta subcategoría en la base de datos
-        carpeta_subcat = Folder(
-            name=subcategoria,
-            user_id=getattr(usuario, "id", None),
-            dropbox_path=ruta_subcat,
-            es_publica=True  # Por defecto las carpetas son públicas
-        )
-        db.session.add(carpeta_subcat)
-        
-    except dropbox.exceptions.ApiError as e:
-        if "conflict" not in str(e):
-            print("ERROR al crear carpeta subcategoría:", e)
-            raise e
-        print("La carpeta subcategoría ya existía:", ruta_subcat)
+        # Generar nombre final del archivo
+        nombre_evidencia = categoria.upper().replace(" ", "_")
+        nombre_original = archivo.filename
+        ext = ""
+        if "." in nombre_original:
+            ext = "." + nombre_original.rsplit(".", 1)[1].lower()
 
-    # Subir archivo
-    dropbox_dest = f"{ruta_subcat}/{archivo.filename}"
-    try:
-        dbx.files_upload(archivo.read(), dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
-        print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
-    except Exception as e:
-        print("ERROR subiendo archivo a Dropbox:", e)
-        flash("Error al subir archivo a Dropbox.", "error")
-        return redirect(url_for("listar_dropbox.subir_archivo"))
-    
-    nombre_evidencia = categoria.upper().replace(" ", "_")
-    nombre_original = archivo.filename
-    ext = ""
-    if "." in nombre_original:
-        ext = "." + nombre_original.rsplit(".", 1)[1].lower()
-
-    # TITULAR (no es beneficiario)
-    if hasattr(usuario, "es_beneficiario") and not usuario.es_beneficiario:
-        nombre_titular = normaliza(usuario.nombre or usuario.email.split('@')[0])
-        nombre_final = f"{nombre_evidencia}_TITULAR_{nombre_titular}{ext}"
-
-    # BENEFICIARIO
-    elif hasattr(usuario, "es_beneficiario") and usuario.es_beneficiario:
-        nombre_ben = normaliza(usuario.nombre)
-        # Relación a titular (ajusta según tu modelo)
-        if hasattr(usuario, "titular") and usuario.titular:
-            nombre_titular = normaliza(usuario.titular.nombre)
+        # Determinar tipo de usuario y generar nombre
+        if isinstance(usuario, User) and not getattr(usuario, "es_beneficiario", False):
+            # TITULAR
+            nombre_titular = normaliza(usuario.nombre or usuario.email.split('@')[0])
+            nombre_final = f"{nombre_evidencia}_TITULAR_{nombre_titular}{ext}"
+        elif isinstance(usuario, Beneficiario):
+            # BENEFICIARIO
+            nombre_ben = normaliza(usuario.nombre)
+            if hasattr(usuario, "titular") and usuario.titular:
+                nombre_titular = normaliza(usuario.titular.nombre)
+            else:
+                nombre_titular = "SIN_TITULAR"
+            nombre_final = f"{nombre_evidencia}_BENEFICIARIO_{nombre_ben}_TITULAR_{nombre_titular}{ext}"
         else:
-            nombre_titular = "SIN_TITULAR"
-        nombre_final = f"{nombre_evidencia}_BENEFICIARIO_{nombre_ben}_TITULAR_{nombre_titular}{ext}"
-    else:
-        nombre_final = f"{nombre_evidencia}_SINROL_{normaliza(usuario.nombre or usuario.email.split('@')[0])}{ext}"
+            # Usuario genérico
+            nombre_final = f"{nombre_evidencia}_SINROL_{normaliza(usuario.nombre or usuario.email.split('@')[0])}{ext}"
 
-    print("DEBUG | Nombre final para guardar/subir:", nombre_final)
+        print("DEBUG | Nombre final para guardar/subir:", nombre_final)
 
-    # --- SUBE EL ARCHIVO ---
-    dropbox_dest = f"{ruta_subcat}/{nombre_final}"
-    dbx.files_upload(archivo.read(), dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
+        # Subir archivo con nombre final
+        dropbox_dest = f"{ruta_subcat}/{nombre_final}"
+        dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
+        print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
 
-    # Guardar en la base de datos
-    nuevo_archivo = Archivo(
-        nombre=archivo.filename,
-        categoria=categoria,
-        subcategoria=subcategoria,
-        dropbox_path=dropbox_dest,
-        usuario_id=getattr(usuario, "id", None)
-    )
-    db.session.add(nuevo_archivo)
-    db.session.commit()
-    print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
+        # Guardar en la base de datos
+        nuevo_archivo = Archivo(
+            nombre=archivo.filename,
+            categoria=categoria,
+            subcategoria=subcategoria,
+            dropbox_path=dropbox_dest,
+            usuario_id=getattr(usuario, "id", None)
+        )
+        db.session.add(nuevo_archivo)
+        db.session.commit()
+        print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
 
-    flash("Archivo subido y registrado para el usuario seleccionado.", "success")
-    return redirect(url_for("listar_dropbox.subir_archivo"))
+        flash("Archivo subido y registrado exitosamente.", "success")
+        return redirect(url_for("listar_dropbox.subir_archivo"))
+
+    except Exception as e:
+        print(f"ERROR general en subida de archivo: {e}")
+        db.session.rollback()
+        flash(f"Error al subir archivo: {str(e)}", "error")
+        return redirect(url_for("listar_dropbox.subir_archivo"))
 
   
   
@@ -613,3 +634,95 @@ def sincronizar_carpetas_dropbox():
     
     db.session.commit()
     print(f"Sincronización de carpetas completada: {nuevos} carpetas nuevas agregadas a la base de datos.")
+
+@bp.route("/subir_archivo_rapido", methods=["POST"])
+def subir_archivo_rapido():
+    """Endpoint para subir archivos directamente a una carpeta específica sin categorías"""
+    from app.models import User, Beneficiario, Archivo
+    import json
+
+    print("POST: Procesando subida rápida de archivo")
+    
+    # Obtener datos del formulario
+    usuario_id = request.form.get("usuario_id")
+    carpeta_destino = request.form.get("carpeta_destino")
+    archivo = request.files.get("archivo")
+    
+    print("usuario_id recibido:", usuario_id)
+    print("carpeta_destino recibida:", carpeta_destino)
+    print("Archivo recibido:", archivo.filename if archivo else None)
+
+    # Validar campos obligatorios
+    if not (usuario_id and carpeta_destino and archivo):
+        print("ERROR: Faltan campos obligatorios")
+        flash("Completa todos los campos obligatorios", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    # Validar y obtener usuario/beneficiario
+    usuario = None
+    try:
+        if usuario_id.startswith("user-"):
+            real_id = int(usuario_id[5:])
+            usuario = User.query.get(real_id)
+            print(f"Es titular (User), id extraído: {real_id}")
+        elif usuario_id.startswith("beneficiario-"):
+            real_id = int(usuario_id[13:])
+            usuario = Beneficiario.query.get(real_id)
+            print(f"Es beneficiario, id extraído: {real_id}")
+        else:
+            print(f"usuario_id inválido: '{usuario_id}' (no tiene prefijo válido)")
+            flash("Formato de usuario inválido. Debe seleccionar un usuario del formulario.", "error")
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    except (ValueError, IndexError) as e:
+        print(f"Error al procesar usuario_id: {e}")
+        flash("Error al procesar el usuario seleccionado", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    if not usuario:
+        print("ERROR: Usuario no encontrado o inválido")
+        flash("Usuario no encontrado en la base de datos", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    # Leer el archivo una sola vez
+    archivo_content = archivo.read()
+    archivo.seek(0)  # Resetear el puntero del archivo para futuras lecturas
+
+    try:
+        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        
+        # Verificar que la carpeta destino existe, si no, crearla
+        try:
+            dbx.files_get_metadata(carpeta_destino)
+            print(f"Carpeta destino ya existe: {carpeta_destino}")
+        except dropbox.exceptions.ApiError as e:
+            if "not_found" in str(e):
+                print(f"Creando carpeta destino: {carpeta_destino}")
+                dbx.files_create_folder_v2(carpeta_destino)
+            else:
+                raise e
+
+        # Subir archivo directamente a la carpeta destino
+        dropbox_dest = f"{carpeta_destino}/{archivo.filename}"
+        dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
+        print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
+
+        # Guardar en la base de datos con categoría y subcategoría genéricas
+        nuevo_archivo = Archivo(
+            nombre=archivo.filename,
+            categoria="Subida Rápida",  # Categoría genérica
+            subcategoria="Directo",     # Subcategoría genérica
+            dropbox_path=dropbox_dest,
+            usuario_id=getattr(usuario, "id", None)
+        )
+        db.session.add(nuevo_archivo)
+        db.session.commit()
+        print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
+
+        flash("Archivo subido exitosamente a la carpeta seleccionada.", "success")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    except Exception as e:
+        print(f"ERROR general en subida rápida de archivo: {e}")
+        db.session.rollback()
+        flash(f"Error al subir archivo: {str(e)}", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
