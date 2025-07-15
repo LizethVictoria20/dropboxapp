@@ -116,18 +116,14 @@ def carpetas_dropbox():
 
         path = user.dropbox_folder_path
         estructura = obtener_estructura_dropbox(path=path)
+        
+        # Filtrar la estructura según los permisos del usuario
+        if current_user.rol != "admin":
+            # Para clientes, solo mostrar carpetas que estén en folders_por_ruta
+            rutas_visibles = set(folders_por_ruta.keys())
+            estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user.email)
+        
         estructuras_usuarios[user.id] = estructura
-
-    # En tu función carpetas_dropbox() antes de render_template:
-
-    if current_user.rol == "admin":
-        usuarios = User.query.all()
-        folders = Folder.query.all()
-    else:
-        usuarios = [current_user]
-        # ¡OJO! Aquí trae TODAS las carpetas que tiene ese usuario, tanto públicas como privadas
-        folders = Folder.query.filter_by(user_id=current_user.id).all()
-    folders_por_ruta = {f.dropbox_path: f for f in folders}
 
    
     return render_template(
@@ -148,14 +144,30 @@ def crear_carpeta():
     if not nombre:
         flash("El nombre de la carpeta es obligatorio.", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
     # Construir la ruta en Dropbox
     ruta = padre.rstrip("/") + "/" + nombre if padre else "/" + nombre
+    
     try:
         dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
         dbx.files_create_folder_v2(ruta)
+        
+        # Guardar carpeta en la base de datos
+        nueva_carpeta = Folder(
+            name=nombre,
+            user_id=current_user.id,
+            dropbox_path=ruta,
+            es_publica=True  # Por defecto las carpetas son públicas
+        )
+        db.session.add(nueva_carpeta)
+        db.session.commit()
+        
         flash(f"Carpeta '{ruta}' creada correctamente.", "success")
     except dropbox.exceptions.ApiError as e:
         flash(f"Error creando carpeta: {e}", "error")
+    except Exception as e:
+        flash(f"Error guardando carpeta en base de datos: {e}", "error")
+        
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
 def normaliza(nombre):
@@ -241,15 +253,36 @@ def subir_archivo():
     try:
         dbx.files_create_folder_v2(ruta_categoria)
         print("Carpeta categoría creada:", ruta_categoria)
+        
+        # Guardar carpeta categoría en la base de datos
+        carpeta_cat = Folder(
+            name=categoria,
+            user_id=getattr(usuario, "id", None),
+            dropbox_path=ruta_categoria,
+            es_publica=True  # Por defecto las carpetas son públicas
+        )
+        db.session.add(carpeta_cat)
+        
     except dropbox.exceptions.ApiError as e:
         if "conflict" not in str(e):
             print("ERROR al crear carpeta categoría:", e)
             raise e
         print("La carpeta categoría ya existía:", ruta_categoria)
+        
     ruta_subcat = f"{ruta_categoria}/{subcategoria}"
     try:
         dbx.files_create_folder_v2(ruta_subcat)
         print("Carpeta subcategoría creada:", ruta_subcat)
+        
+        # Guardar carpeta subcategoría en la base de datos
+        carpeta_subcat = Folder(
+            name=subcategoria,
+            user_id=getattr(usuario, "id", None),
+            dropbox_path=ruta_subcat,
+            es_publica=True  # Por defecto las carpetas son públicas
+        )
+        db.session.add(carpeta_subcat)
+        
     except dropbox.exceptions.ApiError as e:
         if "conflict" not in str(e):
             print("ERROR al crear carpeta subcategoría:", e)
@@ -530,5 +563,53 @@ def sincronizar_dropbox_a_bd():
 @bp.route("/sincronizar_dropbox")
 def sincronizar_dropbox():
     sincronizar_dropbox_a_bd()
+    sincronizar_carpetas_dropbox()
     flash("¡Sincronización completada!", "success")
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+def sincronizar_carpetas_dropbox():
+    """Sincroniza carpetas de Dropbox que no están en la base de datos"""
+    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    
+    # Obtener todas las carpetas que ya están en la base de datos
+    carpetas_existentes = set([f.dropbox_path for f in Folder.query.all()])
+    
+    # Obtener todos los usuarios
+    usuarios = User.query.all()
+    usuarios_por_email = {u.email: u for u in usuarios}
+    
+    nuevos = 0
+    
+    for usuario in usuarios:
+        if not usuario.dropbox_folder_path:
+            continue
+            
+        try:
+            # Listar carpetas del usuario en Dropbox
+            res = dbx.files_list_folder(usuario.dropbox_folder_path, recursive=True)
+            
+            for entry in res.entries:
+                if isinstance(entry, dropbox.files.FolderMetadata):
+                    dropbox_path = entry.path_display
+                    
+                    # Si la carpeta no está en la base de datos, agregarla
+                    if dropbox_path not in carpetas_existentes:
+                        # Extraer nombre de la carpeta del path
+                        nombre = entry.name
+                        
+                        nueva_carpeta = Folder(
+                            name=nombre,
+                            user_id=usuario.id,
+                            dropbox_path=dropbox_path,
+                            es_publica=True  # Por defecto las carpetas existentes son públicas
+                        )
+                        db.session.add(nueva_carpeta)
+                        nuevos += 1
+                        print(f"Nueva carpeta agregada: {dropbox_path}")
+                        
+        except dropbox.exceptions.ApiError as e:
+            print(f"Error accediendo a carpeta de {usuario.email}: {e}")
+            continue
+    
+    db.session.commit()
+    print(f"Sincronización de carpetas completada: {nuevos} carpetas nuevas agregadas a la base de datos.")

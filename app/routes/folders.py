@@ -15,7 +15,12 @@ def create_folder():
 
     path = f"{user.dropbox_folder_path}/{name}"
     create_dropbox_folder(path)
-    folder = Folder(name=name, user_id=user_id, dropbox_path=path)
+    folder = Folder(
+        name=name, 
+        user_id=user_id, 
+        dropbox_path=path,
+        es_publica=True  # Por defecto las carpetas son públicas
+    )
     db.session.add(folder)
     db.session.commit()
     return jsonify({'message': 'Carpeta creada', 'path': path}), 201

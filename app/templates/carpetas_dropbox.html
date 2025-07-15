@@ -39,10 +39,8 @@
 
   {# Mostrar subcarpetas #}
   {% for carpeta, data in tree._subcarpetas.items() %}
-    {% set ruta_actual = (parent ~ '/' ~ carpeta).replace('//', '/') %}
-    {% set folder_db = folders_por_ruta.get(ruta_actual) %}
-    {# --- Solo mostrar si es admin o si la carpeta es pública --- #}
-    {% if usuario_actual.rol == 'admin' or (folder_db and folder_db.es_publica) %}
+    {# --- Para clientes, la estructura ya está filtrada, mostrar todo --- #}
+    {% if usuario_actual.rol == 'admin' or usuario_actual.rol == 'cliente' %}
       <div class="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
         <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-blue-50">
           <div class="flex items-center justify-between">
