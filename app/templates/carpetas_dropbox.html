@@ -3,7 +3,7 @@
 
 {% macro render_tree(tree, parent="", usuario_id="") %}
 <div class="ml-6 space-y-2">
-  {# Mostrar archivos del nivel actual #}
+  {# Archivos de la carpeta actual #}
   {% if tree._archivos %}
     {% for archivo in tree._archivos %}
       <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
@@ -18,7 +18,7 @@
         <div class="flex items-center space-x-2">
           <button type="button"
             onclick="openMoveModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
-            class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-100 rounded-md hover:bg-amber-200 transition-colors duration-200">
+            class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-100 rounded-md hover:bg-amber-200">
             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
             </svg>
@@ -26,7 +26,7 @@
           </button>
           <button type="button"
             onclick="openRenameModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
-            class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors duration-200">
+            class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200">
             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
             </svg>
@@ -39,44 +39,47 @@
 
   {# Mostrar subcarpetas #}
   {% for carpeta, data in tree._subcarpetas.items() %}
-    <div class="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-      <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-blue-50">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center cursor-pointer" onclick="toggleFolder('{{ parent ~ '/' ~ carpeta }}')">
-            <div id="icon-{{ parent ~ '/' ~ carpeta }}" class="w-6 h-6 mr-3 transition-transform duration-200 flex items-center justify-center">
-              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-            </div>
-            <div class="flex items-center space-x-3">
-              <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+    {% set ruta_actual = (parent ~ '/' ~ carpeta).replace('//', '/') %}
+    {% set folder_db = folders_por_ruta.get(ruta_actual) %}
+    {# --- Solo mostrar si es admin o si la carpeta es pública --- #}
+    {% if usuario_actual.rol == 'admin' or (folder_db and folder_db.es_publica) %}
+      <div class="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+        <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-blue-50">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center cursor-pointer" onclick="toggleFolder('{{ parent ~ '/' ~ carpeta }}')">
+              <div id="icon-{{ parent ~ '/' ~ carpeta }}" class="w-6 h-6 mr-3 transition-transform duration-200 flex items-center justify-center">
                 <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
               </div>
-              <span class="font-semibold text-indigo-900">{{ carpeta }}</span>
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                  </svg>
+                </div>
+                <span class="font-semibold text-indigo-900">{{ carpeta }}</span>
+              </div>
             </div>
+            <form action="{{ url_for('listar_dropbox.crear_carpeta') }}" method="post" class="flex items-center space-x-2">
+              <input type="hidden" name="padre" value="{{ parent ~ '/' ~ carpeta }}">
+              <input type="text" name="nombre" placeholder="Nueva subcarpeta" 
+                    class="border border-gray-300 px-3 py-1.5 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+              <button type="submit" 
+                      class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors duration-200">
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                Crear
+              </button>
+            </form>
           </div>
-          
-          <form action="{{ url_for('listar_dropbox.crear_carpeta') }}" method="post" class="flex items-center space-x-2">
-            <input type="hidden" name="padre" value="{{ parent ~ '/' ~ carpeta }}">
-            <input type="text" name="nombre" placeholder="Nueva subcarpeta" 
-                   class="border border-gray-300 px-3 py-1.5 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
-            <button type="submit" 
-                    class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors duration-200">
-              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-              </svg>
-              Crear
-            </button>
-          </form>
+        </div>
+        <div id="folder-{{ parent ~ '/' ~ carpeta }}" class="hidden p-4">
+          {{ render_tree(data, parent ~ '/' ~ carpeta, usuario_id) }}
         </div>
       </div>
-      
-      <div id="folder-{{ parent ~ '/' ~ carpeta }}" class="hidden p-4">
-        {{ render_tree(data, parent ~ '/' ~ carpeta, usuario_id) }}
-      </div>
-    </div>
+    {% endif %}
   {% endfor %}
 </div>
 {% endmacro %}

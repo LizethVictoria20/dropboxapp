@@ -94,11 +94,15 @@ def carpetas_dropbox():
     # Determina qué usuarios cargar
     if current_user.rol == "admin":
         usuarios = User.query.all()
+        # Admin ve todas las carpetas
+        folders = Folder.query.all()
     else:
-        # Solo el usuario actual (cliente ve solo sus carpetas)
+        # Solo el usuario actual (cliente ve solo sus carpetas públicas)
         usuarios = [current_user]
+        folders = Folder.query.filter_by(user_id=current_user.id, es_publica=True).all()
 
     usuarios_dict = {u.id: u for u in usuarios}
+    folders_por_ruta = {f.dropbox_path: f for f in folders}
 
     for user in usuarios:
         if not user.dropbox_folder_path:
@@ -114,12 +118,25 @@ def carpetas_dropbox():
         estructura = obtener_estructura_dropbox(path=path)
         estructuras_usuarios[user.id] = estructura
 
+    # En tu función carpetas_dropbox() antes de render_template:
+
+    if current_user.rol == "admin":
+        usuarios = User.query.all()
+        folders = Folder.query.all()
+    else:
+        usuarios = [current_user]
+        # ¡OJO! Aquí trae TODAS las carpetas que tiene ese usuario, tanto públicas como privadas
+        folders = Folder.query.filter_by(user_id=current_user.id).all()
+    folders_por_ruta = {f.dropbox_path: f for f in folders}
+
+   
     return render_template(
         "carpetas_dropbox.html",
         estructuras_usuarios=estructuras_usuarios,
         usuarios=usuarios_dict,
         usuario_actual=current_user,
-        estructuras_usuarios_json=json.dumps(estructuras_usuarios)
+        estructuras_usuarios_json=json.dumps(estructuras_usuarios),
+        folders_por_ruta=folders_por_ruta,
     )
 
 
