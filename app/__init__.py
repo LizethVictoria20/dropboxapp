@@ -28,7 +28,8 @@ def create_app():
     from .routes.users import bp as users_bp
     from .routes.folders import bp as folders_bp
     from .routes.web_register import bp as web_register_bp
-    from .routes.listar_dropbox import bp as listar_dropbox_bp,sincronizar_dropbox_a_bd
+    from .routes.listar_dropbox import bp as listar_dropbox_bp, sincronizar_dropbox_a_bd
+    from .routes.usuarios import bp as usuarios_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
@@ -36,5 +37,6 @@ def create_app():
     app.register_blueprint(web_register_bp)
     app.register_blueprint(listar_dropbox_bp)
     sincronizar_dropbox_a_bd
+    app.register_blueprint(usuarios_bp)
 
     return app

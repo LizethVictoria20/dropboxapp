@@ -1,0 +1,46 @@
+{% import "carpetas_dropbox.html" as macros with context %}
+{{ macros.render_tree(estructura, '', usuario.id, usuario_actual, folders_por_ruta) }}
+<div class="ml-6 space-y-2">
+  {% if tree._archivos %}
+    {% for archivo in tree._archivos %}
+      <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+            <svg class="w-4 h-4 text-blue-600" ... ></svg>
+          </div>
+          <span class="text-gray-700 font-medium">{{ archivo }}</span>
+        </div>
+        <!-- ... tus botones aquí ... -->
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% for carpeta, data in tree._subcarpetas.items() %}
+    {% set ruta_actual = (parent ~ '/' ~ carpeta).replace('//', '/') %}
+    {% set folder_db = folders_por_ruta[ruta_actual] if folders_por_ruta and ruta_actual in folders_por_ruta else None %}
+    {% if usuario_actual.rol == 'admin' or (folder_db and folder_db.es_publica) %}
+      <div class="border ...">
+        <div class="p-4 ...">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center cursor-pointer" onclick="toggleFolder('{{ parent ~ '/' ~ carpeta }}')">
+              <div id="icon-{{ parent ~ '/' ~ carpeta }}" ...>
+                <svg ...></svg>
+              </div>
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-indigo-100 ...">
+                  <svg ...></svg>
+                </div>
+                <span class="font-semibold text-indigo-900">{{ carpeta }}</span>
+              </div>
+            </div>
+            <!-- ... tu form de crear subcarpeta y subir archivo ... -->
+          </div>
+        </div>
+        <div id="folder-{{ parent ~ '/' ~ carpeta }}" class="hidden p-4">
+          {{ render_tree(data, parent ~ '/' ~ carpeta, usuario_id, usuario_actual, folders_por_ruta) }}
+        </div>
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endmacro %}

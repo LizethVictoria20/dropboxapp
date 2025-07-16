@@ -761,3 +761,36 @@ def subir_archivo_rapido():
         db.session.rollback()
         flash(f"Error al subir archivo: {str(e)}", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+@bp.route("/usuario/<int:usuario_id>/carpetas")
+@login_required
+def ver_usuario_carpetas(usuario_id):
+    usuario = User.query.get_or_404(usuario_id)
+    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+
+    # Obtener solo las carpetas y archivos de este usuario
+    path = usuario.dropbox_folder_path or f"/{usuario.email}"
+    estructura = obtener_estructura_dropbox(path=path)
+
+    # Si el usuario NO es admin, solo muestra públicas
+    if current_user.rol != "admin" and current_user.id != usuario.id:
+        # Si otro cliente intenta ver, no permitirlo
+        flash("No tienes permiso para ver estas carpetas.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    elif current_user.rol == "cliente":
+        # Solo mostrar públicas propias (opcional)
+        folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
+        rutas_visibles = set(f.dropbox_path for f in folders)
+        estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, usuario.email)
+
+    # Carpetas de este usuario
+    folders = Folder.query.filter_by(user_id=usuario.id).all()
+    folders_por_ruta = {f.dropbox_path: f for f in folders}
+
+    return render_template(
+        "usuario_carpetas.html",
+        usuario=usuario,
+        estructura=estructura,
+        folders_por_ruta=folders_por_ruta,
+        usuario_actual=current_user
+    )

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Lista de Usuarios{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-8">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold">Lista de Usuarios</h1>
+    <p class="text-gray-500 mt-1">Gestiona los usuarios del sistema</p>
+  </div>
+
+  <form method="get" action="{{ url_for('usuarios.lista_usuarios') }}" class="mb-6">
+    <div class="flex items-center gap-4">
+      <input type="text" name="q" value="{{ q }}" placeholder="Nombre, email o rol"
+             class="flex-1 bg-white border border-gray-200 px-5 py-3 rounded-xl text-base focus:ring-2 focus:ring-blue-200">
+      <button type="submit" class="hidden"></button>
+      <a href="{{ url_for('usuarios.lista_usuarios', rol=rol) }}"
+         class="ml-auto bg-blue-100 text-blue-700 rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition">+ Agregar usuario</a>
+    </div>
+  </form>
+
+  <div class="bg-white rounded-2xl shadow-md border border-gray-100">
+    <div class="px-6 py-3 border-b bg-blue-50 flex items-center rounded-t-2xl">
+      <div class="flex items-center gap-2 text-blue-700 font-semibold">
+        <i class="fas fa-users"></i> Usuarios {{ rol|capitalize }}s
+      </div>
+      <span class="ml-auto text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-full">{{ pagination.total }} clientes</span>
+    </div>
+    <table class="min-w-full text-sm text-gray-700">
+      <thead>
+        <tr class="border-b text-gray-500">
+          <th class="py-3 px-6 text-left">NOMBRE</th>
+          <th class="py-3 px-2 text-left">EMAIL</th>
+          <th class="py-3 px-2 text-left">CARPETAS</th>
+          <th class="py-3 px-2 text-left">CREACIÓN</th>
+          <th class="py-3 px-2 text-right">ACCIONES</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr 
+          class="border-b last:border-0 hover:bg-blue-50 cursor-pointer transition"
+          onclick="window.location.href='{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}'"
+          style="transition: background 0.2s;"
+          title="Ver carpetas y archivos de {{ u.nombre or u.email }}"
+        >
+          <td class="flex items-center gap-3 py-3 px-6">
+            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-bold text-lg">
+              {{ (u.nombre or u.email)[0]|upper }}
+            </span>
+            <div>
+              <div class="font-semibold text-gray-900">{{ u.nombre or u.email.split('@')[0] }}</div>
+              <div class="text-xs text-gray-500">@{{ u.email.split('@')[0] }}</div>
+            </div>
+          </td>
+          <td class="px-2">{{ u.email }}</td>
+          <td class="px-2">
+            {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %}
+            {% if ncarpetas > 0 %}
+              <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-xs font-semibold">
+                {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
+              </span>
+            {% else %}
+              <span class="bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs">Sin carpetas</span>
+            {% endif %}
+          </td>
+          <td class="px-2">
+            {{ u.fecha_creacion.strftime('%Y-%m-%d') if u.fecha_creacion else '' }}
+          </td>
+          <td class="px-2 text-right">
+            <button class="p-2 rounded hover:bg-gray-100 group relative">
+              <i class="fas fa-ellipsis-v text-gray-400"></i>
+              <!-- Menú de acciones JS (opcional) -->
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="flex items-center justify-between px-6 py-4 border-t bg-gray-50 rounded-b-2xl">
+      <div class="text-sm text-gray-500">
+        Mostrando {{ pagination.start_index }} a {{ pagination.end_index }} de {{ pagination.total }} clientes
+      </div>
+      <div>
+        <nav class="inline-flex shadow-sm">
+          {% if pagination.has_prev %}
+            <a href="{{ url_for('usuarios.lista_usuarios', rol=rol, q=q, page=pagination.prev_num) }}" class="px-3 py-2 rounded-l-lg bg-white border border-gray-200 hover:bg-gray-100">&lt;</a>
+          {% else %}
+            <span class="px-3 py-2 rounded-l-lg bg-gray-100 border border-gray-200 text-gray-400">&lt;</span>
+          {% endif %}
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+            {% if p %}
+              <a href="{{ url_for('usuarios.lista_usuarios', rol=rol, q=q, page=p) }}"
+                class="px-3 py-2 border-t border-b border-gray-200 {{ 'bg-blue-100 text-blue-700 font-bold' if pagination.page == p else 'bg-white hover:bg-gray-100' }}">{{ p }}</a>
+            {% else %}
+              <span class="px-3 py-2 border-t border-b border-gray-200 bg-white">…</span>
+            {% endif %}
+          {% endfor %}
+          {% if pagination.has_next %}
+            <a href="{{ url_for('usuarios.lista_usuarios', rol=rol, q=q, page=pagination.next_num) }}" class="px-3 py-2 rounded-r-lg bg-white border border-gray-200 hover:bg-gray-100">&gt;</a>
+          {% else %}
+            <span class="px-3 py-2 rounded-r-lg bg-gray-100 border border-gray-200 text-gray-400">&gt;</span>
+          {% endif %}
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
