@@ -1,46 +1,104 @@
-{% import "carpetas_dropbox.html" as macros with context %}
-{{ macros.render_tree(estructura, '', usuario.id, usuario_actual, folders_por_ruta) }}
-<div class="ml-6 space-y-2">
-  {% if tree._archivos %}
-    {% for archivo in tree._archivos %}
-      <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-        <div class="flex items-center space-x-3">
-          <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-            <svg class="w-4 h-4 text-blue-600" ... ></svg>
-          </div>
-          <span class="text-gray-700 font-medium">{{ archivo }}</span>
-        </div>
-        <!-- ... tus botones aquí ... -->
-      </div>
-    {% endfor %}
-  {% endif %}
+{% extends "base.html" %}
+{% block title %}Carpetas de {{ usuario.nombre or usuario.email }}{% endblock %}
 
-  {% for carpeta, data in tree._subcarpetas.items() %}
-    {% set ruta_actual = (parent ~ '/' ~ carpeta).replace('//', '/') %}
-    {% set folder_db = folders_por_ruta[ruta_actual] if folders_por_ruta and ruta_actual in folders_por_ruta else None %}
-    {% if usuario_actual.rol == 'admin' or (folder_db and folder_db.es_publica) %}
-      <div class="border ...">
-        <div class="p-4 ...">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center cursor-pointer" onclick="toggleFolder('{{ parent ~ '/' ~ carpeta }}')">
-              <div id="icon-{{ parent ~ '/' ~ carpeta }}" ...>
-                <svg ...></svg>
-              </div>
-              <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 bg-indigo-100 ...">
-                  <svg ...></svg>
-                </div>
-                <span class="font-semibold text-indigo-900">{{ carpeta }}</span>
-              </div>
-            </div>
-            <!-- ... tu form de crear subcarpeta y subir archivo ... -->
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-8">
+  <!-- Header con información del usuario -->
+  <div class="mb-6">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <a href="{{ url_for('usuarios.lista_usuarios') }}" 
+           class="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Volver a usuarios
+        </a>
+        
+        <div class="flex items-center space-x-3">
+          <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+            <span class="text-indigo-600 font-semibold text-lg">
+              {{ (usuario.nombre or usuario.email)[0].upper() }}
+            </span>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">
+              {{ usuario.nombre or usuario.email.split('@')[0] }}
+            </h1>
+            <p class="text-gray-500">{{ usuario.email }}</p>
           </div>
         </div>
-        <div id="folder-{{ parent ~ '/' ~ carpeta }}" class="hidden p-4">
-          {{ render_tree(data, parent ~ '/' ~ carpeta, usuario_id, usuario_actual, folders_por_ruta) }}
+      </div>
+      
+      <div class="text-sm text-gray-500">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          {{ usuario.rol|capitalize }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor de carpetas -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div class="bg-gradient-to-r from-slate-50 to-gray-50 px-6 py-4 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <h2 class="text-lg font-semibold text-gray-900">Carpetas y Archivos</h2>
+        </div>
+        <div class="text-sm text-gray-500">
+          {% if estructura._subcarpetas %}
+            {{ estructura._subcarpetas|length }} carpeta(s)
+          {% else %}
+            Sin carpetas
+          {% endif %}
         </div>
       </div>
-    {% endif %}
-  {% endfor %}
+    </div>
+
+    <div class="p-6">
+      {% if estructura._subcarpetas or estructura._archivos %}
+        {% import "tree_macros.html" as macros with context %}
+        {{ macros.render_tree(estructura, '', usuario.id, usuario_actual, folders_por_ruta) }}
+      {% else %}
+        <div class="text-center py-12">
+          <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No hay carpetas</h3>
+          <p class="text-gray-500 mb-4">Este usuario aún no tiene carpetas creadas.</p>
+          {% if usuario_actual.rol == 'admin' %}
+          <p class="text-sm text-gray-400">
+            Las carpetas se crearán automáticamente cuando el usuario suba archivos.
+          </p>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
-{% endmacro %}
+
+<script>
+function toggleFolder(folderId) {
+    const div = document.getElementById('folder-' + folderId);
+    const icon = document.getElementById('icon-' + folderId);
+    if (!div) return;
+
+    if (div.classList.contains('hidden')) {
+        div.classList.remove('hidden');
+        if (icon) {
+            icon.style.transform = "rotate(90deg)";
+        }
+    } else {
+        div.classList.add('hidden');
+        if (icon) {
+            icon.style.transform = "rotate(0deg)";
+        }
+    }
+}
+</script>
+{% endblock %}
