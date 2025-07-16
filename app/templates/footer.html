@@ -1,0 +1,221 @@
+{# templates/components/footer.html #}
+<footer class="bg-primary-dark text-white pt-8 pb-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <!-- Columna 1: Información de la empresa -->
+      <div class="md:col-span-1">
+        <div class="flex items-center mb-4">
+          <img
+            src="{{ url_for('static', filename='image/LogoFooter.png') }}"
+            alt="Logo"
+            class="h-8 w-auto mr-2"
+            onerror="this.onerror=null; this.src=''; this.alt='ImportSystem'"
+          />
+        </div>
+        <p class="text-sm text-white/80 mb-4">
+          Comparta sus documentos y archivos con nuestro equipo por medio de
+          esta plataforma.
+        </p>
+        <div class="flex space-x-4">
+          <a
+            target="_blank"
+            href="https://www.youtube.com/@inmigracionok"
+            class="text-white/80 hover:text-white transition-colors duration-300"
+            target="_blank"
+          >
+            <i class="fab fa-youtube"></i>
+          </a>
+          <a
+            target="_blank"
+            href="https://web.facebook.com/inmigracionOK?mibextid=wwXIfr&rdid=PmwOIuNtYXfBByRR&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F18mjq4r3Uj%2F%3Fmibextid%3DwwXIfr&_rdc=1&_rdr"
+            class="text-white/80 hover:text-white transition-colors duration-300"
+            target="_blank"
+          >
+            <i class="fab fa-facebook"></i>
+          </a>
+          <a
+            target="_blank"
+            href="https://www.instagram.com/inmigracionok/"
+            class="text-white/80 hover:text-white transition-colors duration-300"
+            target="_blank"
+          >
+            <i class="fab fa-instagram"></i>
+          </a>
+          <a
+            target="_blank"
+            href="https://www.tiktok.com/@inmigracionokabogados?_t=ZS-8tq6k7AsXOk&_r=1"
+            class="text-white/80 hover:text-white transition-colors duration-300"
+            target="_blank"
+          >
+            <i class="fab fa-tiktok"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Columna 2: Enlaces rápidos -->
+      <div class="md:col-span-1">
+        <h3 class="text-base font-semibold mb-4">Enlaces Rápidos</h3>
+        <ul class="space-y-2 text-sm">
+          <li>
+            <a
+              target="_blank"
+              href="https://www.inmigracionokabogados.com"
+              class="text-white/80 hover:text-white transition-colors duration-200 flex items-center"
+            >
+              <i
+                class="fas fa-chevron-right text-xs mr-2 text-accent-light"
+              ></i>
+              Inicio
+            </a>
+          </li>
+          <li>
+            <a
+              target="_blank"
+              href="https://www.inmigracionokabogados.com/servicios"
+              class="text-white/80 hover:text-white transition-colors duration-200 flex items-center"
+            >
+              <i
+                class="fas fa-chevron-right text-xs mr-2 text-accent-light"
+              ></i>
+              Nuestros Servicios
+            </a>
+          </li>
+          <li>
+            <a
+              target="_blank"
+              href="https://www.inmigracionokabogados.com/contacto"
+              class="text-white/80 hover:text-white transition-colors duration-200 flex items-center"
+            >
+              <i
+                class="fas fa-chevron-right text-xs mr-2 text-accent-light"
+              ></i>
+              Contacto
+            </a>
+          </li>
+          <li>
+            <a
+              target="_blank"
+              href="https://www.inmigracionokabogados.com/preguntasf"
+              class="text-white/80 hover:text-white transition-colors duration-200 flex items-center"
+            >
+              <i
+                class="fas fa-chevron-right text-xs mr-2 text-accent-light"
+              ></i>
+              Preguntas Frecuentes
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Columna 3: Centro de Ayuda -->
+      <div class="md:col-span-1">
+        <h3 class="text-base font-semibold mb-4">Centro de Ayuda</h3>
+        <ul class="space-y-2 text-sm">
+          <li>
+            <a
+              target="_blank"
+              href="https://www.inmigracionokabogados.com/blog"
+              class="text-white/80 hover:text-white transition-colors duration-200 flex items-center"
+            >
+              <i class="fas fa-play-circle text-accent-light mr-2"></i>
+              Blog
+            </a>
+          </li>
+          <li>
+            <a
+              target="_blank"
+              href="https://api.whatsapp.com/send?phone=19087583931&text=Hola%2C%20estoy%20en%20el%%2020sistema%20de%20carga%20de%20documentos%20de%20Inmigraci%C3%B3n%20OK%2%200Abogados%20y%20necesito%20ayuda"
+              class="text-white/80 hover:text-white transition-colors duration-200 flex items-center"
+            >
+              <i class="fas fa-headset text-accent-light mr-2"></i>
+              Soporte Técnico
+            </a>
+          </li>
+          <li>
+            <a
+              target="_blank"
+              href="https://api.whatsapp.com/send?phone=19087583931&text=Hola%2C%20estoy%20en%20el%%2020sistema%20de%20carga%20de%20documentos%20de%20Inmigraci%C3%B3n%20OK%2%200Abogados%20y%20necesito%20ayuda"
+              class="text-white/80 hover:text-white transition-colors duration-200 flex items-center"
+            >
+              <i class="fas fa-exclamation-circle text-accent-light mr-2"></i>
+              Reportar un Problema
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Columna 4: Contacto e información legal -->
+      <div class="md:col-span-1">
+        <h3 class="text-base font-semibold mb-4">Contacto</h3>
+        <ul class="space-y-3 text-sm">
+          <li class="flex items-start">
+            <i class="fas fa-map-marker-alt text-accent-light mt-1 mr-2"></i>
+            <span class="text-white/80">
+              425 Elmora Ave, Unidad 1, Elizabeth, NJ 07208.
+            </span>
+          </li>
+          <li class="flex items-center">
+            <i class="fas fa-envelope text-accent-light mr-2"></i>
+            <a
+              target="_blank"
+              href=""
+              class="text-white/80 hover:text-white transition-colors duration-200"
+            >
+              info@inmigracionok.esq
+            </a>
+          </li>
+          <li class="flex items-center">
+            <i class="fas fa-phone text-accent-light mr-2"></i>
+            <a
+              target="_blank"
+              href=""
+              class="text-white/80 hover:text-white transition-colors duration-200"
+            >
+              +1 (908) 838-0182
+            </a>
+          </li>
+          <li class="flex items-start">
+            <i class="fas fa-clock text-accent-light mt-1 mr-2"></i>
+            <span class="text-white/80">
+              8:00 am a 8:00 pm Hora del Este -(ET)
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Separador -->
+    <hr class="border-white/10 my-6" />
+
+    <!-- Pie inferior con políticas y copyright -->
+    <div class="flex flex-col md:flex-row justify-between items-center text-sm">
+      <div class="mb-4 md:mb-0 text-white/60">
+        <p>
+          &copy; {{ now.year if now else config.CURRENT_YEAR|default('2025') }}
+          {{ config.COMPANY_NAME|default('InmigracionOK') }}. Todos los derechos
+          reservados.
+        </p>
+      </div>
+      <div class="flex flex-wrap justify-center gap-4">
+        <a
+          target="_blank"
+          href="https://www.inmigracionokabogados.com/politica-tratamiento-datos"
+          class="text-white/60 hover:text-white transition-colors duration-200"
+          >Términos de Servicio</a
+        >
+        <a
+          target="_blank"
+          href="https://api.whatsapp.com/send?phone=19087583931&text=Hola%2C%20estoy%20en%20el%%2020sistema%20de%20carga%20de%20documentos%20de%20Inmigraci%C3%B3n%20OK%2%200Abogados%20y%20necesito%20ayuda"
+          class="text-white/60 hover:text-white transition-colors duration-200"
+          >Política de Privacidad</a
+        >
+        <a
+          target="_blank"
+          href="https://www.inmigracionokabogados.com/politica-tratamiento-datos"
+          class="text-white/60 hover:text-white transition-colors duration-200"
+          >Tratamiento de Datos</a
+        >
+      </div>
+    </div>
+  </div>
+</footer>

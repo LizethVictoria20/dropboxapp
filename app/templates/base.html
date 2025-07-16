@@ -1,23 +1,512 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <title>My Dropbox App</title>
-  <link href="{{ url_for('static', filename='css/tailwind.css') }}" rel="stylesheet">
-</head>
-<body class="bg-gray-100 text-gray-900">
-  <div class="container mx-auto mt-10">
-    <nav class="bg-blue-100 p-4 mb-8 rounded flex space-x-6 justify-center shadow">
-      <a href="{{ url_for('listar_dropbox.subir_archivo') }}"
-        class="text-blue-800 font-semibold hover:text-blue-600 transition">Subir archivo</a>
-      <a href="{{ url_for('listar_dropbox.carpetas_dropbox') }}"
-        class="text-blue-800 font-semibold hover:text-blue-600 transition">Ver carpetas</a>
-        <a href="{{ url_for('users.crear_beneficiario') }}"
-          class="text-blue-800 font-semibold hover:text-blue-600 transition">
-          Crear beneficiario
-        </a>
-    </nav>
-    {% block content %}{% endblock %}
-  </div>
-</body>
+<html lang="es" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    {% if csrf_token %}
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    {% endif %}
+    <title>{% block title %}Inmigración OK{% endblock %}</title>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                light: "#0095c7",
+                DEFAULT: "#0076a8",
+                dark: "#005685",
+              },
+              accent: {
+                light: "#00a8d4",
+                DEFAULT: "#0088b0",
+                dark: "#00678e",
+              },
+              surface: {
+                light: "#FFFFFF",
+                DEFAULT: "#F0F7FC",
+                dark: "#D9E9F2",
+              },
+            },
+            fontFamily: {
+              sans: ["Montserrat", "sans-serif"],
+              montserrat: ["Montserrat", "sans-serif"],
+              opensans: ["Open Sans", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        font-family: "Montserrat", sans-serif;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      #page-container {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      main {
+        flex: 1 0 auto;
+      }
+
+      footer {
+        flex-shrink: 0;
+      }
+    </style>
+    {% block styles %}{% endblock %}
+  </head>
+  <body class="bg-surface">
+    <div id="page-container">
+      <!-- Header -->
+      <header class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex h-16 items-center justify-between">
+            <!-- Logo y Navegación -->
+            <div class="flex items-center space-x-8">
+              <!-- Logo -->
+              <div class="flex items-center space-x-3">
+                <div class="h-[10rem] rounded-lg p-1">
+                  <img
+                    src="{{ url_for('static', filename='image/LogoText.png') }}"
+                    alt="Inmigración OK Abogados"
+                    class="h-full object-contain"
+                  />
+                </div>
+              </div>
+
+              <!-- Navegación Principal -->
+              <nav class="hidden md:flex items-center space-x-6">
+                {% set user_roles = [] %} {% if current_user.is_authenticated %}
+                {% for r in current_user.roles %} {% set _ =
+                user_roles.append(r.slug) %} {% endfor %} {% endif %} {% if
+                'superadmin' in user_roles %}
+                <!-- Enlaces exclusivos para SUPERADMIN -->
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'admin.dashboard' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Dashboard
+                </a>
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.listar_carpetas' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Clientes
+                </a>
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.listar_usuarios_admin' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Usuarios
+                </a>
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.profile' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Mi Perfil
+                </a>
+                {% elif 'cliente' in user_roles %}
+                <!-- CLIENTES -->
+                {% set first_folder = current_user.folders[0] if
+                current_user.folders else None %} {% if first_folder %}
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.import_files' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Subir
+                </a>
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.ver_carpeta' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Mis Archivos
+                </a>
+                {% endif %}
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.profile' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Mi Perfil
+                </a>
+                {% elif 'admin' in user_roles %}
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'admin.dashboard' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Dashboard
+                </a>
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.listar_carpetas' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Clientes
+                </a>
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.listar_usuarios_admin' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Usuarios
+                </a>
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.profile' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Mi Perfil
+                </a>
+                {% elif 'lector' in user_roles %}
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'admin.dashboard' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Dashboard
+                </a>
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.listar_carpetas' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Clientes{# Using the existing 'listar_carpetas' endpoint #}
+                </a>
+                <a
+                  href="#"
+                  class="{% if request.endpoint == 'main.profile' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                >
+                  Mi Perfil
+                </a>
+                {% endif %}
+              </nav>
+            </div>
+
+            <div class="flex items-center space-x-6">
+              {% if 'cliente' in user_roles %}
+              <a href="{{ url_for('main.notifications')}}">
+                <div class="relative inline-block">
+                  <i class="far fa-bell"></i>
+                </div>
+              </a>
+              {% endif %}
+              <div class="relative group">
+                <button
+                  class="flex items-center space-x-3 hover:bg-surface rounded-xl px-3 py-2 transition-colors"
+                >
+                  <div
+                    class="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary"
+                  >
+                    <i class="fas fa-user"></i>
+                  </div>
+                  <div class="flex flex-col text-right">
+                    <span class="text-sm font-medium text-gray-900">
+                      {% if current_user.is_authenticated %} {{
+                      current_user.username }} {% else %} Invitado {% endif %}
+                    </span>
+                    <span class="text-xs text-gray-500">
+                      {% if current_user.is_authenticated and user_roles %} {{
+                      user_roles[0]|capitalize }} {% else %} Sin acceso {% endif
+                      %}
+                    </span>
+                  </div>
+                  <i
+                    class="fas fa-chevron-down text-gray-400 text-xs group-hover:rotate-180 transition-transform duration-200"
+                  ></i>
+                </button>
+
+                <!-- Menú Desplegable -->
+                <div
+                  class="absolute right-0 mt-1 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out z-10"
+                >
+                  <div
+                    class="bg-white rounded-xl shadow-lg border border-surface-dark/10 py-2"
+                  >
+                    <!-- Opciones de Perfil -->
+                    <div class="py-1">
+                      <a
+                        href="#"
+                        class="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-surface transition-colors"
+                      >
+                        <i class="fas fa-user-circle text-primary w-5"></i>
+                        <span>Ver Perfil</span>
+                      </a>
+                    </div>
+
+                    <!-- Separador -->
+                    <hr class="my-1 border-gray-100" />
+
+                    <!-- Opción de Cerrar Sesión -->
+                    <div class="py-1">
+                      <a
+                        href="#"
+                        class="flex items-center space-x-2 px-4 py-2 text-sm text-primary hover:bg-surface transition-colors"
+                      >
+                        <i class="fas fa-sign-out-alt text-primary w-5"></i>
+                        <span>Cerrar Sesión</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Menú Móvil -->
+              <button
+                id="mobileMenuButton"
+                class="md:hidden text-primary hover:text-primary-dark transition-colors"
+              >
+                <i class="fas fa-bars text-xl"></i>
+              </button>
+
+              <!-- Menú móvil desplegable (oculto por defecto) -->
+              <div id="mobileMenu" class="hidden fixed inset-0 z-50 md:hidden">
+                <!-- Fondo oscuro semi-transparente -->
+                <div
+                  class="absolute inset-0 bg-black/50"
+                  id="mobileMenuOverlay"
+                ></div>
+
+                <!-- Panel del menú -->
+                <div
+                  class="absolute right-0 top-0 h-full w-4/5 max-w-sm bg-white shadow-xl transform translate-x-full transition-transform duration-300 ease-in-out"
+                >
+                  <!-- Cabecera del menú móvil -->
+                  <div
+                    class="p-4 border-b border-gray-100 flex justify-between items-center"
+                  >
+                    <div class="flex items-center space-x-3">
+                      <div
+                        class="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary"
+                      >
+                        <i class="fas fa-user"></i>
+                      </div>
+                      <div>
+                        <span class="text-sm font-medium text-gray-900">
+                          {% if current_user.is_authenticated %} {{
+                          current_user.username }} {% else %} Invitado {% endif
+                          %}
+                        </span>
+                        <p class="text-xs text-gray-500">
+                          {% if current_user.is_authenticated and user_roles %}
+                          {{ user_roles[0]|capitalize }} {% else %} Sin acceso
+                          {% endif %}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      id="closeMobileMenu"
+                      class="text-gray-500 hover:text-gray-700"
+                    >
+                      <i class="fas fa-times text-xl"></i>
+                    </button>
+                  </div>
+
+                  <!-- Contenido del menú móvil - Mismos enlaces que en el menú de escritorio -->
+                  <div class="px-4 py-6 space-y-3 overflow-y-auto">
+                    {% if 'superadmin' in user_roles %}
+                    <!-- Enlaces exclusivos para SUPERADMIN -->
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'admin.dashboard' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-chart-line mr-3 w-5 text-center"></i>
+                      Dashboard
+                    </a>
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'main.listar_carpetas' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-users mr-3 w-5 text-center"></i>
+                      Clientes
+                    </a>
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'main.listar_usuarios_admin' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      Usuarios
+                    </a>
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'superadmin.gestionar_permisos' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-shield-alt mr-3 w-5 text-center"></i>
+                      Permisos
+                    </a>
+                    {% elif 'cliente' in user_roles %}
+                    <!-- CLIENTES -->
+                    {% set first_folder = current_user.folders[0] if
+                    current_user.folders else None %} {% if first_folder %}
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'main.import_files' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-file-upload mr-3 w-5 text-center"></i>
+                      Subir
+                    </a>
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'main.ver_carpeta' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-folder-open mr-3 w-5 text-center"></i>
+                      Mis Archivos
+                    </a>
+                    {% endif %} {% elif 'admin' in user_roles %}
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'main.listar_carpetas' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-users mr-3 w-5 text-center"></i>
+                      Clientes
+                    </a>
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'main.listar_usuarios_admin' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      Usuarios
+                    </a>
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'admin.dashboard' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-chart-line mr-3 w-5 text-center"></i>
+                      Dashboard
+                    </a>
+                    {% elif 'lector' in user_roles %}
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'admin.dashboard' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-chart-line mr-3 w-5 text-center"></i>
+                      Dashboard
+                    </a>
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'main.listar_carpetas' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-users mr-3 w-5 text-center"></i>
+                      Clientes{# Using the existing 'listar_carpetas' endpoint
+                      #}
+                    </a>
+                    {% endif %}
+
+                    <!-- Enlaces comunes para todos los usuarios autenticados -->
+                    {% if current_user.is_authenticated %}
+                    <a
+                      href="#"
+                      class="{% if request.endpoint == 'main.profile' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-user-circle mr-3 w-5 text-center"></i>
+                      Mi Perfil
+                    </a>
+
+                    <div class="border-t border-gray-100 my-4"></div>
+                    <a
+                      href="#"
+                      class="text-red-500 hover:bg-red-50 block px-3 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <i class="fas fa-sign-out-alt mr-3 w-5 text-center"></i>
+                      Cerrar Sesión
+                    </a>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Contenido principal - NUEVO -->
+      <main class="flex-grow py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {% block content %}
+          <!-- El contenido de las páginas específicas irá aquí -->
+          {% endblock %}
+        </div>
+      </main>
+
+      <!-- Footer -->
+      {% include 'footer.html' %}
+    </div>
+
+    <!-- Botón de WhatsApp flotante (fuera del contenedor de página) -->
+    {% if current_user.is_authenticated and 'cliente' in user_roles %}
+    <a
+      href="https://api.whatsapp.com/send?phone=19085854523&text=Hola%20%F0%9F%91%8B%20Quisiera%20conocer%20m%C3%A1s%20sobre%20sus%20servicios"
+      class="fixed bottom-5 right-5 flex items-center bg-green-500 text-white py-2 px-4 rounded-full shadow-lg hover:bg-green-600 transition-all duration-300 hover:-translate-y-1 z-50"
+      target="_blank"
+      rel="noopener"
+    >
+      <i class="fab fa-whatsapp text-2xl mr-2"></i>
+      <span class="font-medium md:block hidden">¿Necesitas ayuda?</span>
+    </a>
+    {% endif %}
+
+    <!-- Scripts -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const mobileMenuButton = document.getElementById("mobileMenuButton");
+        const mobileMenu = document.getElementById("mobileMenu");
+        const closeMobileMenu = document.getElementById("closeMobileMenu");
+        const mobileMenuOverlay = document.getElementById("mobileMenuOverlay");
+
+        // Función para obtener el año actual para el footer
+        const currentYear = new Date().getFullYear();
+        const yearElements = document.querySelectorAll(".current-year");
+        yearElements.forEach(function (element) {
+          element.textContent = currentYear;
+        });
+
+        // Función para abrir el menú
+        function openMobileMenu() {
+          mobileMenu.classList.remove("hidden");
+          // Prevenir scroll del body
+          document.body.style.overflow = "hidden";
+          // Animar la entrada del menú
+          setTimeout(() => {
+            mobileMenu
+              .querySelector(".transform")
+              .classList.remove("translate-x-full");
+          }, 10);
+        }
+
+        // Función para cerrar el menú
+        function closeMobileMenuHandler() {
+          // Animar la salida del menú
+          mobileMenu
+            .querySelector(".transform")
+            .classList.add("translate-x-full");
+          // Restaurar scroll y ocultar menú después de la animación
+          setTimeout(() => {
+            mobileMenu.classList.add("hidden");
+            document.body.style.overflow = "";
+          }, 300);
+        }
+
+        // Event listeners
+        if (mobileMenuButton) {
+          mobileMenuButton.addEventListener("click", openMobileMenu);
+        }
+        if (closeMobileMenu) {
+          closeMobileMenu.addEventListener("click", closeMobileMenuHandler);
+        }
+        if (mobileMenuOverlay) {
+          mobileMenuOverlay.addEventListener("click", closeMobileMenuHandler);
+        }
+      });
+    </script>
+    {% block scripts %}{% endblock %}
+  </body>
 </html>

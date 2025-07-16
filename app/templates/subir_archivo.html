@@ -2,176 +2,408 @@
 {% block title %}Subir archivo{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto bg-gray-50 min-h-screen p-6">
-  <!-- Header -->
-  <div class="mb-8">
-    <h1 class="text-3xl font-bold text-blue-900 mb-2">Subida de documentos</h1>
-    <p class="text-gray-600">Elige un documento y súbelo a la carpeta de tu caso; carga cada archivo por separado para que podamos procesarlo correctamente.</p>
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+    <!-- Header -->
+    <div class="flex flex-col mb-6">
+      <div>
+        <h1 class="text-3xl font-bold font-montserrat text-primary-dark">
+          Subida de documentos
+        </h1>
+        <p class="text-sm text-text-secondary mt-1">
+          Elige un documento y súbelo a la carpeta de tu caso; carga cada archivo por separado para que podamos procesarlo correctamente.
+        </p>
+      </div>
+    </div>
+
+    <!-- Main Upload Section -->
+    <div class="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="text-xl font-semibold font-montserrat text-primary-dark">
+          Subir archivos
+        </h2>
+      </div>
+
+      <div class="p-6">
+        <form action="{{ url_for('listar_dropbox.subir_archivo') }}" method="post" enctype="multipart/form-data">
+          <!-- Upload Area -->
+          <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg py-8 px-4 text-center transition-all duration-200 hover:bg-gray-100 cursor-pointer mb-6" 
+               id="dropZone" 
+               onclick="document.getElementById('archivo').click()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            
+            <div class="mt-3">
+              <input type="file" name="archivo" id="archivo" required class="hidden" onchange="updateFileName(this)">
+              
+              <div class="mb-2">
+                <p id="fileNameDisplay" class="text-sm font-medium text-text">
+                  Selecciona un archivo para importar
+                </p>
+                <div id="fileListContainer" class="mt-1 text-xs"></div>
+                <span class="text-xs text-text-secondary">o arrastra y suelta aquí</span>
+              </div>
+              
+              <button type="button" class="mt-3 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-text bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
+                </svg>
+                Examinar archivos
+              </button>
+            </div>
+          </div>
+
+          <!-- File Information -->
+          <div class="mt-4 flex items-start">
+            <div class="flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-xs text-text-secondary">
+                Formatos aceptados: <span class="font-medium">PDF, DOC, DOCX, XLS, XLSX, CSV, JPG, JPEG, PNG, MP4, MOV, MP3</span>
+                <br>Tamaño máximo de archivo: <span class="font-medium">50MB</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Owner Selection -->
+          <div class="mt-6">
+            <label for="usuario_id" class="block text-base font-bold text-text mb-2">
+              ¿A quién pertenece este documento?
+            </label>
+            <select name="usuario_id" required class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900">
+              <option value="">-- Seleccionar titular o beneficiario --</option>
+              <optgroup label="Titulares">
+                {% for usuario in titulares %}
+                  <option value="user-{{ usuario.id }}">{{ usuario.nombre or usuario.email }}</option>
+                {% endfor %}
+              </optgroup>
+              <optgroup label="Beneficiarios">
+                {% for ben in beneficiarios %}
+                  <option value="beneficiario-{{ ben.id }}">{{ ben.nombre }} ({{ ben.email }})</option>
+                {% endfor %}
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Important Section -->
+          <div class="mt-4 border-t border-gray-100 pt-4">
+            <div class="bg-red-50 rounded-lg p-4 border-l-4 border-primary relative">
+              <div class="absolute -top-3 -left-1 bg-primary text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                Importante
+              </div>
+              <label for="categoria" class="block text-base font-bold text-text mb-2 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+                Elija el tipo de documento o archivo que desea cargar.
+              </label>
+              <p class="text-xs text-text-secondary mb-3">
+                Seleccione una de las opciones a continuación para que podamos clasificar su información correctamente.
+              </p>
+              <select id="categoria" name="categoria" required class="block w-full pl-3 pr-10 py-3 text-base border-2 border-red-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm rounded-md bg-white shadow-sm">
+                <option value="">-- Selecciona una categoría --</option>
+                <!-- Dynamic content will be added here -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Subcategory Selection -->
+          <div class="mt-4" id="subcategoria-container" style="display: none;">
+            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <label for="subcategoria" class="block text-base font-medium text-text mb-2 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+                Subcategoría
+              </label>
+              <select id="subcategoria" name="subcategoria" class="block w-full pl-3 pr-10 py-3 text-base border-2 border-blue-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm rounded-md bg-white shadow-sm">
+                <option value="">Selecciona primero una categoría</option>
+                <!-- Dynamic content will be added here -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="mt-6 flex justify-end space-x-3">
+            <button type="button" class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-text bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+              Cancelar
+            </button>
+            <button type="submit" class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+              Importar archivo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
-  <!-- Upload Section -->
-  <div class="mb-8">
-    <h2 class="text-xl font-semibold text-blue-900 mb-6">Subir archivos</h2>
-    
-    <form action="{{ url_for('listar_dropbox.subir_archivo') }}" method="post" enctype="multipart/form-data">
-      <!-- Upload Area -->
-      <div class="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center bg-white hover:border-gray-400 transition-colors duration-200 cursor-pointer mb-6" onclick="document.getElementById('archivo').click()">
-        <div class="flex flex-col items-center">
-          <!-- Upload Icon -->
-          <div class="w-16 h-16 mb-4">
-            <svg class="w-full h-full text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-            </svg>
-          </div>
-          <p class="text-lg font-medium text-gray-700 mb-2">Selecciona un archivo para importar</p>
-          <p class="text-sm text-gray-500 mb-4">o arrastra y suelta aquí</p>
-          <button type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-            </svg>
-            Examinar archivos
-          </button>
-        </div>
-      </div>
-      
-      <!-- Hidden file input -->
-      <input type="file" name="archivo" id="archivo" required class="hidden">
-      
-      <!-- File info -->
-      <div class="flex items-start mb-6">
-        <div class="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-0.5">
-          <svg class="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-          </svg>
-        </div>
-        <div class="text-sm text-gray-600">
-          <p><strong>Formatos aceptados:</strong> PDF, DOC, DOCX, XLS, XLSX, CSV, JPG, JPEG, PNG, MP4, MOV, MP3</p>
-          <p><strong>Tamaño máximo de archivo:</strong> 50MB</p>
-        </div>
-      </div>
+    <!-- Modal para la barra de progreso -->
+    <div
+      id="progressModal"
+      class="hidden fixed inset-0 z-50 overflow-y-auto"
+      aria-labelledby="modal-title"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0"
+      >
+        <!-- Overlay de fondo -->
+        <div
+          class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          aria-hidden="true"
+        ></div>
 
-      <!-- Owner Selection -->
-      <div class="mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">¿A quién pertenece este documento?</h3>
-        <select name="usuario_id" required class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900">
-          <option value="">-- Seleccionar titular o beneficiario --</option>
-          <optgroup label="Titulares">
-            {% for usuario in titulares %}
-              <option value="user-{{ usuario.id }}">{{ usuario.nombre or usuario.email }}</option>
-            {% endfor %}
-          </optgroup>
-          <optgroup label="Beneficiarios">
-            {% for ben in beneficiarios %}
-              <option value="beneficiario-{{ ben.id }}">{{ ben.nombre }} ({{ ben.email }})</option>
-            {% endfor %}
-          </optgroup>
-        </select>
-      </div>
+        <span
+          class="hidden sm:inline-block sm:align-middle sm:h-screen"
+          aria-hidden="true"
+          >&#8203;</span
+        >
 
-      <!-- Important Section -->
-      <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
-        <div class="flex">
-          <div class="flex-shrink-0">
-            <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-            </svg>
+        <!-- Contenido del modal -->
+        <div
+          class="inline-block align-bottom bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+        >
+          <!-- Cabecera del modal -->
+          <div class="px-6 py-4 border-b border-gray-100">
+            <h3
+              class="text-xl font-bold font-montserrat text-text flex items-center"
+              id="modal-title"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-primary mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                />
+              </svg>
+              Subiendo archivos
+            </h3>
           </div>
-          <div class="ml-3">
-            <h4 class="text-sm font-medium text-blue-800">Importante</h4>
-            <div class="mt-2 text-sm text-blue-700">
-              <p class="font-medium">Elija el tipo de documento o archivo que desea cargar.</p>
-              <p class="mt-1">Seleccione una de las opciones a continuación para que podamos clasificar su información correctamente.</p>
+
+          <!-- Contenido del modal: barra de progreso -->
+          <div class="px-6 py-5">
+            <div
+              id="uploadProgressContainer"
+              class="flex flex-col items-center justify-center"
+              style="min-height: 120px"
+            >
+              <p class="text-sm font-semibold mb-4" id="progressText">
+                Subiendo: 0%
+              </p>
+              <div class="w-full bg-gray-200 rounded-full h-4">
+                <div
+                  id="progressBar"
+                  class="bg-primary h-4 rounded-full transition-all duration-300 ease-out"
+                  style="width: 0%"
+                ></div>
+              </div>
+              <p class="text-xs text-gray-500 mt-4">
+                Por favor, no cierre esta ventana mientras se completa la subida
+              </p>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Category Selection -->
-      <div class="mb-6">
-        <label class="block text-gray-700 font-semibold mb-1" for="categoria">Categoría</label>
-        <select name="categoria" id="categoria" required
-          class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900">
-          <option value="">-- Selecciona una categoría --</option>
-          <!-- JS agrega el resto -->
-        </select>
-      </div>
+  <script>
+    // Simulated data - replace with actual template variables
+    const categorias = {
+      "Documentos personales": ["Pasaporte", "Documento de identidad", "Licencia de conducir", "Permiso de residencia", "Certificado de nacimiento"],
+      "Documentos financieros": ["Factura", "Recibo de pago", "Estado de cuenta bancario", "Documento fiscal", "Nómina"],
+      "Documentos legales": ["Contrato", "Poder notarial", "Certificado legal"],
+      "Otros documentos": ["Documento médico", "Documento educativo", "Documento de propiedad", "Documento técnico", "Otro"]
+    };
 
-      <!-- Subcategory Selection (initially hidden) -->
-      <div class="mb-6" id="subcategoria-container" style="display: none;">
-        <label class="block text-gray-700 font-semibold mb-1" for="subcategoria">Subcategoría</label>
-        <select name="subcategoria" id="subcategoria"
-          class="w-full border border-red-300 px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900">
-          <option value="">Selecciona primero una categoría</option>
-          <!-- JS agrega el resto -->
-        </select>
-      </div>
+    // File name update function
+    function updateFileName(input) {
+      const fileNameDisplay = document.getElementById('fileNameDisplay');
+      const fileListContainer = document.getElementById('fileListContainer');
+      const dropZone = document.getElementById('dropZone');
 
-      <!-- Action Buttons -->
-      <div class="flex justify-end space-x-4">
-        <button type="button" class="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-          Cancelar
-        </button>
-        <button type="submit" class="inline-flex items-center px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-          </svg>
-          Importar archivo
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
+      fileListContainer.innerHTML = '';
 
-<script>
-const categorias = {{ categorias_json|safe }};
-console.log("Categorias cargadas:", categorias);
+      if (input.files.length > 0) {
+        const file = input.files[0];
+        const fileSizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+        
+        fileNameDisplay.innerHTML = `<span class="font-medium text-primary">${file.name}</span>`;
+        fileListContainer.innerHTML = `<span class="text-gray-500">(${fileSizeInMB} MB)</span>`;
+        
+        dropZone.classList.add('border-primary');
+        dropZone.classList.add('bg-blue-50');
+      } else {
+        fileNameDisplay.textContent = 'Selecciona un archivo para importar';
+        dropZone.classList.remove('border-primary');
+        dropZone.classList.remove('bg-blue-50');
+      }
+    }
 
-// Pobla categorías al cargar la página
-window.addEventListener('DOMContentLoaded', () => {
-  const catSelect = document.getElementById('categoria');
-  for (const cat in categorias) {
-    const opt = document.createElement('option');
-    opt.value = cat;
-    opt.innerText = cat;
-    catSelect.appendChild(opt);
-  }
-});
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+      const dropZone = document.getElementById('dropZone');
+      const fileInput = document.getElementById('archivo');
+      const categoriaSelect = document.getElementById('categoria');
+      const subcategoriaSelect = document.getElementById('subcategoria');
+      const subcategoriaContainer = document.getElementById('subcategoria-container');
 
-// Actualiza subcategorías al cambiar la categoría
-document.getElementById('categoria').addEventListener('change', function() {
-  const cat = this.value;
-  const subcatSelect = document.getElementById('subcategoria');
-  const subcatContainer = document.getElementById('subcategoria-container');
-  subcatSelect.innerHTML = '';
-  if (categorias[cat]) {
-    subcatContainer.style.display = 'block';
-    subcatSelect.required = true;
-    const emptyOpt = document.createElement('option');
-    emptyOpt.value = '';
-    emptyOpt.innerText = '-- Selecciona una subcategoría --';
-    subcatSelect.appendChild(emptyOpt);
-    categorias[cat].forEach(function(subcat) {
-      const opt = document.createElement('option');
-      opt.value = subcat;
-      opt.innerText = subcat;
-      subcatSelect.appendChild(opt);
+      // Populate categories
+      for (const cat in categorias) {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.innerText = cat;
+        categoriaSelect.appendChild(opt);
+      }
+
+      // Category change handler
+      categoriaSelect.addEventListener('change', function() {
+        const cat = this.value;
+        subcategoriaSelect.innerHTML = '';
+        
+        if (categorias[cat]) {
+          subcategoriaContainer.style.display = 'block';
+          subcategoriaSelect.required = true;
+          
+          const emptyOpt = document.createElement('option');
+          emptyOpt.value = '';
+          emptyOpt.innerText = '-- Selecciona una subcategoría --';
+          subcategoriaSelect.appendChild(emptyOpt);
+          
+          categorias[cat].forEach(function(subcat) {
+            const opt = document.createElement('option');
+            opt.value = subcat;
+            opt.innerText = subcat;
+            subcategoriaSelect.appendChild(opt);
+          });
+        } else {
+          subcategoriaContainer.style.display = 'none';
+          subcategoriaSelect.required = false;
+          
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.innerText = 'Selecciona primero una categoría';
+          subcategoriaSelect.appendChild(opt);
+        }
+      });
+
+      // Drag and drop functionality
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+      });
+
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+      });
+
+      function highlight() {
+        dropZone.classList.add('border-primary');
+        dropZone.classList.add('bg-blue-50');
+      }
+
+      function unhighlight() {
+        dropZone.classList.remove('border-primary');
+        dropZone.classList.remove('bg-blue-50');
+      }
+
+      dropZone.addEventListener('drop', handleDrop, false);
+
+      function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        updateFileName(fileInput);
+      }
     });
-  } else {
-    subcatContainer.style.display = 'none';
-    subcatSelect.required = false;
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.innerText = 'Selecciona primero una categoría';
-    subcatSelect.appendChild(opt);
-  }
-});
+  </script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[action*="subir_archivo"]');
+    const progressModal = document.getElementById('progressModal');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
 
-// File input handler (opcional, solo para feedback)
-document.getElementById('archivo').addEventListener('change', function(e) {
-  if (e.target.files.length > 0) {
-    const fileName = e.target.files[0].name;
-    console.log('Archivo seleccionado:', fileName);
-  }
-});
-</script>
+    if (form && progressModal) {
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const fileInput = document.getElementById('archivo');
+        if (!fileInput.files.length) {
+          alert('Selecciona un archivo');
+          return;
+        }
+
+        progressModal.classList.remove('hidden');
+        progressModal.classList.add('flex');
+        progressBar.style.width = '0%';
+        progressText.textContent = 'Subiendo: 0%';
+
+        const formData = new FormData(form);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action, true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+        xhr.upload.onprogress = function(event) {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            progressBar.style.width = percent + '%';
+            progressText.textContent = 'Subiendo: ' + percent + '%';
+          }
+        };
+
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            let redirectUrl = "{{ url_for('listar_dropbox.carpetas_dropbox') }}";
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.redirectUrl) redirectUrl = response.redirectUrl;
+            } catch (err) {}
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Subiendo: 100%';
+            setTimeout(() => { window.location.href = redirectUrl; }, 700);
+          } else {
+            alert('Error al subir archivo.');
+            progressModal.classList.add('hidden');
+            progressModal.classList.remove('flex');
+            progressBar.style.width = '0%';
+          }
+        };
+
+        xhr.onerror = function() {
+          alert('Error de conexión.');
+          progressModal.classList.add('hidden');
+          progressModal.classList.remove('flex');
+          progressBar.style.width = '0%';
+        };
+
+        xhr.send(formData);
+      });
+    }
+  });
+  </script>
+
+
+
 {% endblock %}
