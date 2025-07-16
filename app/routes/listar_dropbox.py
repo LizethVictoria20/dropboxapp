@@ -1,4 +1,4 @@
-from flask import Blueprint, json, render_template, current_app, request, redirect, url_for, flash
+from flask import Blueprint, json, jsonify, render_template, current_app, request, redirect, url_for, flash
 from flask_login import current_user, login_required
 from app.categorias import CATEGORIAS
 import dropbox
@@ -135,12 +135,37 @@ def carpetas_dropbox():
         folders_por_ruta=folders_por_ruta,
     )
 
+@bp.route("/api/carpeta_info/<path:ruta>")
+@login_required
+def obtener_info_carpeta(ruta):
+    """Endpoint para obtener información de una carpeta específica"""
+    from app.models import Folder
+    
+    # Buscar la carpeta en la base de datos
+    carpeta = Folder.query.filter_by(dropbox_path=f"/{ruta}").first()
+    
+    if carpeta:
+        return jsonify({
+            'existe': True,
+            'es_publica': carpeta.es_publica,
+            'nombre': carpeta.name,
+            'usuario_id': carpeta.user_id
+        })
+    else:
+        return jsonify({
+            'existe': False,
+            'es_publica': True,  # Por defecto pública si no existe en BD
+            'nombre': ruta.split('/')[-1] if '/' in ruta else ruta,
+            'usuario_id': None
+        })
 
 
 @bp.route("/crear_carpeta", methods=["POST"])
 def crear_carpeta():
     nombre = request.form.get("nombre")
     padre = request.form.get("padre", "")
+    es_publica = request.form.get("es_publica", "true").lower() == "true"  # Por defecto pública
+    
     if not nombre:
         flash("El nombre de la carpeta es obligatorio.", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
@@ -157,12 +182,13 @@ def crear_carpeta():
             name=nombre,
             user_id=current_user.id,
             dropbox_path=ruta,
-            es_publica=True  # Por defecto las carpetas son públicas
+            es_publica=es_publica
         )
         db.session.add(nueva_carpeta)
         db.session.commit()
         
-        flash(f"Carpeta '{ruta}' creada correctamente.", "success")
+        tipo_carpeta = "pública" if es_publica else "privada"
+        flash(f"Carpeta '{ruta}' creada correctamente como {tipo_carpeta}.", "success")
     except dropbox.exceptions.ApiError as e:
         flash(f"Error creando carpeta: {e}", "error")
     except Exception as e:
