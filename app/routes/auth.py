@@ -4,6 +4,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models import User
+from forms import LoginForm
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -19,6 +20,7 @@ def role_required(role):
 
 @bp.route('/', methods=['GET', 'POST'])
 def login():
+    form = LoginForm()
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
@@ -26,7 +28,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             return redirect(url_for('listar_dropbox.subir_archivo'))
-    return render_template('login.html')
+    return render_template('login.html', form=form)
 
 @bp.route('/logout')
 @login_required
