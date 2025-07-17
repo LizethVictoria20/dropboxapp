@@ -26,8 +26,19 @@ def obtener_carpetas_dropbox_estructura(path="", dbx=None):
 
 def obtener_estructura_dropbox(path="", dbx=None):
     if dbx is None:
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
-    res = dbx.files_list_folder(path, recursive=True)
+        api_key = current_app.config.get("DROPBOX_API_KEY")
+        if not api_key:
+            print("Warning: DROPBOX_API_KEY no configurado, retornando estructura vacía")
+            return {"_subcarpetas": {}, "_archivos": []}
+        dbx = dropbox.Dropbox(api_key)
+    
+    try:
+        res = dbx.files_list_folder(path, recursive=True)
+    except dropbox.exceptions.ApiError as e:
+        print(f"Error accediendo a Dropbox path '{path}': {e}")
+        # Retornar estructura vacía si el path no existe
+        return {"_subcarpetas": {}, "_archivos": []}
+    
     estructura = {"_subcarpetas": {}, "_archivos": []}
 
     for entry in res.entries:
@@ -88,52 +99,80 @@ def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
 @bp.route("/carpetas_dropbox")
 @login_required
 def carpetas_dropbox():
-    estructuras_usuarios = {}
-    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    try:
+        estructuras_usuarios = {}
+        
+        # Verificar configuración de Dropbox
+        api_key = current_app.config.get("DROPBOX_API_KEY")
+        if not api_key:
+            flash("Error: Configuración de Dropbox no disponible.", "error")
+            return render_template("carpetas_dropbox.html", 
+                                 estructuras_usuarios={},
+                                 usuarios={},
+                                 usuario_actual=current_user,
+                                 estructuras_usuarios_json="{}",
+                                 folders_por_ruta={})
+        
+        dbx = dropbox.Dropbox(api_key)
 
-    # Determina qué usuarios cargar
-    if current_user.rol == "admin":
-        usuarios = User.query.all()
-        # Admin ve todas las carpetas
-        folders = Folder.query.all()
-    else:
-        # Solo el usuario actual (cliente ve solo sus carpetas públicas)
-        usuarios = [current_user]
-        folders = Folder.query.filter_by(user_id=current_user.id, es_publica=True).all()
+        # Determina qué usuarios cargar
+        if current_user.rol == "admin":
+            usuarios = User.query.all()
+            # Admin ve todas las carpetas
+            folders = Folder.query.all()
+        else:
+            # Solo el usuario actual (cliente ve solo sus carpetas públicas)
+            usuarios = [current_user]
+            folders = Folder.query.filter_by(user_id=current_user.id, es_publica=True).all()
 
-    usuarios_dict = {u.id: u for u in usuarios}
-    folders_por_ruta = {f.dropbox_path: f for f in folders}
+        usuarios_dict = {u.id: u for u in usuarios}
+        folders_por_ruta = {f.dropbox_path: f for f in folders}
 
-    for user in usuarios:
-        if not user.dropbox_folder_path:
-            user.dropbox_folder_path = f"/{user.email}"
+        for user in usuarios:
+            if not user.dropbox_folder_path:
+                user.dropbox_folder_path = f"/{user.email}"
+                try:
+                    dbx.files_create_folder_v2(user.dropbox_folder_path)
+                except dropbox.exceptions.ApiError as e:
+                    if "conflict" not in str(e):
+                        raise e
+                db.session.commit()
+
+            path = user.dropbox_folder_path
             try:
-                dbx.files_create_folder_v2(user.dropbox_folder_path)
-            except dropbox.exceptions.ApiError as e:
-                if "conflict" not in str(e):
-                    raise e
-            db.session.commit()
+                estructura = obtener_estructura_dropbox(path=path)
+            except Exception as e:
+                print(f"Error obteniendo estructura para usuario {user.email}: {e}")
+                estructura = {"_subcarpetas": {}, "_archivos": []}
+            
+            # Filtrar la estructura según los permisos del usuario
+            if current_user.rol != "admin":
+                # Para clientes, solo mostrar carpetas que estén en folders_por_ruta
+                rutas_visibles = set(folders_por_ruta.keys())
+                estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user.email)
+            
+            estructuras_usuarios[user.id] = estructura
 
-        path = user.dropbox_folder_path
-        estructura = obtener_estructura_dropbox(path=path)
+        return render_template(
+            "carpetas_dropbox.html",
+            estructuras_usuarios=estructuras_usuarios,
+            usuarios=usuarios_dict,
+            usuario_actual=current_user,
+            estructuras_usuarios_json=json.dumps(estructuras_usuarios),
+            folders_por_ruta=folders_por_ruta,
+        )
         
-        # Filtrar la estructura según los permisos del usuario
-        if current_user.rol != "admin":
-            # Para clientes, solo mostrar carpetas que estén en folders_por_ruta
-            rutas_visibles = set(folders_por_ruta.keys())
-            estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user.email)
-        
-        estructuras_usuarios[user.id] = estructura
-
-   
-    return render_template(
-        "carpetas_dropbox.html",
-        estructuras_usuarios=estructuras_usuarios,
-        usuarios=usuarios_dict,
-        usuario_actual=current_user,
-        estructuras_usuarios_json=json.dumps(estructuras_usuarios),
-        folders_por_ruta=folders_por_ruta,
-    )
+    except Exception as e:
+        print(f"Error general en carpetas_dropbox: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error al cargar carpetas: {str(e)}", "error")
+        return render_template("carpetas_dropbox.html", 
+                             estructuras_usuarios={},
+                             usuarios={},
+                             usuario_actual=current_user,
+                             estructuras_usuarios_json="{}",
+                             folders_por_ruta={})
 
 @bp.route("/api/carpeta_info/<path:ruta>")
 @login_required

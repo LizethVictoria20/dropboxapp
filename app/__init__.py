@@ -25,6 +25,7 @@ def create_app():
         return User.query.get(int(user_id))
 
     from .routes.auth import bp as auth_bp
+    from .routes.main import bp as main_bp
     from .routes.users import bp as users_bp
     from .routes.folders import bp as folders_bp
     from .routes.web_register import bp as web_register_bp
@@ -32,6 +33,7 @@ def create_app():
     from .routes.usuarios import bp as usuarios_bp
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(main_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(folders_bp)
     app.register_blueprint(web_register_bp)

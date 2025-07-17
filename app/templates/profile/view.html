@@ -1,0 +1,323 @@
+{% extends "base.html" %} {% block title %}Mi Perfil{% endblock %} {% block
+content %}
+<div class="max-w-4xl mx-auto px-6 py-8">
+  <!-- Header del Perfil -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <div
+          class="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center"
+        >
+          <span class="text-blue-600 font-bold text-2xl">
+            {{ (user.nombre or user.email)[0]|upper }}
+          </span>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">
+            {{ user.nombre_completo }}
+          </h1>
+          <p class="text-gray-600">{{ user.email }}</p>
+          <span
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.rol == 'superadmin' %}bg-red-100 text-red-800 {% elif user.rol == 'admin' %}bg-blue-100 text-blue-800 {% elif user.rol == 'cliente' %}bg-green-100 text-green-800 {% else %}bg-gray-100 text-gray-800{% endif %}"
+          >
+            {{ user.rol|title }}
+          </span>
+        </div>
+      </div>
+      <a
+        href="{{ url_for('main.edit_profile') }}"
+        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        <i class="fas fa-edit mr-2"></i>
+        Editar Perfil
+      </a>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Información Personal -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Datos Básicos -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">
+            Información Personal
+          </h2>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Nombre</label
+              >
+              <p class="text-gray-900">
+                {{ user.nombre or 'No especificado' }}
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Apellido</label
+              >
+              <p class="text-gray-900">
+                {{ user.apellido or 'No especificado' }}
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Correo Electrónico</label
+              >
+              <p class="text-gray-900">{{ user.email }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Teléfono</label
+              >
+              <p class="text-gray-900">
+                {{ user.telefono or 'No especificado' }}
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Fecha de Nacimiento</label
+              >
+              <p class="text-gray-900">
+                {% if user.fecha_nacimiento %} {{
+                user.fecha_nacimiento.strftime('%d/%m/%Y') }} {% else %} No
+                especificado {% endif %}
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Estado de la Cuenta</label
+              >
+              <span
+                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}"
+              >
+                {% if user.activo %}
+                <i class="fas fa-check-circle mr-1"></i>Activa {% else %}
+                <i class="fas fa-times-circle mr-1"></i>Inactiva {% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Información de Contacto -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">
+            Información de Contacto
+          </h2>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Ciudad</label
+              >
+              <p class="text-gray-900">
+                {{ user.ciudad or 'No especificado' }}
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Estado/Departamento</label
+              >
+              <p class="text-gray-900">
+                {{ user.estado or 'No especificado' }}
+              </p>
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Dirección</label
+              >
+              <p class="text-gray-900">
+                {{ user.direccion or 'No especificado' }}
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Código Postal</label
+              >
+              <p class="text-gray-900">
+                {{ user.codigo_postal or 'No especificado' }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actividad Reciente -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">
+            Actividad Reciente
+          </h2>
+        </div>
+        <div class="p-6">
+          {% if actividades_recientes %}
+          <div class="space-y-4">
+            {% for actividad in actividades_recientes %}
+            <div class="flex items-start space-x-3">
+              <div
+                class="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0"
+              >
+                {% if actividad.accion == 'login' %}
+                <i class="fas fa-sign-in-alt text-green-600 text-sm"></i>
+                {% elif actividad.accion == 'upload' %}
+                <i class="fas fa-upload text-blue-600 text-sm"></i>
+                {% elif actividad.accion == 'create_folder' %}
+                <i class="fas fa-folder-plus text-yellow-600 text-sm"></i>
+                {% elif actividad.accion == 'profile_update' %}
+                <i class="fas fa-user-edit text-purple-600 text-sm"></i>
+                {% else %}
+                <i class="fas fa-activity text-gray-600 text-sm"></i>
+                {% endif %}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm text-gray-900">
+                  {% if actividad.accion == 'login' %} Iniciaste sesión {% elif
+                  actividad.accion == 'upload' %} Subiste un archivo {% elif
+                  actividad.accion == 'create_folder' %} Creaste una carpeta {%
+                  elif actividad.accion == 'profile_update' %} Actualizaste tu
+                  perfil {% else %} {{ actividad.accion|title }} {% endif %}
+                </p>
+                {% if actividad.descripcion %}
+                <p class="text-xs text-gray-500">{{ actividad.descripcion }}</p>
+                {% endif %}
+                <p class="text-xs text-gray-400 mt-1">
+                  {{ actividad.fecha.strftime('%d/%m/%Y %H:%M') }}
+                </p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-8">
+            <i class="fas fa-activity text-gray-300 text-4xl mb-4"></i>
+            <p class="text-gray-500">No hay actividad reciente.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar con Estadísticas -->
+    <div class="space-y-6">
+      <!-- Estadísticas Rápidas -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Mis Estadísticas</h2>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div
+                class="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center"
+              >
+                <i class="fas fa-file text-blue-600 text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-900">Archivos</span>
+            </div>
+            <span class="text-lg font-bold text-blue-600"
+              >{{ total_archivos }}</span
+            >
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div
+                class="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center"
+              >
+                <i class="fas fa-folder text-green-600 text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-900">Carpetas</span>
+            </div>
+            <span class="text-lg font-bold text-green-600"
+              >{{ total_carpetas }}</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Información de la Cuenta -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">
+            Información de la Cuenta
+          </h2>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1"
+              >FECHA DE REGISTRO</label
+            >
+            <p class="text-sm text-gray-900">
+              {% if user.fecha_registro %} {{ user.fecha_registro.strftime('%d
+              de %B de %Y') }} {% else %} No disponible {% endif %}
+            </p>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1"
+              >ÚLTIMO ACCESO</label
+            >
+            <p class="text-sm text-gray-900">
+              {% if user.ultimo_acceso %} {{
+              user.ultimo_acceso.strftime('%d/%m/%Y %H:%M') }} {% else %} Nunca
+              {% endif %}
+            </p>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1"
+              >ROL DEL USUARIO</label
+            >
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.rol == 'superadmin' %}bg-red-100 text-red-800 {% elif user.rol == 'admin' %}bg-blue-100 text-blue-800 {% elif user.rol == 'cliente' %}bg-green-100 text-green-800 {% else %}bg-gray-100 text-gray-800{% endif %}"
+            >
+              {{ user.rol|title }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones Rápidas -->
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <h3 class="text-lg font-medium text-blue-900 mb-4">Acciones Rápidas</h3>
+        <div class="space-y-3">
+          <a
+            href="{{ url_for('main.edit_profile') }}"
+            class="block w-full text-center py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <i class="fas fa-edit mr-2"></i>
+            Editar Perfil
+          </a>
+
+          {% if user.es_cliente() %}
+          <a
+            href="{{ url_for('listar_dropbox.subir_archivo') }}"
+            class="block w-full text-center py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <i class="fas fa-upload mr-2"></i>
+            Subir Archivo
+          </a>
+          <a
+            href="{{ url_for('listar_dropbox.carpetas_dropbox') }}"
+            class="block w-full text-center py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <i class="fas fa-folder-open mr-2"></i>
+            Mis Archivos
+          </a>
+          {% endif %} {% if user.puede_administrar() %}
+          <a
+            href="{{ url_for('main.dashboard_admin') }}"
+            class="block w-full text-center py-2 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <i class="fas fa-chart-line mr-2"></i>
+            Dashboard Admin
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

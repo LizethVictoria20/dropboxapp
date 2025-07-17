@@ -1,0 +1,525 @@
+{% extends "base.html" %} {% block title %}Dashboard Administrativo - {{
+current_user.nombre_completo }}{% endblock %} {% block extra_head %}
+<!-- Chart.js para gráficos dinámicos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  .admin-avatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+  }
+  .admin-badge {
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+  }
+  .superadmin-badge {
+    background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(124, 58, 237, 0.3);
+  }
+  .admin-stat-card {
+    transition: transform 0.2s ease-in-out;
+    border-left: 4px solid #dc2626;
+  }
+  .admin-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
+  }
+  .admin-header {
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  }
+  .system-alert {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 4px solid #f59e0b;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container mx-auto px-4 py-6">
+  <!-- Header administrativo destacado -->
+  <div class="mb-8">
+    <div class="admin-header rounded-lg shadow-lg p-6 text-white">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <div class="admin-avatar">
+            {{ current_user.nombre_completo[0].upper() if
+            current_user.nombre_completo else 'A' }}
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold">Panel de Administración</h1>
+            <div class="flex items-center space-x-2 mt-1">
+              {% if current_user.es_superadmin() %}
+              <span class="superadmin-badge">SUPER ADMINISTRADOR</span>
+              {% else %}
+              <span class="admin-badge">ADMINISTRADOR</span>
+              {% endif %}
+              <span class="text-sm opacity-90"
+                >{{ current_user.nombre_completo }} ({{ current_user.email
+                }})</span
+              >
+            </div>
+            <p class="text-sm opacity-75 mt-1">
+              🔒 Acceso completo al sistema {% if current_user.ultimo_acceso %}
+              • Último acceso: {{ current_user.ultimo_acceso.strftime('%d/%m/%Y
+              a las %H:%M') }} {% endif %}
+            </p>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="bg-white bg-opacity-20 rounded-lg p-3">
+            <p class="text-sm opacity-90">Total Usuarios</p>
+            <p class="text-2xl font-bold">{{ stats.total_usuarios }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerta del sistema si hay problemas -->
+  {% if stats.usuarios_inactivos > 0 or stats.notificaciones_pendientes > 5 %}
+  <div class="system-alert rounded-lg p-4 mb-6">
+    <div class="flex items-start space-x-3">
+      <svg
+        class="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+        />
+      </svg>
+      <div>
+        <h3 class="text-yellow-800 font-semibold">Alertas del Sistema</h3>
+        <ul class="text-yellow-700 text-sm mt-1 space-y-1">
+          {% if stats.usuarios_inactivos > 0 %}
+          <li>
+            • {{ stats.usuarios_inactivos }} usuario(s) inactivo(s) requieren
+            atención
+          </li>
+          {% endif %} {% if stats.notificaciones_pendientes > 5 %}
+          <li>
+            • {{ stats.notificaciones_pendientes }} notificaciones pendientes de
+            gestión
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Estadísticas del sistema -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div
+      class="admin-stat-card bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+    >
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-red-100 text-red-600">
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
+            />
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm text-gray-500">Usuarios Activos</p>
+          <p class="text-2xl font-bold text-gray-900">
+            {{ stats.usuarios_activos }}
+          </p>
+          <p class="text-xs text-gray-400">
+            de {{ stats.total_usuarios }} totales
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="admin-stat-card bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+    >
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+            />
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm text-gray-500">Total Carpetas</p>
+          <p class="text-2xl font-bold text-gray-900">
+            {{ stats.total_carpetas }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="admin-stat-card bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+    >
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-green-100 text-green-600">
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm text-gray-500">Total Archivos</p>
+          <p class="text-2xl font-bold text-gray-900">
+            {{ stats.total_archivos }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="admin-stat-card bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+    >
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 17h5l-5 5v-5zM4 20h6a2 2 0 002-2V9l-6 6v5z"
+            />
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm text-gray-500">Actividades del Sistema</p>
+          <p class="text-2xl font-bold text-gray-900">
+            {{ stats.total_actividades }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Distribución de usuarios por rol -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">
+        Distribución de Usuarios por Rol
+      </h3>
+      <div class="space-y-4">
+        <div
+          class="flex items-center justify-between p-3 rounded-lg bg-purple-50 border border-purple-200"
+        >
+          <div class="flex items-center space-x-3">
+            <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
+            <span class="font-medium text-gray-900">Super Administradores</span>
+          </div>
+          <span class="text-xl font-bold text-purple-600"
+            >{{ distribucion_roles.superadmin }}</span
+          >
+        </div>
+        <div
+          class="flex items-center justify-between p-3 rounded-lg bg-red-50 border border-red-200"
+        >
+          <div class="flex items-center space-x-3">
+            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+            <span class="font-medium text-gray-900">Administradores</span>
+          </div>
+          <span class="text-xl font-bold text-red-600"
+            >{{ distribucion_roles.admin }}</span
+          >
+        </div>
+        <div
+          class="flex items-center justify-between p-3 rounded-lg bg-blue-50 border border-blue-200"
+        >
+          <div class="flex items-center space-x-3">
+            <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+            <span class="font-medium text-gray-900">Clientes</span>
+          </div>
+          <span class="text-xl font-bold text-blue-600"
+            >{{ distribucion_roles.cliente }}</span
+          >
+        </div>
+        <div
+          class="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-200"
+        >
+          <div class="flex items-center space-x-3">
+            <div class="w-3 h-3 bg-gray-500 rounded-full"></div>
+            <span class="font-medium text-gray-900">Lectores</span>
+          </div>
+          <span class="text-xl font-bold text-gray-600"
+            >{{ distribucion_roles.lector }}</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- Usuarios más activos -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">
+        Usuarios Más Activos
+      </h3>
+      {% if usuarios_activos %}
+      <div class="space-y-3">
+        {% for usuario in usuarios_activos %}
+        <div
+          class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50"
+        >
+          <div>
+            <p class="text-sm font-medium text-gray-900">
+              {{ usuario.nombre_completo }}
+            </p>
+            <p class="text-xs text-gray-500">{{ usuario.email }}</p>
+          </div>
+          <span
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+          >
+            {{ usuario.actividades }} actividades
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-8">
+        <svg
+          class="mx-auto h-12 w-12 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+          />
+        </svg>
+        <p class="text-gray-500 text-sm mt-2">
+          No hay actividad de usuarios registrada
+        </p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Actividad reciente del sistema -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+      Actividad Reciente del Sistema
+    </h3>
+    {% if actividad_reciente %}
+    <div class="space-y-3 max-h-96 overflow-y-auto">
+      {% for actividad in actividad_reciente %}
+      <div
+        class="flex items-start space-x-3 p-3 rounded-lg border border-gray-100"
+      >
+        <div class="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-gray-900 font-medium">
+              {{ actividad.usuario.nombre_completo }} - {{ actividad.accion }}
+            </p>
+            <span class="text-xs text-gray-500">
+              {{ actividad.fecha.strftime('%d/%m/%Y %H:%M') }}
+            </span>
+          </div>
+          {% if actividad.descripcion %}
+          <p class="text-sm text-gray-600">{{ actividad.descripcion }}</p>
+          {% endif %}
+          <p class="text-xs text-gray-500">
+            Usuario: {{ actividad.usuario.email }} {% if actividad.ip_address %}
+            • IP: {{ actividad.ip_address }}{% endif %}
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-8">
+      <svg
+        class="mx-auto h-12 w-12 text-gray-400"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+        />
+      </svg>
+      <p class="text-gray-500 text-sm mt-2">
+        No hay actividad registrada en el sistema
+      </p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Acciones administrativas -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+      Herramientas Administrativas
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a
+        href="{{ url_for('main.listar_usuarios_admin') }}"
+        class="flex items-center p-4 border border-red-200 rounded-lg hover:bg-red-50 transition-colors group"
+      >
+        <svg
+          class="w-8 h-8 text-red-500 mr-3 group-hover:text-red-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
+          />
+        </svg>
+        <div>
+          <p class="font-medium text-gray-900">Gestionar Usuarios</p>
+          <p class="text-sm text-gray-500">Administrar cuentas y permisos</p>
+        </div>
+      </a>
+
+      <a
+        href="{{ url_for('main.listar_carpetas_admin') }}"
+        class="flex items-center p-4 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors group"
+      >
+        <svg
+          class="w-8 h-8 text-blue-500 mr-3 group-hover:text-blue-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+          />
+        </svg>
+        <div>
+          <p class="font-medium text-gray-900">Gestionar Carpetas</p>
+          <p class="text-sm text-gray-500">Supervisar estructura de archivos</p>
+        </div>
+      </a>
+
+      <a
+        href="{{ url_for('main.system_settings') }}"
+        class="flex items-center p-4 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors group"
+      >
+        <svg
+          class="w-8 h-8 text-purple-500 mr-3 group-hover:text-purple-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+        </svg>
+        <div>
+          <p class="font-medium text-gray-900">Configuración</p>
+          <p class="text-sm text-gray-500">Ajustes del sistema</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Gráfico de distribución de roles si existe Chart.js
+  if (typeof Chart !== 'undefined') {
+      const ctx = document.getElementById('rolesChart');
+      if (ctx) {
+          new Chart(ctx, {
+              type: 'doughnut',
+              data: {
+                  labels: ['Super Admin', 'Admin', 'Cliente', 'Lector'],
+                  datasets: [{
+                      data: [
+                          {{ distribucion_roles.superadmin }},
+                          {{ distribucion_roles.admin }},
+                          {{ distribucion_roles.cliente }},
+                          {{ distribucion_roles.lector }}
+                      ],
+                      backgroundColor: [
+                          '#7c3aed',
+                          '#dc2626',
+                          '#2563eb',
+                          '#6b7280'
+                      ]
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  plugins: {
+                      legend: {
+                          position: 'bottom'
+                      }
+                  }
+              }
+          });
+      }
+  }
+</script>
+{% endblock %}

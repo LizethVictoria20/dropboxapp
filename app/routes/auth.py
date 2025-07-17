@@ -1,14 +1,16 @@
 from functools import wraps
-from flask import Blueprint, abort, redirect, render_template, request, jsonify, url_for
+from flask import Blueprint, abort, redirect, render_template, request, jsonify, url_for, flash
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 from app import db
-from app.models import User
+from app.models import User, UserActivityLog
 from forms import LoginForm
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 def role_required(role):
+    """Decorador para requerir un rol específico"""
     def wrapper(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -18,38 +20,208 @@ def role_required(role):
         return decorated_function
     return wrapper
 
+def roles_required(*roles):
+    """Decorador para requerir uno de varios roles"""
+    def wrapper(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated or current_user.rol not in roles:
+                abort(403)
+            return f(*args, **kwargs)
+        return decorated_function
+    return wrapper
+
+def registrar_actividad(user, accion, descripcion=None):
+    """Helper para registrar actividad de usuario"""
+    actividad = UserActivityLog(
+        user_id=user.id,
+        accion=accion,
+        descripcion=descripcion,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent', '')[:255]
+    )
+    db.session.add(actividad)
+    db.session.commit()
+
 @bp.route('/', methods=['GET', 'POST'])
 def login():
+    # Redirigir si ya está logueado
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+    
     form = LoginForm()
+    error = None
+    
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        
         user = User.query.filter_by(email=email).first()
+        
         if user and user.check_password(password):
-            login_user(user)
-            return redirect(url_for('listar_dropbox.subir_archivo'))
-    return render_template('login.html', form=form)
+            if not user.activo:
+                error = "Tu cuenta está desactivada. Contacta al administrador."
+            else:
+                # Actualizar último acceso
+                user.ultimo_acceso = datetime.utcnow()
+                db.session.commit()
+                
+                # Login exitoso
+                login_user(user, remember=True)
+                
+                # Registrar actividad
+                registrar_actividad(user, 'login', f'Inicio de sesión desde {request.remote_addr}')
+                
+                # Redirigir según el rol
+                next_page = request.args.get('next')
+                if next_page:
+                    return redirect(next_page)
+                elif user.es_cliente():
+                    return redirect(url_for('main.dashboard_cliente'))
+                elif user.puede_administrar():
+                    return redirect(url_for('main.dashboard_admin'))
+                else:
+                    return redirect(url_for('main.dashboard_lector'))
+        else:
+            error = "Credenciales incorrectas."
+            
+            # Registrar intento de login fallido
+            if user:
+                registrar_actividad(user, 'login_failed', f'Intento de login fallido desde {request.remote_addr}')
+    
+    return render_template('login.html', form=form, error=error)
+
+@bp.route('/login_direct')
+def login_direct():
+    """Ruta alternativa para /auth sin redirección"""
+    return login()
 
 @bp.route('/logout')
 @login_required
 def logout():
+    # Registrar logout
+    registrar_actividad(current_user, 'logout', f'Cierre de sesión desde {request.remote_addr}')
+    
     logout_user()
+    flash('Has cerrado sesión correctamente.', 'success')
     return redirect(url_for('auth.login'))
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
+    # Solo permitir registro si está habilitado o es admin
+    if current_user.is_authenticated and not current_user.puede_administrar():
+        flash('No tienes permisos para registrar usuarios.', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    error = None
+    success = None
+    
     if request.method == 'POST':
         email = request.form['email']
         nombre = request.form['nombre']
         password = request.form['password']
         rol = request.form.get('rol', 'cliente')
+        
+        # Validar que el rol sea válido
+        roles_validos = ['cliente', 'lector', 'admin', 'superadmin']
+        if rol not in roles_validos:
+            rol = 'cliente'
+        
+        # Solo superadmin puede crear otros superadmin/admin
+        if rol in ['admin', 'superadmin'] and (not current_user.is_authenticated or not current_user.es_superadmin()):
+            rol = 'cliente'
 
         if User.query.filter_by(email=email).first():
-            return redirect(url_for('auth.register'))
+            error = "Este correo ya está registrado."
+        else:
+            user = User(
+                email=email, 
+                nombre=nombre, 
+                rol=rol,
+                activo=True,
+                fecha_registro=datetime.utcnow()
+            )
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+            
+            # Registrar actividad
+            if current_user.is_authenticated:
+                registrar_actividad(current_user, 'user_created', f'Usuario {email} creado con rol {rol}')
+            
+            registrar_actividad(user, 'user_registered', f'Usuario registrado desde {request.remote_addr}')
+            
+            success = "Usuario creado exitosamente."
+            
+    return render_template('register.html', error=error, success=success)
 
-        user = User(email=email, nombre=nombre, rol=rol)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-        return redirect(url_for('auth.login'))
-    return render_template('register.html')
+@bp.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    """Cambiar contraseña del usuario actual"""
+    if request.method == 'POST':
+        current_password = request.form['current_password']
+        new_password = request.form['new_password']
+        confirm_password = request.form['confirm_password']
+        
+        if not current_user.check_password(current_password):
+            flash('La contraseña actual es incorrecta.', 'error')
+        elif new_password != confirm_password:
+            flash('Las contraseñas nuevas no coinciden.', 'error')
+        elif len(new_password) < 6:
+            flash('La nueva contraseña debe tener al menos 6 caracteres.', 'error')
+        else:
+            current_user.set_password(new_password)
+            db.session.commit()
+            
+            # Registrar actividad
+            registrar_actividad(current_user, 'password_changed', 'Contraseña cambiada por el usuario')
+            
+            flash('Contraseña actualizada correctamente.', 'success')
+            return redirect(url_for('main.profile'))
+    
+    return render_template('auth/change_password.html')
+
+@bp.route('/admin/toggle-user-status/<int:user_id>')
+@login_required
+@roles_required('admin', 'superadmin')
+def toggle_user_status(user_id):
+    """Activar/Desactivar usuario"""
+    user = User.query.get_or_404(user_id)
+    
+    # Solo superadmin puede desactivar otros admin/superadmin
+    if user.rol in ['admin', 'superadmin'] and not current_user.es_superadmin():
+        abort(403)
+    
+    user.activo = not user.activo
+    db.session.commit()
+    
+    # Registrar actividad
+    estado = 'activado' if user.activo else 'desactivado'
+    registrar_actividad(current_user, 'user_status_changed', f'Usuario {user.email} {estado}')
+    
+    flash(f'Usuario {estado} correctamente.', 'success')
+    return redirect(url_for('main.listar_usuarios_admin'))
+
+@bp.route('/admin/change-user-role/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('superadmin')
+def change_user_role(user_id):
+    """Cambiar rol de usuario (solo superadmin)"""
+    user = User.query.get_or_404(user_id)
+    new_role = request.form.get('new_role')
+    
+    roles_validos = ['cliente', 'lector', 'admin', 'superadmin']
+    if new_role not in roles_validos:
+        flash('Rol inválido.', 'error')
+        return redirect(url_for('main.listar_usuarios_admin'))
+    
+    old_role = user.rol
+    user.rol = new_role
+    db.session.commit()
+    
+    # Registrar actividad
+    registrar_actividad(current_user, 'user_role_changed', f'Rol de {user.email} cambiado de {old_role} a {new_role}')
+    
+    flash(f'Rol actualizado a {new_role}.', 'success')
+    return redirect(url_for('main.listar_usuarios_admin'))

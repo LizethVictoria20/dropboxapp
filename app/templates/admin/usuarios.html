@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}Administración de Usuarios{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Administración de Usuarios</h1>
+        <p class="text-gray-600 mt-2">Gestiona usuarios, roles y permisos del sistema.</p>
+      </div>
+      <div class="flex items-center space-x-3">
+        <a href="{{ url_for('main.dashboard_admin') }}" 
+           class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+          <i class="fas fa-arrow-left mr-2"></i>
+          Volver al Dashboard
+        </a>
+        <button class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <i class="fas fa-user-plus mr-2"></i>
+          Nuevo Usuario
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros y Búsqueda -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+    <div class="p-6">
+      <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Búsqueda -->
+        <div class="md:col-span-2">
+          <label for="q" class="block text-sm font-medium text-gray-700 mb-2">Buscar Usuario</label>
+          <div class="relative">
+            <input type="text" 
+                   name="q" 
+                   id="q"
+                   value="{{ busqueda }}"
+                   placeholder="Buscar por nombre, apellido o email..."
+                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtro por Rol -->
+        <div>
+          <label for="rol" class="block text-sm font-medium text-gray-700 mb-2">Rol</label>
+          <select name="rol" 
+                  id="rol"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Todos los roles</option>
+            <option value="superadmin" {% if rol_filtro == 'superadmin' %}selected{% endif %}>Super Admin</option>
+            <option value="admin" {% if rol_filtro == 'admin' %}selected{% endif %}>Admin</option>
+            <option value="cliente" {% if rol_filtro == 'cliente' %}selected{% endif %}>Cliente</option>
+            <option value="lector" {% if rol_filtro == 'lector' %}selected{% endif %}>Lector</option>
+          </select>
+        </div>
+
+        <!-- Filtro por Estado -->
+        <div>
+          <label for="estado" class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+          <select name="estado" 
+                  id="estado"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Todos</option>
+            <option value="activo" {% if estado_filtro == 'activo' %}selected{% endif %}>Activos</option>
+            <option value="inactivo" {% if estado_filtro == 'inactivo' %}selected{% endif %}>Inactivos</option>
+          </select>
+        </div>
+
+        <!-- Botones -->
+        <div class="md:col-span-4 flex items-center space-x-3">
+          <button type="submit" 
+                  class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <i class="fas fa-search mr-2"></i>
+            Buscar
+          </button>
+          <a href="{{ url_for('main.listar_usuarios_admin') }}" 
+             class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+            <i class="fas fa-times mr-2"></i>
+            Limpiar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Lista de Usuarios -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+    <div class="p-6 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">
+          Usuarios Encontrados ({{ usuarios.total }})
+        </h2>
+        <div class="flex items-center space-x-2 text-sm text-gray-600">
+          <span>Página {{ usuarios.page }} de {{ usuarios.pages }}</span>
+        </div>
+      </div>
+    </div>
+
+    {% if usuarios.items %}
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estadísticas</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Último Acceso</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for usuario in usuarios.items %}
+          <tr class="hover:bg-gray-50">
+            <!-- Usuario -->
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center">
+                <div class="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span class="text-blue-600 font-medium text-sm">
+                    {{ (usuario.nombre or usuario.email)[0]|upper }}
+                  </span>
+                </div>
+                <div class="ml-4">
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ usuario.nombre_completo }}
+                  </div>
+                  <div class="text-sm text-gray-500">{{ usuario.email }}</div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Rol -->
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                           {% if usuario.rol == 'superadmin' %}bg-red-100 text-red-800
+                           {% elif usuario.rol == 'admin' %}bg-blue-100 text-blue-800
+                           {% elif usuario.rol == 'cliente' %}bg-green-100 text-green-800
+                           {% else %}bg-gray-100 text-gray-800{% endif %}">
+                {{ usuario.rol|title }}
+              </span>
+            </td>
+
+            <!-- Estado -->
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                           {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                {% if usuario.activo %}
+                  <i class="fas fa-check-circle mr-1"></i>Activo
+                {% else %}
+                  <i class="fas fa-times-circle mr-1"></i>Inactivo
+                {% endif %}
+              </span>
+            </td>
+
+            <!-- Estadísticas -->
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm text-gray-900">
+                <div class="flex items-center space-x-4">
+                  <span class="flex items-center">
+                    <i class="fas fa-file text-blue-600 mr-1"></i>
+                    {{ estadisticas_usuarios[usuario.id].archivos }}
+                  </span>
+                  <span class="flex items-center">
+                    <i class="fas fa-folder text-green-600 mr-1"></i>
+                    {{ estadisticas_usuarios[usuario.id].carpetas }}
+                  </span>
+                  {% if estadisticas_usuarios[usuario.id].beneficiarios > 0 %}
+                  <span class="flex items-center">
+                    <i class="fas fa-users text-purple-600 mr-1"></i>
+                    {{ estadisticas_usuarios[usuario.id].beneficiarios }}
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+
+            <!-- Último Acceso -->
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {% if estadisticas_usuarios[usuario.id].ultimo_acceso %}
+                {{ estadisticas_usuarios[usuario.id].ultimo_acceso.strftime('%d/%m/%Y') }}
+              {% else %}
+                Nunca
+              {% endif %}
+            </td>
+
+            <!-- Acciones -->
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <div class="flex items-center space-x-2">
+                <a href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=usuario.id) }}" 
+                   class="text-blue-600 hover:text-blue-800" title="Ver Carpetas">
+                  <i class="fas fa-folder-open"></i>
+                </a>
+                <button class="text-green-600 hover:text-green-800" title="Editar Usuario">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="text-red-600 hover:text-red-800" title="Eliminar Usuario">
+                  <i class="fas fa-trash"></i>
+                </button>
+                <div class="relative group">
+                  <button class="text-gray-600 hover:text-gray-800" title="Más acciones">
+                    <i class="fas fa-ellipsis-v"></i>
+                  </button>
+                  <!-- Menú desplegable -->
+                  <div class="absolute right-0 top-8 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                    <div class="py-1">
+                      <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <i class="fas fa-key mr-2"></i>Cambiar Contraseña
+                      </a>
+                      <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <i class="fas fa-user-shield mr-2"></i>Cambiar Rol
+                      </a>
+                      <div class="border-t border-gray-100"></div>
+                      {% if usuario.activo %}
+                      <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                        <i class="fas fa-ban mr-2"></i>Desactivar
+                      </a>
+                      {% else %}
+                      <a href="#" class="block px-4 py-2 text-sm text-green-600 hover:bg-green-50">
+                        <i class="fas fa-check mr-2"></i>Activar
+                      </a>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    {% if usuarios.pages > 1 %}
+    <div class="px-6 py-4 border-t border-gray-200">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-gray-700">
+          Mostrando {{ ((usuarios.page - 1) * usuarios.per_page) + 1 }} a 
+          {{ ((usuarios.page - 1) * usuarios.per_page) + usuarios.items|length }} de 
+          {{ usuarios.total }} resultados
+        </div>
+        <div class="flex items-center space-x-2">
+          {% if usuarios.has_prev %}
+          <a href="{{ url_for('main.listar_usuarios_admin', page=usuarios.prev_num, q=busqueda, rol=rol_filtro, estado=estado_filtro) }}" 
+             class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+            Anterior
+          </a>
+          {% endif %}
+          
+          {% for page_num in usuarios.iter_pages() %}
+            {% if page_num %}
+              {% if page_num != usuarios.page %}
+              <a href="{{ url_for('main.listar_usuarios_admin', page=page_num, q=busqueda, rol=rol_filtro, estado=estado_filtro) }}" 
+                 class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                {{ page_num }}
+              </a>
+              {% else %}
+              <span class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg">
+                {{ page_num }}
+              </span>
+              {% endif %}
+            {% else %}
+              <span class="px-2 py-2 text-sm text-gray-500">…</span>
+            {% endif %}
+          {% endfor %}
+          
+          {% if usuarios.has_next %}
+          <a href="{{ url_for('main.listar_usuarios_admin', page=usuarios.next_num, q=busqueda, rol=rol_filtro, estado=estado_filtro) }}" 
+             class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+            Siguiente
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Sin resultados -->
+    <div class="p-12 text-center">
+      <i class="fas fa-users text-gray-300 text-6xl mb-4"></i>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">No se encontraron usuarios</h3>
+      <p class="text-gray-500 mb-6">
+        {% if busqueda or rol_filtro or estado_filtro %}
+          Intenta ajustar los filtros de búsqueda.
+        {% else %}
+          No hay usuarios registrados en el sistema.
+        {% endif %}
+      </p>
+      {% if not busqueda and not rol_filtro and not estado_filtro %}
+      <button class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        <i class="fas fa-user-plus mr-2"></i>
+        Crear Primer Usuario
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Scripts para funcionalidades adicionales -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Auto-submit formulario de búsqueda al cambiar filtros
+  const filtros = document.querySelectorAll('select[name="rol"], select[name="estado"]');
+  filtros.forEach(filtro => {
+    filtro.addEventListener('change', function() {
+      this.form.submit();
+    });
+  });
+
+  // Confirmación para acciones destructivas
+  document.querySelectorAll('[title="Eliminar Usuario"]').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (confirm('¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.')) {
+        // Aquí iría la lógica de eliminación
+        console.log('Eliminando usuario...');
+      }
+    });
+  });
+});
+</script>
+{% endblock %} 
