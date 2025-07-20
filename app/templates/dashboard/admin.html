@@ -6,8 +6,6 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
-<!-- Chart.js desde CDN con verificación robusta -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
   tailwind.config = {
@@ -488,62 +486,70 @@
   </div>
 </div>
 
+<!-- Chart.js con fallback -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <script>
-// Verificación mejorada de Chart.js
-function waitForChart(callback, maxTries = 50) {
-    let tries = 0;
-    const checkChart = () => {
-        if (typeof Chart !== 'undefined') {
-            console.log('✅ Chart.js cargado correctamente - Versión:', Chart.version);
-            callback();
-        } else if (tries < maxTries) {
-            tries++;
-            console.log(`🔄 Esperando Chart.js... intento ${tries}/${maxTries}`);
-            setTimeout(checkChart, 100);
-        } else {
-            console.error('❌ Chart.js no se pudo cargar después de', maxTries, 'intentos');
-            showChartError();
-        }
-    };
-    checkChart();
+// Fallback si Chart.js no se carga desde CDN
+if (typeof Chart === 'undefined') {
+    console.log('⚠️ CDN falló, cargando Chart.js alternativo...');
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+    document.head.appendChild(script);
 }
+</script>
 
-function showChartError() {
-    document.body.innerHTML = `
-        <div style="text-align:center; padding:50px; font-family:Arial; background:#f5f5f5; height:100vh; display:flex; align-items:center; justify-content:center;">
-            <div style="background:white; padding:40px; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
-                <h2 style="color:#dc2626; margin-bottom:20px;">⚠️ Error de Carga</h2>
-                <p style="margin-bottom:20px;">Chart.js no se pudo cargar desde el CDN.</p>
-                <p style="margin-bottom:30px;">Posibles causas:</p>
-                <ul style="text-align:left; margin-bottom:30px;">
-                    <li>• Problemas de conexión a internet</li>
-                    <li>• Bloqueador de anuncios activo</li>
-                    <li>• Firewall corporativo</li>
-                    <li>• DNS no resuelve cdn.jsdelivr.net</li>
-                </ul>
-                <button onclick="location.reload()" style="background:#0076a8; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">
-                    🔄 Reintentar
-                </button>
-                <br><br>
-                <a href="/test-charts" style="color:#0076a8; text-decoration:none;">
-                    🧪 Ir a página de prueba simple
-                </a>
-            </div>
-        </div>
-    `;
-}
-
+<script>
+// Inicialización robusta con múltiples intentos
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM cargado, iniciando verificación de Chart.js...');
+    console.log('🚀 Iniciando dashboard...');
     
-    // Usar la función robusta de verificación
-    waitForChart(function() {
-        initializeDashboard();
-    });
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    function checkAndInit() {
+        attempts++;
+        
+        if (typeof Chart !== 'undefined') {
+            console.log('✅ Chart.js listo, versión:', Chart.version);
+            initializeDashboard();
+        } else if (attempts < maxAttempts) {
+            console.log(`⏳ Intento ${attempts}/${maxAttempts} - esperando Chart.js...`);
+            setTimeout(checkAndInit, 300);
+        } else {
+            console.error('❌ Chart.js no disponible después de', attempts, 'intentos');
+            
+            // Mostrar mensaje de error en la página
+            const dashboardContent = document.querySelector('.max-w-7xl');
+            if (dashboardContent) {
+                dashboardContent.innerHTML = `
+                    <div style="text-align:center; padding:50px; background:white; border-radius:10px; margin:20px;">
+                        <h2 style="color:#dc2626; margin-bottom:20px;">⚠️ Error de Carga</h2>
+                        <p style="margin-bottom:20px;">Chart.js no se pudo cargar. Las gráficas no estarán disponibles.</p>
+                        <button onclick="location.reload()" style="background:#0076a8; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">
+                            🔄 Reintentar
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    // Iniciar verificación después de un delay inicial
+    setTimeout(checkAndInit, 200);
 });
 
 function initializeDashboard() {
     console.log('🎯 Inicializando dashboard completo...');
+    
+    // DATOS INICIALES DEL SERVIDOR - PRIMERO
+    const chartsData = {{ charts_data|tojson }};
+    const fileTypesGeneralData = {{ file_types_general|tojson }};
+    let fileTypesRecentData = {{ file_types_recent_initial|tojson }};
+    
+    // Verificar que los datos estén disponibles
+    console.log('📊 Charts data:', typeof chartsData, chartsData ? Object.keys(chartsData) : 'undefined');
+    console.log('📊 File types general:', typeof fileTypesGeneralData, fileTypesGeneralData ? fileTypesGeneralData.length : 'undefined');
+    console.log('📊 File types recent:', typeof fileTypesRecentData, fileTypesRecentData ? fileTypesRecentData.length : 'undefined');
 
     // Mapeo de nombres amigables para tipos de archivo
     const friendlyFileTypeNames = {
@@ -565,11 +571,6 @@ function initializeDashboard() {
     function getFriendlyFileName(typeName) {
         return friendlyFileTypeNames[typeName] || typeName;
     }
-
-    // Datos iniciales del servidor
-    const chartsData = {{ charts_data|tojson }};
-    const fileTypesGeneralData = {{ file_types_general|tojson }};
-    let fileTypesRecentData = {{ file_types_recent_initial|tojson }};
 
     // Configuración de datos para gráficos lineales
     const filesData = {
@@ -672,11 +673,28 @@ function initializeDashboard() {
 
     // Función para crear/actualizar gráficos lineales
     function createOrUpdateLineCharts(period) {
+        console.log('🔧 Creando gráficos para período:', period);
+        
+        // Verificar que los elementos HTML existan
+        const filesCanvas = document.getElementById('filesChart');
+        const usersCanvas = document.getElementById('usersChart');
+        
+        if (!filesCanvas) {
+            console.error('❌ Elemento filesChart no encontrado');
+            return;
+        }
+        if (!usersCanvas) {
+            console.error('❌ Elemento usersChart no encontrado');
+            return;
+        }
+        
+        console.log('✅ Elementos canvas encontrados');
+        
         if (filesChart) filesChart.destroy();
         if (usersChart) usersChart.destroy();
 
-        const filesCtx = document.getElementById('filesChart').getContext('2d');
-        const usersCtx = document.getElementById('usersChart').getContext('2d');
+        const filesCtx = filesCanvas.getContext('2d');
+        const usersCtx = usersCanvas.getContext('2d');
 
         if (['week', 'month', 'year', 'today'].includes(period)) {
             filesChart = new Chart(filesCtx, {
@@ -760,7 +778,14 @@ function initializeDashboard() {
     }
 
     // Gráfico de tipos de archivo general
-    const fileTypesGeneralCtx = document.getElementById('fileTypesGeneralChart').getContext('2d');
+    const fileTypesGeneralCanvas = document.getElementById('fileTypesGeneralChart');
+    if (!fileTypesGeneralCanvas) {
+        console.error('❌ Elemento fileTypesGeneralChart no encontrado');
+        return;
+    }
+    console.log('✅ Elemento fileTypesGeneralChart encontrado');
+    
+    const fileTypesGeneralCtx = fileTypesGeneralCanvas.getContext('2d');
     const customColorsGeneral = [
         '#3a6fb5', '#4c7ebd', '#5a8ac7', '#6495ED', '#779ECB', '#89CFF0', '#9BCDED', '#ADD8E6',
         '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'
@@ -802,6 +827,13 @@ function initializeDashboard() {
     });
 
     // Gráfico de tipos de archivo recientes
+    const fileTypesRecentCanvas = document.getElementById('fileTypesRecentChart');
+    if (!fileTypesRecentCanvas) {
+        console.error('❌ Elemento fileTypesRecentChart no encontrado');
+        return;
+    }
+    console.log('✅ Elemento fileTypesRecentChart encontrado');
+    
     const specialMimeColorsRecent = {
         'Excel': '#779ECB',
         'JSON': '#4c7ebd',
@@ -821,7 +853,7 @@ function initializeDashboard() {
         }
     });
 
-    const fileTypesRecentCtx = document.getElementById('fileTypesRecentChart').getContext('2d');
+    const fileTypesRecentCtx = fileTypesRecentCanvas.getContext('2d');
     let fileTypesRecentChart = new Chart(fileTypesRecentCtx, {
         type: 'doughnut',
         data: {
@@ -962,7 +994,20 @@ function initializeDashboard() {
     });
 
     // Gráficos anuales estáticos
-    const filesYearCtx = document.getElementById('filesYearChart').getContext('2d');
+    const filesYearCanvas = document.getElementById('filesYearChart');
+    const usersYearCanvas = document.getElementById('usersYearChart');
+    
+    if (!filesYearCanvas) {
+        console.error('❌ Elemento filesYearChart no encontrado');
+        return;
+    }
+    if (!usersYearCanvas) {
+        console.error('❌ Elemento usersYearChart no encontrado');
+        return;
+    }
+    console.log('✅ Elementos canvas anuales encontrados');
+    
+    const filesYearCtx = filesYearCanvas.getContext('2d');
     const filesYearChart = new Chart(filesYearCtx, {
         type: 'line',
         data: {
@@ -1002,7 +1047,7 @@ function initializeDashboard() {
         }
     });
 
-    const usersYearCtx = document.getElementById('usersYearChart').getContext('2d');
+    const usersYearCtx = usersYearCanvas.getContext('2d');
     const usersYearChart = new Chart(usersYearCtx, {
         type: 'line',
         data: {
@@ -1045,6 +1090,8 @@ function initializeDashboard() {
     // Inicializar con el período seleccionado
     const initialPeriod = periodSelector.value;
     createOrUpdateLineCharts(initialPeriod);
+    
+    console.log('🎉 Dashboard inicializado completamente');
 }
 </script>
 {% endblock %}
