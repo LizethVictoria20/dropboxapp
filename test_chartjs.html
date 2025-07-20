@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test Chart.js</title>
+    <script src="app/static/js/chart.min.js"></script>
+  </head>
+  <body>
+    <h1>Test Chart.js</h1>
+    <canvas id="testChart" width="400" height="200"></canvas>
+
+    <script>
+      console.log("Testing Chart.js...");
+
+      if (typeof Chart === "undefined") {
+        console.error("❌ Chart.js NO está cargado");
+        document.body.innerHTML +=
+          '<p style="color:red;">❌ Chart.js NO está cargado</p>';
+      } else {
+        console.log("✅ Chart.js está cargado correctamente");
+        document.body.innerHTML +=
+          '<p style="color:green;">✅ Chart.js está cargado correctamente</p>';
+
+        // Crear una gráfica de prueba
+        const ctx = document.getElementById("testChart").getContext("2d");
+        new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["Test 1", "Test 2", "Test 3"],
+            datasets: [
+              {
+                label: "Prueba",
+                data: [12, 19, 3],
+                backgroundColor: ["#ff6384", "#36a2eb", "#cc65fe"],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: {
+                display: true,
+                text: "Gráfica de Prueba",
+              },
+            },
+          },
+        });
+      }
+    </script>
+  </body>
+</html>

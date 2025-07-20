@@ -1,0 +1,339 @@
+{% extends "base.html" %} {% block title %}Dashboard Administrativo -
+Funcional{% endblock %} {% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
+<!-- Mismo método que test-charts que SÍ funciona -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body {
+    font-family: "Montserrat", sans-serif;
+  }
+  .chart-container {
+    height: 300px;
+    margin: 10px 0;
+  }
+  .stat-card {
+    transition: all 0.2s ease-in-out;
+  }
+  .stat-card:hover {
+    transform: translateY(-5px);
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-blue-800">Dashboard Estadístico</h1>
+      <p class="text-gray-600">Monitoreo de actividad del sistema</p>
+    </div>
+    <div class="flex items-center space-x-4">
+      <select id="periodSelector" class="px-4 py-2 border rounded-md">
+        <option value="today">Hoy</option>
+        <option value="week">Semana</option>
+        <option value="month" selected>Mes</option>
+        <option value="year">Año</option>
+      </select>
+      <button
+        id="refreshBtn"
+        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+      >
+        <i class="fas fa-sync-alt mr-2"></i>Actualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- Status de Chart.js -->
+  <div id="chartStatus" class="mb-6 p-4 bg-gray-50 rounded-lg">
+    <p class="text-center">🔄 Verificando Chart.js...</p>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div id="dashboardContent" style="display: none">
+    <!-- Métricas principales -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-lg shadow stat-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-500">Total Usuarios</p>
+            <p class="text-3xl font-bold text-blue-600" id="totalUsers">
+              {{ stats.total_users or 0 }}
+            </p>
+          </div>
+          <div class="p-3 bg-blue-100 rounded-full">
+            <i class="fas fa-users text-blue-600"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-lg shadow stat-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-500">Total Archivos</p>
+            <p class="text-3xl font-bold text-green-600" id="totalFiles">
+              {{ stats.total_files or 0 }}
+            </p>
+          </div>
+          <div class="p-3 bg-green-100 rounded-full">
+            <i class="fas fa-file text-green-600"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-lg shadow stat-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-500">Total Carpetas</p>
+            <p class="text-3xl font-bold text-purple-600" id="totalFolders">
+              {{ stats.total_folders or 0 }}
+            </p>
+          </div>
+          <div class="p-3 bg-purple-100 rounded-full">
+            <i class="fas fa-folder text-purple-600"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-lg shadow stat-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-500">Nuevos (Período)</p>
+            <p class="text-3xl font-bold text-red-600" id="newPeriod">
+              {{ stats.new_users_period or 0 }}
+            </p>
+          </div>
+          <div class="p-3 bg-red-100 rounded-full">
+            <i class="fas fa-plus text-red-600"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráficas -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <!-- Gráfica de línea - Tendencia semanal -->
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4 flex items-center">
+          <i class="fas fa-chart-line mr-2 text-blue-600"></i>
+          Tendencia de Archivos
+        </h3>
+        <div class="chart-container">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Gráfica circular - Tipos de archivo -->
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4 flex items-center">
+          <i class="fas fa-chart-pie mr-2 text-green-600"></i>
+          Tipos de Archivo
+        </h3>
+        <div class="chart-container">
+          <canvas id="typesChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráfica de barras - Actividad mensual -->
+    <div class="bg-white p-6 rounded-lg shadow mb-8">
+      <h3 class="text-lg font-semibold mb-4 flex items-center">
+        <i class="fas fa-chart-bar mr-2 text-purple-600"></i>
+        Actividad Anual por Meses
+      </h3>
+      <div style="height: 400px">
+        <canvas id="activityChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Archivos recientes -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold flex items-center">
+          <i class="fas fa-clock mr-2 text-gray-600"></i>
+          Archivos Recientes
+        </h3>
+      </div>
+      <div class="p-6">
+        {% if recent_files %}
+        <div class="space-y-3">
+          {% for file, user in recent_files[:5] %}
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+            <div class="flex items-center">
+              <i class="fas fa-file mr-3 text-gray-400"></i>
+              <div>
+                <p class="font-medium">{{ file.nombre }}</p>
+                <p class="text-sm text-gray-500">por {{ user.username }}</p>
+              </div>
+            </div>
+            <div class="text-sm text-gray-500">
+              {{ file.fecha_subida.strftime('%d/%m/%Y %H:%M') }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-500">
+          <i class="fas fa-inbox text-4xl mb-4"></i>
+          <p>No hay archivos recientes</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Usar exactamente el mismo método que test-charts que SÍ funciona
+  function checkChartAndInit() {
+      console.log('🔍 Verificando Chart.js...');
+
+      const statusDiv = document.getElementById('chartStatus');
+
+      if (typeof Chart !== 'undefined') {
+          console.log('✅ Chart.js disponible! Versión:', Chart.version);
+          statusDiv.innerHTML = `
+              <div class="text-center text-green-600">
+                  <i class="fas fa-check-circle mr-2"></i>
+                  Chart.js cargado correctamente (v${Chart.version})
+              </div>
+          `;
+
+          // Mostrar dashboard y crear gráficas
+          setTimeout(() => {
+              statusDiv.style.display = 'none';
+              document.getElementById('dashboardContent').style.display = 'block';
+              createCharts();
+          }, 1000);
+
+      } else {
+          console.error('❌ Chart.js NO disponible');
+          statusDiv.innerHTML = `
+              <div class="text-center text-red-600">
+                  <i class="fas fa-exclamation-triangle mr-2"></i>
+                  Error: Chart.js no se pudo cargar.
+                  <button onclick="location.reload()" class="ml-4 px-3 py-1 bg-red-600 text-white rounded text-sm">
+                      Reintentar
+                  </button>
+                  <a href="/test-charts" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded text-sm">
+                      Ir a Test
+                  </a>
+              </div>
+          `;
+      }
+  }
+
+  function createCharts() {
+      console.log('📊 Creando gráficas...');
+
+      // Datos de ejemplo basados en las estadísticas reales
+      const chartsData = {{ charts_data|tojson|safe }};
+
+      // 1. Gráfica de tendencia (línea)
+      const trendCtx = document.getElementById('trendChart').getContext('2d');
+      new Chart(trendCtx, {
+          type: 'line',
+          data: {
+              labels: chartsData.files.week.map(item => item.label),
+              datasets: [{
+                  label: 'Archivos subidos',
+                  data: chartsData.files.week.map(item => item.value),
+                  borderColor: 'rgb(59, 130, 246)',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  tension: 0.3,
+                  fill: true
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                  legend: { display: false }
+              },
+              scales: {
+                  y: { beginAtZero: true }
+              }
+          }
+      });
+
+      // 2. Gráfica de tipos (circular)
+      const typesCtx = document.getElementById('typesChart').getContext('2d');
+      const fileTypes = {{ file_types_general|tojson|safe }};
+
+      new Chart(typesCtx, {
+          type: 'doughnut',
+          data: {
+              labels: fileTypes.map(type => type.name),
+              datasets: [{
+                  data: fileTypes.map(type => type.count),
+                  backgroundColor: [
+                      '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
+                      '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
+                  ]
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                  legend: {
+                      position: 'bottom',
+                      labels: { usePointStyle: true }
+                  }
+              }
+          }
+      });
+
+      // 3. Gráfica de actividad anual (barras)
+      const activityCtx = document.getElementById('activityChart').getContext('2d');
+      new Chart(activityCtx, {
+          type: 'bar',
+          data: {
+              labels: chartsData.files.year.map(item => item.label),
+              datasets: [{
+                  label: 'Archivos',
+                  data: chartsData.files.year.map(item => item.value),
+                  backgroundColor: 'rgba(147, 51, 234, 0.8)',
+                  borderColor: 'rgb(147, 51, 234)',
+                  borderWidth: 1
+              }, {
+                  label: 'Usuarios',
+                  data: chartsData.users.year.map(item => item.value),
+                  backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                  borderColor: 'rgb(34, 197, 94)',
+                  borderWidth: 1
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                  y: { beginAtZero: true }
+              }
+          }
+      });
+
+      console.log('✅ Todas las gráficas creadas exitosamente!');
+  }
+
+  // Event listeners
+  document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚀 DOM cargado, verificando Chart.js...');
+      setTimeout(checkChartAndInit, 100);
+  });
+
+  // También verificar inmediatamente por si acaso
+  if (document.readyState === 'complete') {
+      setTimeout(checkChartAndInit, 100);
+  }
+
+  // Botón refresh
+  document.addEventListener('DOMContentLoaded', function() {
+      const refreshBtn = document.getElementById('refreshBtn');
+      if (refreshBtn) {
+          refreshBtn.addEventListener('click', function() {
+              location.reload();
+          });
+      }
+  });
+</script>
+{% endblock %}

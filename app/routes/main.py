@@ -70,22 +70,76 @@ def dashboard_cliente():
                          carpetas_recientes=carpetas_recientes,
                          notificaciones=notificaciones)
 
+@bp.route('/test-charts')
+def test_charts():
+    """Página de prueba simple para Chart.js (sin login)"""
+    return render_template('test_simple.html')
+
+@bp.route('/dashboard/working')
+@login_required
+@role_required('admin')
+def dashboard_working():
+    """Dashboard funcional que usa el mismo método que test-charts"""
+    from app.utils.dashboard_stats import (
+        get_dashboard_stats, get_charts_data, get_file_types_stats, 
+        get_recent_files_with_users
+    )
+    
+    # Obtener todas las estadísticas
+    stats = get_dashboard_stats('month')
+    charts_data = get_charts_data()
+    file_types_general = get_file_types_stats()
+    recent_files = get_recent_files_with_users(10)
+    
+    return render_template('dashboard/admin_working.html',
+                         stats=stats,
+                         charts_data=charts_data,
+                         file_types_general=file_types_general,
+                         recent_files=recent_files)
+
+@bp.route('/dashboard/test')
+@login_required
+@role_required('admin')
+def dashboard_test():
+    """Dashboard de prueba para verificar Chart.js"""
+    from app.utils.dashboard_stats import get_dashboard_stats
+    
+    # Obtener estadísticas básicas
+    stats = get_dashboard_stats('month')
+    
+    return render_template('dashboard/admin_simple.html', stats=stats)
+
 @bp.route('/dashboard/admin')
 @login_required
 @role_required('admin')
 def dashboard_admin():
     """Dashboard específico para administradores con estadísticas reales del sistema"""
+    from app.utils.dashboard_stats import (
+        get_dashboard_stats, get_charts_data, get_file_types_stats, 
+        get_recent_files_with_users, get_recent_activity
+    )
     
-    # Estadísticas reales del sistema
-    stats = {
-        'total_usuarios': User.query.count(),
-        'usuarios_activos': User.query.filter_by(activo=True).count(),
-        'usuarios_inactivos': User.query.filter_by(activo=False).count(),
-        'total_carpetas': Folder.query.count(),
-        'total_archivos': Archivo.query.count(),
-        'total_actividades': UserActivityLog.query.count(),
-        'notificaciones_pendientes': Notification.query.filter_by(leida=False).count()
-    }
+    # Obtener el período seleccionado (por defecto 'month')
+    period = request.args.get('period', 'month')
+    selected_period = period
+    
+    # Generar todas las estadísticas
+    stats = get_dashboard_stats(period)
+    charts_data = get_charts_data()
+    
+    # Tipos de archivo - general (todos los tiempos)
+    file_types_general = get_file_types_stats()
+    
+    # Tipos de archivo - para el período seleccionado
+    from app.utils.dashboard_stats import calculate_period_dates
+    start_date, end_date = calculate_period_dates(period)
+    file_types_recent_initial = get_file_types_stats(start_date, end_date)
+    
+    # Archivos recientes con usuarios
+    recent_files = get_recent_files_with_users(10)
+    
+    # Actividad reciente del sistema
+    recent_activity = get_recent_activity(15)
     
     # Distribución real de usuarios por rol
     usuarios_por_rol = db.session.query(
@@ -93,7 +147,6 @@ def dashboard_admin():
         db.func.count(User.id).label('cantidad')
     ).group_by(User.rol).all()
     
-    # Convertir a diccionario para el template
     distribucion_roles = {
         'superadmin': 0,
         'admin': 0,
@@ -105,7 +158,7 @@ def dashboard_admin():
         if rol in distribucion_roles:
             distribucion_roles[rol] = cantidad
     
-    # Usuarios más activos (simplificado para SQLite)
+    # Usuarios más activos
     usuarios_activos_raw = db.session.query(
         User.id,
         User.nombre,
@@ -117,7 +170,6 @@ def dashboard_admin():
      .order_by(db.desc('actividades'))\
      .limit(5).all()
     
-    # Convertir resultados a formato compatible
     usuarios_activos = []
     for resultado in usuarios_activos_raw:
         usuario_data = {
@@ -127,20 +179,28 @@ def dashboard_admin():
         }
         usuarios_activos.append(type('obj', (object,), usuario_data)())
     
-    # Actividad reciente del sistema (últimas 15 actividades)
-    actividad_reciente = UserActivityLog.query\
-        .join(User)\
-        .order_by(UserActivityLog.fecha.desc())\
-        .limit(15).all()
-    
     # Registrar actividad de acceso al dashboard admin
     current_user.registrar_actividad('admin_dashboard_access', 'Acceso al dashboard administrativo')
     
+    # Si es una petición AJAX, devolver solo los datos que necesita JavaScript
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'stats': stats,
+            'file_types_recent': file_types_recent_initial,
+            'charts_data': charts_data
+        })
+    
+    # Para peticiones normales, renderizar el template completo
     return render_template('dashboard/admin.html',
                          stats=stats,
+                         charts_data=charts_data,
+                         file_types_general=file_types_general,
+                         file_types_recent_initial=file_types_recent_initial,
+                         recent_files=recent_files,
+                         recent_activity=recent_activity,
                          distribucion_roles=distribucion_roles,
                          usuarios_activos=usuarios_activos,
-                         actividad_reciente=actividad_reciente)
+                         selected_period=selected_period)
 
 @bp.route('/dashboard/lector')
 @login_required

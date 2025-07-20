@@ -1,0 +1,238 @@
+{% extends "base.html" %} {% block title %}Dashboard Test - Chart.js{% endblock
+%} {% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  .chart-container {
+    width: 100%;
+    height: 400px;
+    margin: 20px 0;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold mb-8">Test Dashboard - Chart.js</h1>
+
+  <div id="loadingMessage" class="text-center py-8">
+    <p>Cargando Chart.js...</p>
+  </div>
+
+  <div id="dashboardContent" style="display: none">
+    <!-- Métricas básicas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold text-gray-700">Usuarios</h3>
+        <p class="text-3xl font-bold text-blue-600">
+          {{ stats.total_users or 0 }}
+        </p>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold text-gray-700">Archivos</h3>
+        <p class="text-3xl font-bold text-green-600">
+          {{ stats.total_files or 0 }}
+        </p>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold text-gray-700">Carpetas</h3>
+        <p class="text-3xl font-bold text-purple-600">
+          {{ stats.total_folders or 0 }}
+        </p>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold text-gray-700">Clientes</h3>
+        <p class="text-3xl font-bold text-red-600">
+          {{ stats.total_clients or 0 }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Gráficas de prueba -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-xl font-semibold mb-4">Gráfica de Barras (Test)</h3>
+        <div class="chart-container">
+          <canvas id="testBarChart"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-xl font-semibold mb-4">Gráfica Circular (Test)</h3>
+        <div class="chart-container">
+          <canvas id="testPieChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow mt-6">
+      <h3 class="text-xl font-semibold mb-4">Gráfica de Línea (Test)</h3>
+      <div class="chart-container">
+        <canvas id="testLineChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function checkChartJS() {
+    console.log("Verificando Chart.js...");
+
+    if (typeof Chart !== "undefined") {
+      console.log("✅ Chart.js está disponible!");
+      console.log("Versión de Chart.js:", Chart.version);
+
+      // Ocultar mensaje de carga
+      document.getElementById("loadingMessage").style.display = "none";
+      document.getElementById("dashboardContent").style.display = "block";
+
+      // Crear gráficas de prueba
+      createTestCharts();
+    } else {
+      console.error("❌ Chart.js NO está disponible");
+      document.getElementById("loadingMessage").innerHTML =
+        '<div class="text-red-600"><h2>❌ Error</h2><p>Chart.js no se pudo cargar</p></div>';
+    }
+  }
+
+  function createTestCharts() {
+    console.log("Creando gráficas de prueba...");
+
+    // Gráfica de barras
+    const barCtx = document.getElementById("testBarChart").getContext("2d");
+    new Chart(barCtx, {
+      type: "bar",
+      data: {
+        labels: ["Enero", "Febrero", "Marzo", "Abril", "Mayo"],
+        datasets: [
+          {
+            label: "Datos de Prueba",
+            data: [12, 19, 3, 5, 2],
+            backgroundColor: [
+              "rgba(255, 99, 132, 0.2)",
+              "rgba(54, 162, 235, 0.2)",
+              "rgba(255, 205, 86, 0.2)",
+              "rgba(75, 192, 192, 0.2)",
+              "rgba(153, 102, 255, 0.2)",
+            ],
+            borderColor: [
+              "rgba(255, 99, 132, 1)",
+              "rgba(54, 162, 235, 1)",
+              "rgba(255, 205, 86, 1)",
+              "rgba(75, 192, 192, 1)",
+              "rgba(153, 102, 255, 1)",
+            ],
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+          },
+        },
+      },
+    });
+
+    // Gráfica circular
+    const pieCtx = document.getElementById("testPieChart").getContext("2d");
+    new Chart(pieCtx, {
+      type: "doughnut",
+      data: {
+        labels: ["PDF", "Word", "Excel", "Imágenes", "Otros"],
+        datasets: [
+          {
+            data: [30, 25, 20, 15, 10],
+            backgroundColor: [
+              "#FF6384",
+              "#36A2EB",
+              "#FFCE56",
+              "#4BC0C0",
+              "#9966FF",
+            ],
+            hoverBackgroundColor: [
+              "#FF6384",
+              "#36A2EB",
+              "#FFCE56",
+              "#4BC0C0",
+              "#9966FF",
+            ],
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    });
+
+    // Gráfica de línea
+    const lineCtx = document.getElementById("testLineChart").getContext("2d");
+    new Chart(lineCtx, {
+      type: "line",
+      data: {
+        labels: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+        datasets: [
+          {
+            label: "Usuarios",
+            data: [65, 59, 80, 81, 56, 55, 40],
+            fill: false,
+            borderColor: "rgb(75, 192, 192)",
+            backgroundColor: "rgba(75, 192, 192, 0.2)",
+            tension: 0.1,
+          },
+          {
+            label: "Archivos",
+            data: [28, 48, 40, 19, 86, 27, 90],
+            fill: false,
+            borderColor: "rgb(255, 99, 132)",
+            backgroundColor: "rgba(255, 99, 132, 0.2)",
+            tension: 0.1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: "index",
+          intersect: false,
+        },
+        scales: {
+          x: {
+            display: true,
+            title: {
+              display: true,
+              text: "Días de la Semana",
+            },
+          },
+          y: {
+            display: true,
+            title: {
+              display: true,
+              text: "Cantidad",
+            },
+          },
+        },
+      },
+    });
+
+    console.log("✅ Todas las gráficas creadas exitosamente!");
+  }
+
+  // Verificar Chart.js cuando se carga la página
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("DOM cargado, verificando Chart.js...");
+
+    // Dar un pequeño delay para asegurar que Chart.js se cargue
+    setTimeout(checkChartJS, 100);
+  });
+
+  // También verificar inmediatamente por si acaso
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", checkChartJS);
+  } else {
+    setTimeout(checkChartJS, 100);
+  }
+</script>
+{% endblock %}

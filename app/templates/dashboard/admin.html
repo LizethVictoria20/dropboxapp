@@ -1,525 +1,1050 @@
-{% extends "base.html" %} {% block title %}Dashboard Administrativo - {{
-current_user.nombre_completo }}{% endblock %} {% block extra_head %}
-<!-- Chart.js para gráficos dinámicos -->
+{% extends "base.html" %}
+
+{% block title %}Dashboard Estadístico - Administrador{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
+<!-- Chart.js desde CDN con verificación robusta -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: {
+            DEFAULT: "#0076a8",
+            light: "#0095c7",
+            dark: "#005685",
+          },
+          accent: {
+            DEFAULT: "#0088b0",
+            light: "#00a8d4",
+            dark: "#00678e",
+          },
+          surface: {
+            light: "#FFFFFF",
+            DEFAULT: "#F0F7FC",
+            dark: "#D9E9F2",
+          },
+        },
+        fontFamily: {
+          montserrat: ["Montserrat", "sans-serif"],
+          opensans: ["Open Sans", "sans-serif"],
+        },
+      },
+    },
+  };
+</script>
+
 <style>
-  .admin-avatar {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  body {
+    font-family: "Montserrat", sans-serif;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .stat-card {
+    transition: all 0.2s ease-in-out;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1),
+      0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  .period-btn.active {
+    background-color: #0076a8;
     color: white;
-    font-weight: bold;
-    font-size: 1.2rem;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+    border-color: #0076a8;
   }
-  .admin-badge {
-    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  
+  .user-period-btn.active {
+    background-color: #0088b0;
     color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
-  }
-  .superadmin-badge {
-    background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    box-shadow: 0 2px 4px rgba(124, 58, 237, 0.3);
-  }
-  .admin-stat-card {
-    transition: transform 0.2s ease-in-out;
-    border-left: 4px solid #dc2626;
-  }
-  .admin-stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
-  }
-  .admin-header {
-    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-  }
-  .system-alert {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-left: 4px solid #f59e0b;
+    border-color: #0088b0;
   }
 </style>
-{% endblock %} {% block content %}
-<div class="container mx-auto px-4 py-6">
-  <!-- Header administrativo destacado -->
-  <div class="mb-8">
-    <div class="admin-header rounded-lg shadow-lg p-6 text-white">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-          <div class="admin-avatar">
-            {{ current_user.nombre_completo[0].upper() if
-            current_user.nombre_completo else 'A' }}
-          </div>
-          <div>
-            <h1 class="text-2xl font-bold">Panel de Administración</h1>
-            <div class="flex items-center space-x-2 mt-1">
-              {% if current_user.es_superadmin() %}
-              <span class="superadmin-badge">SUPER ADMINISTRADOR</span>
-              {% else %}
-              <span class="admin-badge">ADMINISTRADOR</span>
-              {% endif %}
-              <span class="text-sm opacity-90"
-                >{{ current_user.nombre_completo }} ({{ current_user.email
-                }})</span
-              >
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Encabezado -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-primary-dark mb-1">
+        Dashboard Estadístico
+      </h1>
+      <p class="text-gray-600 text-sm">
+        Monitorea la actividad y crecimiento del sistema
+      </p>
+    </div>
+    <div class="mt-4 md:mt-0 flex items-center space-x-4">
+      <label for="periodSelector" class="text-sm font-medium text-gray-700">Período:</label>
+      <select id="periodSelector" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
+        <option value="today" {% if selected_period == 'today' %}selected{% endif %}>Hoy</option>
+        <option value="week" {% if selected_period == 'week' %}selected{% endif %}>Semana</option>
+        <option value="month" {% if selected_period == 'month' %}selected{% endif %}>Mes</option>
+        <option value="year" {% if selected_period == 'year' %}selected{% endif %}>Año</option>
+      </select>
+      <button id="refreshButton" type="button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+        <i class="fas fa-sync-alt mr-2"></i>
+        Actualizar datos
+      </button>
+    </div>
+  </div>
+
+  <!-- SECCIÓN DE DATOS DINÁMICOS -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <div class="bg-gray-50 px-3 py-2 border-b border-gray-200">
+      <h2 class="text-base font-semibold text-gray-800 flex items-center">
+        <i class="fas fa-chart-bar text-green-600 mr-2"></i>
+        Datos Dinámicos del Período
+      </h2>
+      <p class="text-sm text-gray-500">Actividad y tendencias del período seleccionado</p>
+    </div>
+    
+    <div class="p-3">
+      <!-- Actividad del Período -->
+      <div class="mb-4">
+        <h3 class="text-sm font-medium text-gray-700 mb-2 border-b border-gray-100 pb-1">
+          Actividad del Período
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <!-- Tarjeta Usuarios Nuevos -->
+          <div class="bg-gray-50 rounded p-2 border border-gray-100 stat-card">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-medium text-gray-500">Usuarios Nuevos</p>
+              <span class="p-1 rounded-full bg-gray-100 text-green-600">
+                <i class="fas fa-user-plus text-sm"></i>
+              </span>
             </div>
-            <p class="text-sm opacity-75 mt-1">
-              🔒 Acceso completo al sistema {% if current_user.ultimo_acceso %}
-              • Último acceso: {{ current_user.ultimo_acceso.strftime('%d/%m/%Y
-              a las %H:%M') }} {% endif %}
-            </p>
+            <h3 class="text-2xl font-medium text-gray-800" id="newUsersPeriodCount">
+              {{ stats.new_users_period }}
+            </h3>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>usuarios creados</span>
+            </div>
           </div>
-        </div>
-        <div class="text-right">
-          <div class="bg-white bg-opacity-20 rounded-lg p-3">
-            <p class="text-sm opacity-90">Total Usuarios</p>
-            <p class="text-2xl font-bold">{{ stats.total_usuarios }}</p>
+
+          <!-- Tarjeta Clientes Nuevos -->
+          <div class="bg-gray-50 rounded p-2 border border-gray-100 stat-card">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-medium text-gray-500">Clientes Nuevos</p>
+              <span class="p-1 rounded-full bg-gray-100 text-green-600">
+                <i class="fas fa-handshake text-sm"></i>
+              </span>
+            </div>
+            <h3 class="text-2xl font-medium text-gray-800" id="newClientsPeriodCount">
+              {{ stats.new_clients_period }}
+            </h3>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>clientes creados</span>
+            </div>
+          </div>
+
+          <!-- Tarjeta Archivos Nuevos -->
+          <div class="bg-gray-50 rounded p-2 border border-gray-100 stat-card">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-medium text-gray-500">Archivos Nuevos</p>
+              <span class="p-1 rounded-full bg-gray-100 text-green-600">
+                <i class="fas fa-file-upload text-sm"></i>
+              </span>
+            </div>
+            <h3 class="text-2xl font-medium text-gray-800" id="newFilesPeriodCount">
+              {{ stats.new_files_period }}
+            </h3>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>archivos subidos</span>
+            </div>
+          </div>
+
+          <!-- Tarjeta Carpetas Nuevas -->
+          <div class="bg-gray-50 rounded p-2 border border-gray-100 stat-card">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-medium text-gray-500">Carpetas Nuevas</p>
+              <span class="p-1 rounded-full bg-gray-100 text-green-600">
+                <i class="fas fa-folder-plus text-sm"></i>
+              </span>
+            </div>
+            <h3 class="text-2xl font-medium text-gray-800" id="newFoldersPeriodCount">
+              {{ stats.new_folders_period }}
+            </h3>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>carpetas creadas</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Alerta del sistema si hay problemas -->
-  {% if stats.usuarios_inactivos > 0 or stats.notificaciones_pendientes > 5 %}
-  <div class="system-alert rounded-lg p-4 mb-6">
-    <div class="flex items-start space-x-3">
-      <svg
-        class="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-        />
-      </svg>
+      <!-- Tendencias del Período -->
       <div>
-        <h3 class="text-yellow-800 font-semibold">Alertas del Sistema</h3>
-        <ul class="text-yellow-700 text-sm mt-1 space-y-1">
-          {% if stats.usuarios_inactivos > 0 %}
-          <li>
-            • {{ stats.usuarios_inactivos }} usuario(s) inactivo(s) requieren
-            atención
-          </li>
-          {% endif %} {% if stats.notificaciones_pendientes > 5 %}
-          <li>
-            • {{ stats.notificaciones_pendientes }} notificaciones pendientes de
-            gestión
-          </li>
-          {% endif %}
-        </ul>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Estadísticas del sistema -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <div
-      class="admin-stat-card bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-    >
-      <div class="flex items-center">
-        <div class="p-3 rounded-full bg-red-100 text-red-600">
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
-            />
-          </svg>
-        </div>
-        <div class="ml-4">
-          <p class="text-sm text-gray-500">Usuarios Activos</p>
-          <p class="text-2xl font-bold text-gray-900">
-            {{ stats.usuarios_activos }}
-          </p>
-          <p class="text-xs text-gray-400">
-            de {{ stats.total_usuarios }} totales
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div
-      class="admin-stat-card bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-    >
-      <div class="flex items-center">
-        <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-            />
-          </svg>
-        </div>
-        <div class="ml-4">
-          <p class="text-sm text-gray-500">Total Carpetas</p>
-          <p class="text-2xl font-bold text-gray-900">
-            {{ stats.total_carpetas }}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div
-      class="admin-stat-card bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-    >
-      <div class="flex items-center">
-        <div class="p-3 rounded-full bg-green-100 text-green-600">
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-        </div>
-        <div class="ml-4">
-          <p class="text-sm text-gray-500">Total Archivos</p>
-          <p class="text-2xl font-bold text-gray-900">
-            {{ stats.total_archivos }}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div
-      class="admin-stat-card bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-    >
-      <div class="flex items-center">
-        <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 17h5l-5 5v-5zM4 20h6a2 2 0 002-2V9l-6 6v5z"
-            />
-          </svg>
-        </div>
-        <div class="ml-4">
-          <p class="text-sm text-gray-500">Actividades del Sistema</p>
-          <p class="text-2xl font-bold text-gray-900">
-            {{ stats.total_actividades }}
-          </p>
+        <h3 class="text-sm font-medium text-gray-700 mb-2 border-b border-gray-100 pb-1">
+          Tendencias del Período
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- Gráfico de Archivos por período -->
+          <div class="bg-gray-50 rounded p-3 border border-gray-100">
+            <div class="mb-2 flex items-center">
+              <i class="fas fa-folder-open mr-1 text-green-600 text-sm"></i>
+              <h4 class="text-sm font-medium text-gray-700">
+                Archivos por período
+              </h4>
+            </div>
+            <div class="h-48">
+              <canvas id="filesChart"></canvas>
+            </div>
+          </div>
+          
+          <!-- Gráfico de Usuarios por período -->
+          <div class="bg-gray-50 rounded p-3 border border-gray-100">
+            <div class="mb-2 flex items-center">
+              <i class="fas fa-user mr-1 text-green-600 text-sm"></i>
+              <h4 class="text-sm font-medium text-gray-700">
+                Usuarios por período
+              </h4>
+            </div>
+            <div class="h-48">
+              <canvas id="usersChart"></canvas>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Distribución de usuarios por rol -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">
-        Distribución de Usuarios por Rol
+  <!-- SECCIÓN DE DATOS ESTÁTICOS -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <div class="bg-gray-50 px-3 py-2 border-b border-gray-200">
+      <h2 class="text-base font-semibold text-gray-800 flex items-center">
+        <i class="fas fa-database text-primary mr-2"></i>
+        Datos Estáticos del Sistema
+      </h2>
+      <p class="text-sm text-gray-500">Métricas globales y evolución histórica</p>
+    </div>
+    
+    <div class="p-3">
+      <!-- Métricas Globales -->
+      <div class="mb-4">
+        <h3 class="text-sm font-medium text-gray-700 mb-2 border-b border-gray-100 pb-1">
+          Métricas Globales
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <!-- Tarjeta Usuarios Totales -->
+          <div class="bg-gray-50 rounded p-2 border border-gray-100 stat-card">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-medium text-gray-500">Usuarios</p>
+              <span class="p-1 rounded-full bg-gray-100 text-primary">
+                <i class="fas fa-users text-sm"></i>
+              </span>
+            </div>
+            <h3 class="text-2xl font-medium text-gray-800">
+              {{ stats.total_users }}
+            </h3>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>registrados</span>
+            </div>
+          </div>
+
+          <!-- Tarjeta Clientes Totales -->
+          <div class="bg-gray-50 rounded p-2 border border-gray-100 stat-card">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-medium text-gray-500">Clientes</p>
+              <span class="p-1 rounded-full bg-gray-100 text-primary">
+                <i class="fas fa-handshake text-sm"></i>
+              </span>
+            </div>
+            <h3 class="text-2xl font-medium text-gray-800">
+              {{ stats.total_clients }}
+            </h3>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>registrados</span>
+            </div>
+          </div>
+
+          <!-- Tarjeta Archivos Totales -->
+          <div class="bg-gray-50 rounded p-2 border border-gray-100 stat-card">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-medium text-gray-500">Archivos</p>
+              <span class="p-1 rounded-full bg-gray-100 text-primary">
+                <i class="fas fa-database text-sm"></i>
+              </span>
+            </div>
+            <h3 class="text-2xl font-medium text-gray-800">
+              {{ stats.total_files }}
+            </h3>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>almacenados</span>
+            </div>
+          </div>
+
+          <!-- Tarjeta Carpetas Totales -->
+          <div class="bg-gray-50 rounded p-2 border border-gray-100 stat-card">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-medium text-gray-500">Carpetas</p>
+              <span class="p-1 rounded-full bg-gray-100 text-primary">
+                <i class="fas fa-folder text-sm"></i>
+              </span>
+            </div>
+            <h3 class="text-2xl font-medium text-gray-800">
+              {{ stats.total_folders }}
+            </h3>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>creadas</span>
+            </div>
+          </div>
+
+          <!-- Tarjeta Beneficiarios Totales -->
+          <div class="bg-gray-50 rounded p-2 border border-gray-100 stat-card">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-medium text-gray-500">Beneficiarios</p>
+              <span class="p-1 rounded-full bg-gray-100 text-primary">
+                <i class="fas fa-user-friends text-sm"></i>
+              </span>
+            </div>
+            <h3 class="text-2xl font-medium text-gray-800">
+              {{ stats.total_beneficiaries }}
+            </h3>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>registrados</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evolución Anual -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-700 mb-2 border-b border-gray-100 pb-1">
+          Evolución Anual
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- Gráfico de Archivos - Evolución Anual -->
+          <div class="bg-gray-50 rounded p-3 border border-gray-100">
+            <div class="mb-2 flex items-center">
+              <i class="fas fa-folder-open mr-1 text-primary text-sm"></i>
+              <h4 class="text-sm font-medium text-gray-700">
+                Archivos - Evolución Anual
+              </h4>
+            </div>
+            <div class="h-48">
+              <canvas id="filesYearChart"></canvas>
+            </div>
+          </div>
+          
+          <!-- Gráfico de Usuarios - Evolución Anual -->
+          <div class="bg-gray-50 rounded p-3 border border-gray-100">
+            <div class="mb-2 flex items-center">
+              <i class="fas fa-user mr-1 text-primary text-sm"></i>
+              <h4 class="text-sm font-medium text-gray-700">
+                Usuarios - Evolución Anual
+              </h4>
+            </div>
+            <div class="h-48">
+              <canvas id="usersYearChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Archivos Recientes -->
+  <div class="bg-white rounded-xl shadow-sm border border-surface-dark/10 overflow-hidden mb-6">
+    <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+      <div class="flex items-center">
+        <i class="fas fa-file-alt text-accent mr-3"></i>
+        <h2 class="text-xl font-semibold text-primary-dark">
+          Archivos Recientes
+        </h2>
+      </div>
+      <a href="{{ url_for('main.listar_carpetas') }}" class="text-primary hover:text-primary-dark text-sm font-medium">
+        Ver todos
+      </a>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-surface">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Archivo
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Usuario
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Fecha
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for file, user in recent_files[:5] %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <i class="fas fa-file text-gray-400"></i>
+                </div>
+                <div class="ml-4">
+                  <div class="text-sm font-medium text-gray-900 truncate max-w-xs">
+                    {{ file.nombre }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ file.extension or 'Sin extensión' }}
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm text-gray-900">{{ user.username }}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm text-gray-500">
+                {{ file.fecha_subida.strftime('%d/%m/%Y %H:%M') }}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not recent_files %}
+    <div class="p-8 text-center">
+      <div class="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+        <i class="fas fa-inbox text-gray-400 text-xl"></i>
+      </div>
+      <h3 class="text-sm font-medium text-gray-900">
+        No hay archivos recientes
       </h3>
-      <div class="space-y-4">
-        <div
-          class="flex items-center justify-between p-3 rounded-lg bg-purple-50 border border-purple-200"
-        >
-          <div class="flex items-center space-x-3">
-            <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
-            <span class="font-medium text-gray-900">Super Administradores</span>
-          </div>
-          <span class="text-xl font-bold text-purple-600"
-            >{{ distribucion_roles.superadmin }}</span
-          >
-        </div>
-        <div
-          class="flex items-center justify-between p-3 rounded-lg bg-red-50 border border-red-200"
-        >
-          <div class="flex items-center space-x-3">
-            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-            <span class="font-medium text-gray-900">Administradores</span>
-          </div>
-          <span class="text-xl font-bold text-red-600"
-            >{{ distribucion_roles.admin }}</span
-          >
-        </div>
-        <div
-          class="flex items-center justify-between p-3 rounded-lg bg-blue-50 border border-blue-200"
-        >
-          <div class="flex items-center space-x-3">
-            <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
-            <span class="font-medium text-gray-900">Clientes</span>
-          </div>
-          <span class="text-xl font-bold text-blue-600"
-            >{{ distribucion_roles.cliente }}</span
-          >
-        </div>
-        <div
-          class="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-200"
-        >
-          <div class="flex items-center space-x-3">
-            <div class="w-3 h-3 bg-gray-500 rounded-full"></div>
-            <span class="font-medium text-gray-900">Lectores</span>
-          </div>
-          <span class="text-xl font-bold text-gray-600"
-            >{{ distribucion_roles.lector }}</span
-          >
-        </div>
-      </div>
-    </div>
-
-    <!-- Usuarios más activos -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">
-        Usuarios Más Activos
-      </h3>
-      {% if usuarios_activos %}
-      <div class="space-y-3">
-        {% for usuario in usuarios_activos %}
-        <div
-          class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50"
-        >
-          <div>
-            <p class="text-sm font-medium text-gray-900">
-              {{ usuario.nombre_completo }}
-            </p>
-            <p class="text-xs text-gray-500">{{ usuario.email }}</p>
-          </div>
-          <span
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-          >
-            {{ usuario.actividades }} actividades
-          </span>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="text-center py-8">
-        <svg
-          class="mx-auto h-12 w-12 text-gray-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-          />
-        </svg>
-        <p class="text-gray-500 text-sm mt-2">
-          No hay actividad de usuarios registrada
-        </p>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Actividad reciente del sistema -->
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">
-      Actividad Reciente del Sistema
-    </h3>
-    {% if actividad_reciente %}
-    <div class="space-y-3 max-h-96 overflow-y-auto">
-      {% for actividad in actividad_reciente %}
-      <div
-        class="flex items-start space-x-3 p-3 rounded-lg border border-gray-100"
-      >
-        <div class="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center justify-between">
-            <p class="text-sm text-gray-900 font-medium">
-              {{ actividad.usuario.nombre_completo }} - {{ actividad.accion }}
-            </p>
-            <span class="text-xs text-gray-500">
-              {{ actividad.fecha.strftime('%d/%m/%Y %H:%M') }}
-            </span>
-          </div>
-          {% if actividad.descripcion %}
-          <p class="text-sm text-gray-600">{{ actividad.descripcion }}</p>
-          {% endif %}
-          <p class="text-xs text-gray-500">
-            Usuario: {{ actividad.usuario.email }} {% if actividad.ip_address %}
-            • IP: {{ actividad.ip_address }}{% endif %}
-          </p>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="text-center py-8">
-      <svg
-        class="mx-auto h-12 w-12 text-gray-400"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-        />
-      </svg>
-      <p class="text-gray-500 text-sm mt-2">
-        No hay actividad registrada en el sistema
+      <p class="mt-1 text-sm text-gray-500">
+        Aún no se han subido archivos al sistema.
       </p>
     </div>
     {% endif %}
   </div>
 
-  <!-- Acciones administrativas -->
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">
-      Herramientas Administrativas
-    </h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <a
-        href="{{ url_for('main.listar_usuarios_admin') }}"
-        class="flex items-center p-4 border border-red-200 rounded-lg hover:bg-red-50 transition-colors group"
-      >
-        <svg
-          class="w-8 h-8 text-red-500 mr-3 group-hover:text-red-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
-          />
-        </svg>
-        <div>
-          <p class="font-medium text-gray-900">Gestionar Usuarios</p>
-          <p class="text-sm text-gray-500">Administrar cuentas y permisos</p>
+  <!-- Distribución por Tipo de Archivo -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Gráfico de Distribución por Tipo (Período Seleccionado) -->
+    <div class="bg-white rounded-xl shadow-sm border border-surface-dark/10 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center">
+        <i class="fas fa-chart-pie text-accent mr-3"></i>
+        <h2 class="text-xl font-semibold text-primary-dark">
+          Distribución por Tipo (Período Seleccionado)
+        </h2>
+      </div>
+      <div class="p-6">
+        <div class="h-72">
+          <canvas id="fileTypesRecentChart"></canvas>
         </div>
-      </a>
+        <div id="fileTypesRecentLegend" class="mt-6 space-y-2">
+          <!-- La leyenda se generará dinámicamente con JavaScript -->
+        </div>
+      </div>
+    </div>
 
-      <a
-        href="{{ url_for('main.listar_carpetas_admin') }}"
-        class="flex items-center p-4 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors group"
-      >
-        <svg
-          class="w-8 h-8 text-blue-500 mr-3 group-hover:text-blue-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-          />
-        </svg>
-        <div>
-          <p class="font-medium text-gray-900">Gestionar Carpetas</p>
-          <p class="text-sm text-gray-500">Supervisar estructura de archivos</p>
+    <!-- Gráfico de Distribución por Tipo (General) -->
+    <div class="bg-white rounded-xl shadow-sm border border-surface-dark/10 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center">
+        <i class="fas fa-chart-pie text-accent mr-3"></i>
+        <h2 class="text-xl font-semibold text-primary-dark">
+          Distribución por Tipo (General)
+        </h2>
+      </div>
+      <div class="p-6">
+        <div class="h-72">
+          <canvas id="fileTypesGeneralChart"></canvas>
         </div>
-      </a>
-
-      <a
-        href="{{ url_for('main.system_settings') }}"
-        class="flex items-center p-4 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors group"
-      >
-        <svg
-          class="w-8 h-8 text-purple-500 mr-3 group-hover:text-purple-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-          />
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-        <div>
-          <p class="font-medium text-gray-900">Configuración</p>
-          <p class="text-sm text-gray-500">Ajustes del sistema</p>
+        <div class="mt-6 space-y-2">
+          {% for type in file_types_general %}
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <span class="inline-block w-3 h-3 rounded-full mr-2" style="background-color: {{ type.color }};"></span>
+              <span class="text-sm text-gray-600">{{ type.name }}</span>
+            </div>
+            <div class="text-sm font-medium">
+              {{ type.count }} ({{ type.percentage }}%)
+            </div>
+          </div>
+          {% endfor %}
         </div>
-      </a>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-  // Gráfico de distribución de roles si existe Chart.js
-  if (typeof Chart !== 'undefined') {
-      const ctx = document.getElementById('rolesChart');
-      if (ctx) {
-          new Chart(ctx, {
-              type: 'doughnut',
-              data: {
-                  labels: ['Super Admin', 'Admin', 'Cliente', 'Lector'],
-                  datasets: [{
-                      data: [
-                          {{ distribucion_roles.superadmin }},
-                          {{ distribucion_roles.admin }},
-                          {{ distribucion_roles.cliente }},
-                          {{ distribucion_roles.lector }}
-                      ],
-                      backgroundColor: [
-                          '#7c3aed',
-                          '#dc2626',
-                          '#2563eb',
-                          '#6b7280'
-                      ]
-                  }]
-              },
-              options: {
-                  responsive: true,
-                  plugins: {
-                      legend: {
-                          position: 'bottom'
-                      }
-                  }
-              }
-          });
+// Verificación mejorada de Chart.js
+function waitForChart(callback, maxTries = 50) {
+    let tries = 0;
+    const checkChart = () => {
+        if (typeof Chart !== 'undefined') {
+            console.log('✅ Chart.js cargado correctamente - Versión:', Chart.version);
+            callback();
+        } else if (tries < maxTries) {
+            tries++;
+            console.log(`🔄 Esperando Chart.js... intento ${tries}/${maxTries}`);
+            setTimeout(checkChart, 100);
+        } else {
+            console.error('❌ Chart.js no se pudo cargar después de', maxTries, 'intentos');
+            showChartError();
+        }
+    };
+    checkChart();
+}
+
+function showChartError() {
+    document.body.innerHTML = `
+        <div style="text-align:center; padding:50px; font-family:Arial; background:#f5f5f5; height:100vh; display:flex; align-items:center; justify-content:center;">
+            <div style="background:white; padding:40px; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                <h2 style="color:#dc2626; margin-bottom:20px;">⚠️ Error de Carga</h2>
+                <p style="margin-bottom:20px;">Chart.js no se pudo cargar desde el CDN.</p>
+                <p style="margin-bottom:30px;">Posibles causas:</p>
+                <ul style="text-align:left; margin-bottom:30px;">
+                    <li>• Problemas de conexión a internet</li>
+                    <li>• Bloqueador de anuncios activo</li>
+                    <li>• Firewall corporativo</li>
+                    <li>• DNS no resuelve cdn.jsdelivr.net</li>
+                </ul>
+                <button onclick="location.reload()" style="background:#0076a8; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">
+                    🔄 Reintentar
+                </button>
+                <br><br>
+                <a href="/test-charts" style="color:#0076a8; text-decoration:none;">
+                    🧪 Ir a página de prueba simple
+                </a>
+            </div>
+        </div>
+    `;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM cargado, iniciando verificación de Chart.js...');
+    
+    // Usar la función robusta de verificación
+    waitForChart(function() {
+        initializeDashboard();
+    });
+});
+
+function initializeDashboard() {
+    console.log('🎯 Inicializando dashboard completo...');
+
+    // Mapeo de nombres amigables para tipos de archivo
+    const friendlyFileTypeNames = {
+        'Desconocido': 'Tipo Desconocido',
+        'pdf': 'PDF',
+        'doc': 'Word',
+        'docx': 'Word',
+        'xls': 'Excel',
+        'xlsx': 'Excel',
+        'jpg': 'Imagen JPG',
+        'jpeg': 'Imagen JPG',
+        'png': 'Imagen PNG',
+        'gif': 'Imagen GIF',
+        'txt': 'Texto',
+        'zip': 'Comprimido',
+        'json': 'JSON'
+    };
+
+    function getFriendlyFileName(typeName) {
+        return friendlyFileTypeNames[typeName] || typeName;
+    }
+
+    // Datos iniciales del servidor
+    const chartsData = {{ charts_data|tojson }};
+    const fileTypesGeneralData = {{ file_types_general|tojson }};
+    let fileTypesRecentData = {{ file_types_recent_initial|tojson }};
+
+    // Configuración de datos para gráficos lineales
+    const filesData = {
+      week: {
+        labels: chartsData.files.week.map(item => item.label),
+        datasets: [{
+          label: 'Archivos subidos',
+          data: chartsData.files.week.map(item => item.value),
+          borderColor: '#0076a8',
+          backgroundColor: 'rgba(0, 118, 168, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      month: {
+        labels: chartsData.files.month.map(item => item.label),
+        datasets: [{
+          label: 'Archivos subidos',
+          data: chartsData.files.month.map(item => item.value),
+          borderColor: '#0076a8',
+          backgroundColor: 'rgba(0, 118, 168, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      year: {
+        labels: chartsData.files.year.map(item => item.label),
+        datasets: [{
+          label: 'Archivos subidos',
+          data: chartsData.files.year.map(item => item.value),
+          borderColor: '#0076a8',
+          backgroundColor: 'rgba(0, 118, 168, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      today: {
+        labels: chartsData.files.today ? chartsData.files.today.map(item => item.label) : [],
+        datasets: [{
+          label: 'Archivos subidos',
+          data: chartsData.files.today ? chartsData.files.today.map(item => item.value) : [],
+          borderColor: '#0076a8',
+          backgroundColor: 'rgba(0, 118, 168, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
       }
-  }
+    };
+
+    const usersData = {
+      week: {
+        labels: chartsData.users.week.map(item => item.label),
+        datasets: [{
+          label: 'Usuarios nuevos',
+          data: chartsData.users.week.map(item => item.value),
+          borderColor: '#00a8d4',
+          backgroundColor: 'rgba(0, 168, 212, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      month: {
+        labels: chartsData.users.month.map(item => item.label),
+        datasets: [{
+          label: 'Usuarios nuevos',
+          data: chartsData.users.month.map(item => item.value),
+          borderColor: '#00a8d4',
+          backgroundColor: 'rgba(0, 168, 212, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      year: {
+        labels: chartsData.users.year.map(item => item.label),
+        datasets: [{
+          label: 'Usuarios nuevos',
+          data: chartsData.users.year.map(item => item.value),
+          borderColor: '#00a8d4',
+          backgroundColor: 'rgba(0, 168, 212, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      today: {
+        labels: chartsData.users.today ? chartsData.users.today.map(item => item.label) : [],
+        datasets: [{
+          label: 'Usuarios nuevos',
+          data: chartsData.users.today ? chartsData.users.today.map(item => item.value) : [],
+          borderColor: '#00a8d4',
+          backgroundColor: 'rgba(0, 168, 212, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      }
+    };
+
+    // Variables de gráficos
+    let filesChart;
+    let usersChart;
+
+    // Función para crear/actualizar gráficos lineales
+    function createOrUpdateLineCharts(period) {
+        if (filesChart) filesChart.destroy();
+        if (usersChart) usersChart.destroy();
+
+        const filesCtx = document.getElementById('filesChart').getContext('2d');
+        const usersCtx = document.getElementById('usersChart').getContext('2d');
+
+        if (['week', 'month', 'year', 'today'].includes(period)) {
+            filesChart = new Chart(filesCtx, {
+                type: 'line',
+                data: filesData[period],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) { return `Archivos: ${context.parsed.y}`; }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { drawBorder: false }, ticks: { precision: 0 } },
+                        x: { 
+                            grid: { display: false },
+                            ticks: {
+                                maxRotation: period === 'today' ? 45 : 0,
+                                minRotation: period === 'today' ? 45 : 0,
+                                font: {
+                                    size: period === 'today' ? 9 : 11
+                                }
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 3,
+                            hoverRadius: 5,
+                            backgroundColor: '#0076a8',
+                            borderWidth: 2,
+                            borderColor: 'white'
+                        }
+                    }
+                }
+            });
+
+            usersChart = new Chart(usersCtx, {
+                type: 'line',
+                data: usersData[period],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) { return `Usuarios: ${context.parsed.y}`; }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { drawBorder: false }, ticks: { precision: 0 } },
+                        x: { 
+                            grid: { display: false },
+                            ticks: {
+                                maxRotation: period === 'today' ? 45 : 0,
+                                minRotation: period === 'today' ? 45 : 0,
+                                font: {
+                                    size: period === 'today' ? 9 : 11
+                                }
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 3,
+                            hoverRadius: 5,
+                            backgroundColor: '#00a8d4',
+                            borderWidth: 2,
+                            borderColor: 'white'
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Gráfico de tipos de archivo general
+    const fileTypesGeneralCtx = document.getElementById('fileTypesGeneralChart').getContext('2d');
+    const customColorsGeneral = [
+        '#3a6fb5', '#4c7ebd', '#5a8ac7', '#6495ED', '#779ECB', '#89CFF0', '#9BCDED', '#ADD8E6',
+        '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'
+    ];
+
+    fileTypesGeneralData.forEach((type, index) => {
+        type.color = customColorsGeneral[index % customColorsGeneral.length];
+    });
+
+    const fileTypesGeneralChart = new Chart(fileTypesGeneralCtx, {
+        type: 'doughnut',
+        data: {
+            labels: fileTypesGeneralData.map(type => type.name),
+            datasets: [{
+                data: fileTypesGeneralData.map(type => type.count),
+                backgroundColor: fileTypesGeneralData.map(type => type.color),
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? (value / total) * 100 : 0;
+                            return `${label}: ${value} (${percentage.toFixed(1)}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '70%'
+        }
+    });
+
+    // Gráfico de tipos de archivo recientes
+    const specialMimeColorsRecent = {
+        'Excel': '#779ECB',
+        'JSON': '#4c7ebd',
+        'PDF': '#3a6fb5',
+        'Desconocido': '#89CFF0'
+    };
+    const bluesPaletteRecent = [
+        '#3a6fb5', '#4c7ebd', '#5a8ac7', '#6495ED', '#779ECB', '#89CFF0', '#9BCDED', '#ADD8E6'
+    ];
+
+    fileTypesRecentData.forEach((type, index) => {
+        const friendlyName = getFriendlyFileName(type.name);
+        if (specialMimeColorsRecent[friendlyName]) {
+            type.color = specialMimeColorsRecent[friendlyName];
+        } else {
+            type.color = bluesPaletteRecent[index % bluesPaletteRecent.length];
+        }
+    });
+
+    const fileTypesRecentCtx = document.getElementById('fileTypesRecentChart').getContext('2d');
+    let fileTypesRecentChart = new Chart(fileTypesRecentCtx, {
+        type: 'doughnut',
+        data: {
+            labels: fileTypesRecentData.map(type => type.name),
+            datasets: [{
+                data: fileTypesRecentData.map(type => type.count),
+                backgroundColor: fileTypesRecentData.map(type => type.color),
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? (value / total) * 100 : 0;
+                            return `${label}: ${value} (${percentage.toFixed(1)}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '70%'
+        }
+    });
+
+    // Actualizar leyenda de tipos recientes
+    function updateFileTypesRecentLegend(data) {
+        const legendContainer = document.getElementById('fileTypesRecentLegend');
+        legendContainer.innerHTML = '';
+        const totalCount = data.reduce((sum, type) => sum + type.count, 0);
+
+        if (data.length === 0) {
+            legendContainer.innerHTML = '<p class="text-sm text-gray-500 text-center">No hay datos para este período.</p>';
+            return;
+        }
+
+        data.forEach(type => {
+            const legendItem = document.createElement('div');
+            legendItem.className = 'flex items-center justify-between';
+            const percentage = totalCount > 0 ? (type.count / totalCount) * 100 : 0;
+            legendItem.innerHTML = `
+                <div class="flex items-center">
+                    <span class="inline-block w-3 h-3 rounded-full mr-2" style="background-color: ${type.color};"></span>
+                    <span class="text-sm text-gray-600">${getFriendlyFileName(type.name)}</span>
+                </div>
+                <div class="text-sm font-medium">
+                    ${type.count} (${percentage.toFixed(1)}%)
+                </div>
+            `;
+            legendContainer.appendChild(legendItem);
+        });
+    }
+
+    // Render inicial de la leyenda
+    updateFileTypesRecentLegend(fileTypesRecentData);
+
+    // Función para actualizar datos via AJAX
+    function fetchDataAndUpdateDashboard(period) {
+        fetch(`/dashboard/admin?period=${period}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Actualizar tarjetas de estadísticas
+            document.getElementById('newUsersPeriodCount').textContent = data.stats.new_users_period;
+            document.getElementById('newClientsPeriodCount').textContent = data.stats.new_clients_period;
+            document.getElementById('newFilesPeriodCount').textContent = data.stats.new_files_period;
+            document.getElementById('newFoldersPeriodCount').textContent = data.stats.new_folders_period;
+
+            // Actualizar datos de tipos de archivo recientes
+            fileTypesRecentData = data.file_types_recent;
+            
+            fileTypesRecentData.forEach((type, index) => {
+                const friendlyName = getFriendlyFileName(type.name);
+                if (specialMimeColorsRecent[friendlyName]) {
+                    type.color = specialMimeColorsRecent[friendlyName];
+                } else {
+                    type.color = bluesPaletteRecent[index % bluesPaletteRecent.length];
+                }
+            });
+
+            // Actualizar gráfico de tipos recientes
+            fileTypesRecentChart.data.labels = fileTypesRecentData.map(t => t.name);
+            fileTypesRecentChart.data.datasets[0].data = fileTypesRecentData.map(t => t.count);
+            fileTypesRecentChart.data.datasets[0].backgroundColor = fileTypesRecentData.map(t => t.color);
+            fileTypesRecentChart.update();
+
+            updateFileTypesRecentLegend(fileTypesRecentData);
+
+            // Actualizar datos de gráficos lineales para 'today'
+            if (period === 'today' && data.charts_data && data.charts_data.files) {
+                if (data.charts_data.files.today) {
+                    filesData.today.datasets[0].data = data.charts_data.files.today.map(item => item.value);
+                    if (filesChart) {
+                        filesChart.data = filesData.today;
+                        filesChart.update();
+                    } else {
+                        createOrUpdateLineCharts('today');
+                    }
+                }
+                
+                if (data.charts_data.users && data.charts_data.users.today) {
+                    usersData.today.datasets[0].data = data.charts_data.users.today.map(item => item.value);
+                    if (usersChart) {
+                        usersChart.data = usersData.today;
+                        usersChart.update();
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error al actualizar datos:', error);
+        });
+    }
+
+    // Event listeners
+    const periodSelector = document.getElementById('periodSelector');
+    const refreshButton = document.getElementById('refreshButton');
+
+    periodSelector.addEventListener('change', function() {
+        const selectedPeriod = this.value;
+        createOrUpdateLineCharts(selectedPeriod);
+        fetchDataAndUpdateDashboard(selectedPeriod);
+    });
+
+    refreshButton.addEventListener('click', function() {
+        const currentPeriod = periodSelector.value;
+        createOrUpdateLineCharts(currentPeriod);
+        fetchDataAndUpdateDashboard(currentPeriod);
+    });
+
+    // Gráficos anuales estáticos
+    const filesYearCtx = document.getElementById('filesYearChart').getContext('2d');
+    const filesYearChart = new Chart(filesYearCtx, {
+        type: 'line',
+        data: {
+            labels: chartsData.files.year.map(item => item.label),
+            datasets: [{
+                label: '',
+                data: chartsData.files.year.map(item => item.value),
+                borderColor: '#0076a8',
+                backgroundColor: 'rgba(0, 118, 168, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Archivos: ${context.parsed.y}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { drawBorder: false },
+                    ticks: { precision: 0 }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    const usersYearCtx = document.getElementById('usersYearChart').getContext('2d');
+    const usersYearChart = new Chart(usersYearCtx, {
+        type: 'line',
+        data: {
+            labels: chartsData.users.year.map(item => item.label),
+            datasets: [{
+                label: '',
+                data: chartsData.users.year.map(item => item.value),
+                borderColor: '#00a8d4',
+                backgroundColor: 'rgba(0, 168, 212, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Usuarios: ${context.parsed.y}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { drawBorder: false },
+                    ticks: { precision: 0 }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // Inicializar con el período seleccionado
+    const initialPeriod = periodSelector.value;
+    createOrUpdateLineCharts(initialPeriod);
+}
 </script>
 {% endblock %}

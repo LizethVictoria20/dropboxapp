@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test Chart.js - Súper Simple</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .chart-box {
+        background: #f9f9f9;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+      }
+      canvas {
+        max-height: 400px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🧪 Test Chart.js - Versión Súper Simple</h1>
+
+      <div id="status">
+        <p>Verificando Chart.js...</p>
+      </div>
+
+      <div id="charts" style="display: none">
+        <div class="chart-box">
+          <h3>📊 Gráfica de Barras</h3>
+          <canvas id="chart1"></canvas>
+        </div>
+
+        <div class="chart-box">
+          <h3>🍩 Gráfica Circular</h3>
+          <canvas id="chart2"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      console.log("🧪 Script iniciado...");
+
+      function testChart() {
+        const statusDiv = document.getElementById("status");
+
+        if (typeof Chart === "undefined") {
+          console.error("❌ Chart.js NO disponible");
+          statusDiv.innerHTML = `
+                    <div style="color: red; text-align: center;">
+                        <h2>❌ Error</h2>
+                        <p>Chart.js no se pudo cargar</p>
+                        <p>Verifica tu conexión a internet</p>
+                    </div>
+                `;
+          return;
+        }
+
+        console.log("✅ Chart.js disponible! Versión:", Chart.version);
+        statusDiv.innerHTML = `
+                <div style="color: green; text-align: center;">
+                    <h2>✅ Éxito</h2>
+                    <p>Chart.js cargado correctamente</p>
+                    <p>Versión: ${Chart.version}</p>
+                </div>
+            `;
+
+        // Mostrar gráficas
+        document.getElementById("charts").style.display = "block";
+
+        // Crear gráfica de barras
+        const ctx1 = document.getElementById("chart1").getContext("2d");
+        new Chart(ctx1, {
+          type: "bar",
+          data: {
+            labels: ["Enero", "Febrero", "Marzo", "Abril"],
+            datasets: [
+              {
+                label: "Ventas",
+                data: [12, 19, 3, 5],
+                backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0"],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: {
+                display: true,
+                text: "Gráfica de Barras - Test",
+              },
+            },
+          },
+        });
+
+        // Crear gráfica circular
+        const ctx2 = document.getElementById("chart2").getContext("2d");
+        new Chart(ctx2, {
+          type: "doughnut",
+          data: {
+            labels: ["PDF", "Word", "Excel", "Otros"],
+            datasets: [
+              {
+                data: [40, 30, 20, 10],
+                backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0"],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: {
+                display: true,
+                text: "Distribución de Archivos",
+              },
+            },
+          },
+        });
+
+        console.log("✅ Gráficas creadas exitosamente");
+      }
+
+      // Probar cuando se cargue todo
+      window.addEventListener("load", function () {
+        console.log("🚀 Página cargada completamente");
+        setTimeout(testChart, 500); // Dar tiempo extra para Chart.js
+      });
+
+      // También probar inmediatamente
+      if (document.readyState === "complete") {
+        setTimeout(testChart, 500);
+      }
+    </script>
+  </body>
+</html>
