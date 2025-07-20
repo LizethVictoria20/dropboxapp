@@ -98,6 +98,89 @@ def ver_historial_usuario(usuario_id):
         carpetas=carpetas
     )
 
+@bp.route('/usuarios/<int:usuario_id>/historial-json')
+@login_required
+def obtener_historial_usuario_json(usuario_id):
+    """Obtener historial de un usuario en formato JSON"""
+    if not current_user.puede_administrar():
+        return jsonify({"error": "No tienes permisos"}), 403
+    
+    usuario = User.query.get_or_404(usuario_id)
+    
+    # Obtener actividades del usuario
+    actividades = UserActivityLog.query.filter_by(user_id=usuario_id)\
+        .order_by(UserActivityLog.fecha.desc())\
+        .limit(50)\
+        .all()
+    
+    # Obtener archivos del usuario
+    archivos = Archivo.query.filter_by(usuario_id=usuario_id)\
+        .order_by(Archivo.fecha_subida.desc())\
+        .limit(20)\
+        .all()
+    
+    # Obtener carpetas del usuario
+    carpetas = Folder.query.filter_by(user_id=usuario_id)\
+        .order_by(Folder.fecha_creacion.desc())\
+        .all()
+    
+    # Convertir a formato JSON
+    actividades_data = []
+    for actividad in actividades:
+        actividades_data.append({
+            'id': actividad.id,
+            'accion': actividad.accion,
+            'descripcion': actividad.descripcion,
+            'fecha': actividad.fecha.isoformat() if actividad.fecha else None,
+            'ip_address': actividad.ip_address,
+            'user_agent': actividad.user_agent
+        })
+    
+    archivos_data = []
+    for archivo in archivos:
+        archivos_data.append({
+            'id': archivo.id,
+            'nombre': archivo.nombre,
+            'categoria': archivo.categoria,
+            'subcategoria': archivo.subcategoria,
+            'dropbox_path': archivo.dropbox_path,
+            'fecha_subida': archivo.fecha_subida.isoformat() if archivo.fecha_subida else None,
+            'tamano': archivo.tamano,
+            'extension': archivo.extension,
+            'descripcion': archivo.descripcion
+        })
+    
+    carpetas_data = []
+    for carpeta in carpetas:
+        carpetas_data.append({
+            'id': carpeta.id,
+            'name': carpeta.name,
+            'dropbox_path': carpeta.dropbox_path,
+            'es_publica': carpeta.es_publica,
+            'fecha_creacion': carpeta.fecha_creacion.isoformat() if carpeta.fecha_creacion else None
+        })
+    
+    return jsonify({
+        'usuario': {
+            'id': usuario.id,
+            'nombre': usuario.nombre,
+            'apellido': usuario.apellido,
+            'email': usuario.email,
+            'rol': usuario.rol,
+            'activo': usuario.activo,
+            'fecha_registro': usuario.fecha_registro.isoformat() if usuario.fecha_registro else None,
+            'ultimo_acceso': usuario.ultimo_acceso.isoformat() if usuario.ultimo_acceso else None
+        },
+        'actividades': actividades_data,
+        'archivos': archivos_data,
+        'carpetas': carpetas_data,
+        'estadisticas': {
+            'total_actividades': len(actividades_data),
+            'total_archivos': len(archivos_data),
+            'total_carpetas': len(carpetas_data)
+        }
+    })
+
 @bp.route('/usuarios/<int:usuario_id>/carpetas-json')
 @login_required
 def obtener_carpetas_usuario_json(usuario_id):
