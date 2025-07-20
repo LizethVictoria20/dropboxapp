@@ -354,7 +354,7 @@ block content %}
   class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
 >
   <div
-    class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden"
+    class="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden"
   >
     <div class="flex items-center justify-between p-6 border-b">
       <div>
@@ -786,72 +786,27 @@ block content %}
     const estadisticas = data.estadisticas;
 
     return `
-      <!-- Tabs -->
-      <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-        <div class="border-b border-gray-200">
-          <nav class="flex space-x-8 px-6" aria-label="Tabs">
-            <button onclick="mostrarTabHistorial('actividades')" id="tab-actividades" 
-                    class="tab-button active py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600">
-              <i class="fas fa-history mr-2"></i>Actividades Recientes
-            </button>
-            <button onclick="mostrarTabHistorial('archivos')" id="tab-archivos" 
-                    class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
-              <i class="fas fa-file-alt mr-2"></i>Archivos
-            </button>
-            <button onclick="mostrarTabHistorial('carpetas')" id="tab-carpetas" 
-                    class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
-              <i class="fas fa-folder mr-2"></i>Carpetas
-            </button>
-          </nav>
-        </div>
-
-        <!-- Contenido de Actividades -->
-        <div id="contenido-actividades" class="tab-content">
-          <div class="p-6">
-            ${
-              actividades.length > 0
-                ? `
-              <div class="space-y-4">
-                ${actividades
-                  .map(
-                    (actividad) => `
-                  <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <i class="fas fa-${getActividadIcon(
-                        actividad.accion
-                      )} text-blue-600"></i>
-                    </div>
-                    <div class="flex-1">
-                      <p class="font-medium text-gray-900">${actividad.accion
-                        .replace("_", " ")
-                        .replace(/\b\w/g, (l) => l.toUpperCase())}</p>
-                      <p class="text-sm text-gray-600">${
-                        actividad.descripcion || "Sin descripción"
-                      }</p>
-                      <p class="text-xs text-gray-500 mt-1">${
-                        actividad.fecha
-                          ? new Date(actividad.fecha).toLocaleString()
-                          : "N/A"
-                      }</p>
-                    </div>
-                  </div>
-                `
-                  )
-                  .join("")}
-              </div>
-            `
-                : `
-              <div class="text-center py-8">
-                <i class="fas fa-history text-gray-300 text-4xl mb-4"></i>
-                <p class="text-gray-500">No hay actividades registradas</p>
-              </div>
-            `
-            }
+        <!-- Tabs -->
+        <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+          <div class="border-b border-gray-200">
+            <nav class="flex space-x-8 px-6" aria-label="Tabs">
+              <button onclick="mostrarTabHistorial('archivos')" id="tab-archivos" 
+                      class="tab-button active py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600">
+                <i class="fas fa-file-alt mr-2"></i>Archivos
+              </button>
+              <button onclick="mostrarTabHistorial('carpetas')" id="tab-carpetas" 
+                      class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+                <i class="fas fa-folder mr-2"></i>Carpetas
+              </button>
+              <button onclick="mostrarTabHistorial('actividades')" id="tab-actividades" 
+                      class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+                <i class="fas fa-history mr-2"></i>Actividades
+              </button>
+            </nav>
           </div>
-        </div>
 
         <!-- Contenido de Archivos -->
-        <div id="contenido-archivos" class="tab-content hidden">
+        <div id="contenido-archivos" class="tab-content">
           <div class="p-6">
             ${
               archivos.length > 0
@@ -874,13 +829,19 @@ block content %}
                         <td class="px-6 py-4 whitespace-nowrap">
                           <div class="flex items-center">
                             <i class="fas fa-file-alt text-blue-500 mr-3"></i>
-                            <div>
-                              <div class="text-sm font-medium text-gray-900">${
+                            <div class="flex items-center">
+                              <span class="text-sm font-medium text-gray-900">${
                                 archivo.nombre
-                              }</div>
-                              <div class="text-sm text-gray-500">${
-                                archivo.dropbox_path
-                              }</div>
+                              }</span>
+                              <div class="relative ml-2 group">
+                                <i class="fas fa-info-circle text-gray-400 hover:text-blue-500 cursor-help transition-colors"></i>
+                                <div class="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10" style="max-width: 400px; min-width: 200px;">
+                                  <div class="break-all leading-relaxed">${
+                                    archivo.dropbox_path
+                                  }</div>
+                                  <div class="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -915,44 +876,120 @@ block content %}
           </div>
         </div>
 
-        <!-- Contenido de Carpetas -->
+                <!-- Contenido de Carpetas -->
         <div id="contenido-carpetas" class="tab-content hidden">
           <div class="p-6">
             ${
               carpetas.length > 0
                 ? `
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="space-y-3">
                 ${carpetas
                   .map(
                     (carpeta) => `
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150">
+                    <div class="flex-shrink-0">
                       <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-folder text-blue-600"></i>
+                        <i class="fas fa-folder text-blue-600 text-sm"></i>
                       </div>
-                      <div class="flex-1">
-                        <h3 class="font-medium text-gray-900">${
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-3 mb-1">
+                        <h3 class="font-medium text-gray-900 truncate">${
                           carpeta.name
                         }</h3>
-                        <p class="text-sm text-gray-500">${
-                          carpeta.dropbox_path
-                        }</p>
-                        <p class="text-xs text-gray-400 mt-1">
-                          Creada: ${
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                          carpeta.es_publica
+                            ? "bg-green-50 text-green-700"
+                            : "bg-red-50 text-red-700"
+                        }">
+                          <i class="fas fa-${
+                            carpeta.es_publica ? "eye" : "eye-slash"
+                          } text-xs"></i>
+                          ${carpeta.es_publica ? "Pública" : "Privada"}
+                        </span>
+                      </div>
+                      <div class="flex items-center gap-4 text-sm text-gray-500">
+                        <div class="flex items-center gap-1">
+                          <i class="fas fa-map-marker-alt text-gray-400"></i>
+                          <span class="truncate">${carpeta.dropbox_path}</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                          <i class="fas fa-calendar text-gray-400"></i>
+                          <span>${
                             carpeta.fecha_creacion
                               ? new Date(
                                   carpeta.fecha_creacion
                                 ).toLocaleDateString()
                               : "N/A"
-                          }
-                        </p>
+                          }</span>
+                        </div>
                       </div>
-                      <span class="bg-${
-                        carpeta.es_publica ? "green" : "red"
-                      }-100 text-${
-                      carpeta.es_publica ? "green" : "red"
-                    }-800 px-2 py-1 rounded-full text-xs">
-                        ${carpeta.es_publica ? "Pública" : "Privada"}
+                    </div>
+                  </div>
+                `
+                  )
+                  .join("")}
+              </div>
+            `
+                : `
+              <div class="text-center py-8">
+                <i class="fas fa-folder text-gray-300 text-3xl mb-3"></i>
+                <p class="text-gray-500">No hay carpetas registradas</p>
+              </div>
+            `
+            }
+          </div>
+        </div>
+
+        <!-- Contenido de Actividades -->
+        <div id="contenido-actividades" class="tab-content hidden">
+          <div class="p-6">
+            ${
+              actividades.length > 0
+                ? `
+              <div class="space-y-4">
+                ${actividades
+                  .filter(
+                    (actividad) =>
+                      actividad.accion.includes("login") ||
+                      actividad.accion.includes("logout") ||
+                      actividad.accion.includes("change_password") ||
+                      actividad.accion.includes("create_beneficiario") ||
+                      actividad.accion.includes("login_failed")
+                  )
+                  .map(
+                    (actividad) => `
+                  <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <i class="fas fa-${getActividadIcon(
+                        actividad.accion
+                      )} text-blue-600"></i>
+                    </div>
+                    <div class="flex-1">
+                      <p class="font-medium text-gray-900">${getActividadTitle(
+                        actividad.accion
+                      )}</p>
+                      <p class="text-sm text-gray-600">${
+                        actividad.descripcion || "Sin descripción"
+                      }</p>
+                      <p class="text-xs text-gray-500 mt-1">${
+                        actividad.fecha
+                          ? new Date(actividad.fecha).toLocaleString()
+                          : "N/A"
+                      }</p>
+                      ${
+                        actividad.ip_address
+                          ? `<p class="text-xs text-gray-400">IP: ${actividad.ip_address}</p>`
+                          : ""
+                      }
+                    </div>
+                    <div class="flex-shrink-0">
+                      <span class="bg-${getActividadColor(
+                        actividad.accion
+                      )}-100 text-${getActividadColor(
+                      actividad.accion
+                    )}-800 px-2 py-1 rounded-full text-xs font-medium">
+                        ${getActividadStatus(actividad.accion)}
                       </span>
                     </div>
                   </div>
@@ -963,8 +1000,8 @@ block content %}
             `
                 : `
               <div class="text-center py-8">
-                <i class="fas fa-folder text-gray-300 text-4xl mb-4"></i>
-                <p class="text-gray-500">No hay carpetas registradas</p>
+                <i class="fas fa-history text-gray-300 text-4xl mb-4"></i>
+                <p class="text-gray-500">No hay actividades de seguridad registradas</p>
               </div>
             `
             }
@@ -975,12 +1012,44 @@ block content %}
   }
 
   function getActividadIcon(accion) {
+    if (accion.includes("login_failed")) return "exclamation-triangle";
+    if (accion.includes("login")) return "sign-in-alt";
+    if (accion.includes("logout")) return "sign-out-alt";
+    if (accion.includes("change_password")) return "key";
+    if (accion.includes("create_beneficiario")) return "user-plus";
     if (accion.includes("upload")) return "upload";
     if (accion.includes("edit")) return "edit";
     if (accion.includes("delete")) return "trash";
-    if (accion.includes("login")) return "sign-in-alt";
-    if (accion.includes("logout")) return "sign-out-alt";
     return "user";
+  }
+
+  function getActividadTitle(accion) {
+    if (accion.includes("login_failed"))
+      return "Intento de inicio de sesión fallido";
+    if (accion.includes("login")) return "Inicio de sesión exitoso";
+    if (accion.includes("logout")) return "Cierre de sesión";
+    if (accion.includes("change_password")) return "Cambio de contraseña";
+    if (accion.includes("create_beneficiario"))
+      return "Creación de beneficiario";
+    return accion.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  }
+
+  function getActividadColor(accion) {
+    if (accion.includes("login_failed")) return "red";
+    if (accion.includes("login")) return "green";
+    if (accion.includes("logout")) return "blue";
+    if (accion.includes("change_password")) return "purple";
+    if (accion.includes("create_beneficiario")) return "indigo";
+    return "gray";
+  }
+
+  function getActividadStatus(accion) {
+    if (accion.includes("login_failed")) return "Fallido";
+    if (accion.includes("login")) return "Exitoso";
+    if (accion.includes("logout")) return "Completado";
+    if (accion.includes("change_password")) return "Actualizado";
+    if (accion.includes("create_beneficiario")) return "Creado";
+    return "Realizado";
   }
 
   function mostrarTabHistorial(tabName) {
