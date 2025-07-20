@@ -1,7 +1,5 @@
-{% extends "base.html" %}
-{% block title %}Lista de Usuarios{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Lista de Usuarios{% endblock %} {%
+block content %}
 <div class="max-w-6xl mx-auto px-6 py-8">
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
@@ -9,27 +7,43 @@
       <h1 class="text-3xl font-bold text-primary-dark">Lista de Usuarios</h1>
       <p class="text-gray-500 mt-1">Gestiona los usuarios del sistema</p>
     </div>
-    <a href="{{ url_for('usuarios.lista_usuarios', rol=rol) }}"
-       class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition">
+    <a
+      href="{{ url_for('usuarios.lista_usuarios', rol=rol) }}"
+      class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition"
+    >
       + Agregar usuario
     </a>
   </div>
 
   <!-- Search -->
-  <form method="get" action="{{ url_for('usuarios.lista_usuarios') }}" class="mb-6">
+  <form
+    method="get"
+    action="{{ url_for('usuarios.lista_usuarios') }}"
+    class="mb-6"
+  >
     <div>
-      <input type="text" name="q" value="{{ q }}" placeholder="🔍 Nombre, email o rol"
-            class="w-[32rem] h-[3rem] text-sm px-4 py-3 rounded-xl border border-transparent focus:ring-2 focus:ring-blue-200 focus:outline-none placeholder-gray-400">
+      <input
+        type="text"
+        name="q"
+        value="{{ q }}"
+        placeholder="🔍 Nombre, email o rol"
+        class="w-[32rem] h-[3rem] text-sm px-4 py-3 rounded-xl border border-transparent focus:ring-2 focus:ring-blue-200 focus:outline-none placeholder-gray-400"
+      />
     </div>
   </form>
 
   <!-- Tabla de usuarios -->
-  <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+  <div
+    class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden"
+  >
     <div class="px-6 py-3 border-b bg-blue-50 flex items-center">
       <div class="flex items-center gap-2 text-primary-dark font-semibold">
         <i class="fas fa-users"></i> Usuarios {{ rol|capitalize }}s
       </div>
-      <span class="ml-auto text-xs font-bold bg-blue-100 text-primary-dark px-3 py-1 rounded-full">{{ pagination.total }} clientes</span>
+      <span
+        class="ml-auto text-xs font-bold bg-blue-100 text-primary-dark px-3 py-1 rounded-full"
+        >{{ pagination.total }} clientes</span
+      >
     </div>
     <table class="min-w-full text-sm text-gray-700">
       <thead>
@@ -43,76 +57,194 @@
       <tbody>
         {% for u in usuarios %}
         <!-- Fila de tabla en escritorio -->
-        <tr 
-          class="border-b last:border-0 hover:bg-blue-50 cursor-pointer transition hidden md:table-row"
-          onclick="window.location.href='{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}'"
-          title="Ver carpetas y archivos de {{ u.nombre or u.email }}"
+        <tr
+          class="border-b last:border-0 hover:bg-blue-50 transition hidden md:table-row"
         >
           <td class="flex items-center gap-3 py-3 px-6">
-            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-primary-dark font-bold text-lg">
+            <span
+              class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-primary-dark font-bold text-lg"
+            >
               {{ (u.nombre or u.email)[0]|upper }}
             </span>
             <div>
-              <div class="font-semibold text-gray-900">{{ u.nombre or u.email.split('@')[0] }}</div>
-              <div class="text-xs text-gray-500">@{{ u.email.split('@')[0] }}</div>
+              <div class="font-semibold text-gray-900">
+                {{ u.nombre or u.email.split('@')[0] }}
+              </div>
+              <div class="text-xs text-gray-500">
+                @{{ u.email.split('@')[0] }}
+              </div>
             </div>
           </td>
           <td class="px-2">{{ u.email }}</td>
           <td class="px-2">
-            {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %}
-            {% if ncarpetas > 0 %}
-              <span class="bg-blue-100 text-primary-dark px-2.5 py-1 rounded-full text-xs font-semibold">
-                {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
-              </span>
+            {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %} {% if
+            ncarpetas > 0 %}
+            <span
+              class="bg-blue-100 text-primary-dark px-2.5 py-1 rounded-full text-xs font-semibold"
+            >
+              {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
+            </span>
             {% else %}
-              <span class="bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs">Sin carpetas</span>
+            <span
+              class="bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs"
+              >Sin carpetas</span
+            >
             {% endif %}
           </td>
           <td class="px-2 text-right">
-            <button class="p-2 rounded hover:bg-gray-100 group relative">
-              <i class="fas fa-ellipsis-v text-gray-400"></i>
-            </button>
+            <div class="relative" x-data="{ open: false }">
+              <button
+                @click="open = !open"
+                class="p-2 rounded hover:bg-gray-100 group relative"
+              >
+                <i class="fas fa-ellipsis-v text-gray-400"></i>
+              </button>
+
+              <!-- Menú desplegable de acciones -->
+              <div
+                x-show="open"
+                @click.away="open = false"
+                x-transition:enter="transition ease-out duration-100"
+                x-transition:enter-start="transform opacity-0 scale-95"
+                x-transition:enter-end="transform opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-75"
+                x-transition:leave-start="transform opacity-100 scale-100"
+                x-transition:leave-end="transform opacity-0 scale-95"
+                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+              >
+                <!-- Ver Carpetas -->
+                <a
+                  href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
+                  class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-folder-open mr-3 text-blue-500"></i>
+                  Ver Carpetas
+                </a>
+
+                <!-- Ver Historial -->
+                <button
+                  onclick="abrirModalHistorial({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-history mr-3 text-green-500"></i>
+                  Ver Historial
+                </button>
+
+                <!-- Importar Archivo -->
+                <button
+                  onclick="abrirModalImportar({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-upload mr-3 text-purple-500"></i>
+                  Importar Archivo
+                </button>
+
+                <!-- Editar Usuario -->
+                <button
+                  onclick="abrirModalEditar({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-edit mr-3 text-yellow-500"></i>
+                  Editar Usuario
+                </button>
+
+                <!-- Separador -->
+                <div class="border-t border-gray-100"></div>
+
+                <!-- Eliminar Usuario -->
+                <button
+                  onclick="confirmarEliminarUsuario({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                >
+                  <i class="fas fa-trash mr-3"></i>
+                  Eliminar Usuario
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
 
         <!-- Tarjeta en móvil -->
         <tr class="md:hidden">
           <td colspan="5" class="p-4">
-            <div 
-              class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-2 hover:bg-blue-50 transition cursor-pointer"
-              onclick="window.location.href='{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}'"
-              title="Ver carpetas y archivos de {{ u.nombre or u.email }}"
+            <div
+              class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-2 hover:bg-blue-50 transition"
             >
               <div class="flex items-center gap-3 mb-2">
-                <span class="w-10 h-10 rounded-full bg-blue-100 text-primary-dark font-bold text-lg flex items-center justify-center">
+                <span
+                  class="w-10 h-10 rounded-full bg-blue-100 text-primary-dark font-bold text-lg flex items-center justify-center"
+                >
                   {{ (u.nombre or u.email)[0]|upper }}
                 </span>
                 <div>
-                  <div class="font-semibold text-gray-900 text-base">{{ u.nombre or u.email.split('@')[0] }}</div>
-                  <div class="text-xs text-gray-500">@{{ u.email.split('@')[0] }}</div>
+                  <div class="font-semibold text-gray-900 text-base">
+                    {{ u.nombre or u.email.split('@')[0] }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    @{{ u.email.split('@')[0] }}
+                  </div>
                 </div>
               </div>
               <div class="text-sm text-gray-700">
                 <p><strong>Email:</strong> {{ u.email }}</p>
-                <p><strong>Carpetas:</strong>
-                  {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %}
-                  {% if ncarpetas > 0 %}
-                    <span class="inline-block bg-blue-100 text-primary-dark px-2.5 py-1 rounded-full text-xs font-semibold">
-                      {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
-                    </span>
+                <p>
+                  <strong>Carpetas:</strong>
+                  {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %} {% if
+                  ncarpetas > 0 %}
+                  <span
+                    class="inline-block bg-blue-100 text-primary-dark px-2.5 py-1 rounded-full text-xs font-semibold"
+                  >
+                    {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
+                  </span>
                   {% else %}
-                    <span class="inline-block bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs">Sin carpetas</span>
+                  <span
+                    class="inline-block bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs"
+                    >Sin carpetas</span
+                  >
                   {% endif %}
                 </p>
-                <p><strong>Creación:</strong>
-                  <span class="inline-block text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
-                    {{ u.fecha_creacion.strftime('%Y-%m-%d') if u.fecha_creacion else '' }}
+                <p>
+                  <strong>Creación:</strong>
+                  <span
+                    class="inline-block text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
+                  >
+                    {{ u.fecha_creacion.strftime('%Y-%m-%d') if u.fecha_creacion
+                    else '' }}
                   </span>
                 </p>
               </div>
-              <div class="flex justify-end mt-3">
-                <button class="p-2 rounded hover:bg-gray-100 group relative">
-                  <i class="fas fa-ellipsis-v text-gray-400"></i>
+
+              <!-- Acciones en móvil -->
+              <div class="flex flex-wrap gap-2 mt-3">
+                <a
+                  href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
+                  class="flex-1 bg-blue-100 text-blue-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 transition text-center"
+                >
+                  <i class="fas fa-folder-open mr-1"></i> Carpetas
+                </a>
+                <button
+                  onclick="abrirModalHistorial({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="flex-1 bg-green-100 text-green-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-200 transition text-center"
+                >
+                  <i class="fas fa-history mr-1"></i> Historial
+                </button>
+                <button
+                  onclick="abrirModalImportar({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="flex-1 bg-purple-100 text-purple-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 transition text-center"
+                >
+                  <i class="fas fa-upload mr-1"></i> Importar
+                </button>
+                <button
+                  onclick="abrirModalEditar({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="flex-1 bg-yellow-100 text-yellow-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-yellow-200 transition text-center"
+                >
+                  <i class="fas fa-edit mr-1"></i> Editar
+                </button>
+                <button
+                  onclick="confirmarEliminarUsuario({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="flex-1 bg-red-100 text-red-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-200 transition"
+                >
+                  <i class="fas fa-trash mr-1"></i> Eliminar
                 </button>
               </div>
             </div>
@@ -123,9 +255,12 @@
     </table>
 
     <!-- Paginación -->
-    <div class="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
+    <div
+      class="flex items-center justify-between px-6 py-4 border-t bg-gray-50"
+    >
       <div class="text-sm text-gray-500">
-        Mostrando {{ pagination.start_index }} a {{ pagination.end_index }} de {{ pagination.total }} clientes
+        Mostrando {{ pagination.start_index }} a {{ pagination.end_index }} de
+        {{ pagination.total }} clientes
       </div>
       <div class="flex items-center gap-2">
         <label class="text-sm text-gray-500 mr-2">Mostrar:</label>
@@ -136,28 +271,677 @@
         </select>
         <nav class="flex border rounded overflow-hidden text-sm">
           {% if pagination.has_prev %}
-            <a href="{{ url_for('usuarios.lista_usuarios', rol=rol, q=q, page=pagination.prev_num) }}"
-               class="px-3 py-2 bg-white border-r hover:bg-gray-100">&lt;</a>
+          <a
+            href="{{ url_for('usuarios.lista_usuarios', rol=rol, q=q, page=pagination.prev_num) }}"
+            class="px-3 py-2 bg-white border-r hover:bg-gray-100"
+            >&lt;</a
+          >
           {% else %}
-            <span class="px-3 py-2 bg-gray-100 text-gray-400 border-r">&lt;</span>
-          {% endif %}
-          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
-            {% if p %}
-              <a href="{{ url_for('usuarios.lista_usuarios', rol=rol, q=q, page=p) }}"
-                 class="px-3 py-2 border-r {{ 'bg-blue-100 text-primary-dark font-bold' if pagination.page == p else 'bg-white hover:bg-gray-100' }}">{{ p }}</a>
-            {% else %}
-              <span class="px-3 py-2 bg-white border-r">…</span>
-            {% endif %}
-          {% endfor %}
-          {% if pagination.has_next %}
-            <a href="{{ url_for('usuarios.lista_usuarios', rol=rol, q=q, page=pagination.next_num) }}"
-               class="px-3 py-2 bg-white hover:bg-gray-100">&gt;</a>
+          <span class="px-3 py-2 bg-gray-100 text-gray-400 border-r">&lt;</span>
+          {% endif %} {% for p in pagination.iter_pages(left_edge=1,
+          right_edge=1, left_current=1, right_current=1) %} {% if p %}
+          <a
+            href="{{ url_for('usuarios.lista_usuarios', rol=rol, q=q, page=p) }}"
+            class="px-3 py-2 border-r {{ 'bg-blue-100 text-primary-dark font-bold' if pagination.page == p else 'bg-white hover:bg-gray-100' }}"
+            >{{ p }}</a
+          >
           {% else %}
-            <span class="px-3 py-2 bg-gray-100 text-gray-400">&gt;</span>
+          <span class="px-3 py-2 bg-white border-r">…</span>
+          {% endif %} {% endfor %} {% if pagination.has_next %}
+          <a
+            href="{{ url_for('usuarios.lista_usuarios', rol=rol, q=q, page=pagination.next_num) }}"
+            class="px-3 py-2 bg-white hover:bg-gray-100"
+            >&gt;</a
+          >
+          {% else %}
+          <span class="px-3 py-2 bg-gray-100 text-gray-400">&gt;</span>
           {% endif %}
         </nav>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Modal de confirmación para eliminar usuario -->
+<div
+  id="modalEliminar"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center"
+>
+  <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+    <div class="flex items-center mb-4">
+      <div
+        class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4"
+      >
+        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">
+          Confirmar Eliminación
+        </h3>
+        <p class="text-sm text-gray-500">Esta acción no se puede deshacer</p>
+      </div>
+    </div>
+
+    <p class="text-gray-700 mb-6">
+      ¿Estás seguro de que quieres eliminar al usuario
+      <strong id="nombreUsuarioEliminar"></strong>? <br /><br />
+      <span class="text-sm text-red-600">
+        <i class="fas fa-info-circle mr-1"></i>
+        Se eliminarán también todas sus carpetas y archivos de Dropbox.
+      </span>
+    </p>
+
+    <div class="flex gap-3">
+      <button
+        onclick="cerrarModalEliminar()"
+        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+      >
+        Cancelar
+      </button>
+      <button
+        id="btnConfirmarEliminar"
+        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+      >
+        Eliminar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Historial -->
+<div
+  id="modalHistorial"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
+>
+  <div
+    class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden"
+  >
+    <div class="flex items-center justify-between p-6 border-b">
+      <div>
+        <h3 class="text-xl font-semibold text-gray-900">
+          Historial de Usuario
+        </h3>
+        <p class="text-sm text-gray-500" id="historialUsuarioInfo"></p>
+      </div>
+      <button
+        onclick="cerrarModalHistorial()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+      <div id="historialContent" class="space-y-4">
+        <!-- El contenido se cargará dinámicamente -->
+        <div class="flex justify-center">
+          <div
+            class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Importar Archivo -->
+<div
+  id="modalImportar"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
+>
+  <div
+    class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden"
+  >
+    <div class="flex items-center justify-between p-6 border-b">
+      <div>
+        <h3 class="text-xl font-semibold text-gray-900">Importar Archivo</h3>
+        <p class="text-sm text-gray-500" id="importarUsuarioInfo"></p>
+      </div>
+      <button
+        onclick="cerrarModalImportar()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+      <form id="formImportar" enctype="multipart/form-data" class="space-y-6">
+        <input type="hidden" id="importarUsuarioId" name="usuario_id" />
+
+        <!-- Selección de archivo -->
+        <div>
+          <label
+            for="archivo"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
+            <i class="fas fa-file-upload mr-2 text-blue-500"></i>
+            Seleccionar Archivo
+          </label>
+          <div
+            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-blue-400 transition-colors"
+          >
+            <div class="space-y-1 text-center">
+              <i
+                class="fas fa-cloud-upload-alt text-gray-400 text-3xl mb-4"
+              ></i>
+              <div class="flex text-sm text-gray-600">
+                <label
+                  for="archivo"
+                  class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500"
+                >
+                  <span>Subir un archivo</span>
+                  <input
+                    id="archivo"
+                    name="archivo"
+                    type="file"
+                    class="sr-only"
+                    required
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt,.xls,.xlsx"
+                  />
+                </label>
+                <p class="pl-1">o arrastrar y soltar</p>
+              </div>
+              <p class="text-xs text-gray-500">
+                PDF, DOC, DOCX, JPG, PNG, GIF, TXT, XLS, XLSX hasta 10MB
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selección de carpeta -->
+        <div>
+          <label
+            for="carpeta_destino"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
+            <i class="fas fa-folder-open mr-2 text-green-500"></i>
+            Carpeta de Destino
+          </label>
+          <select
+            id="carpeta_destino"
+            name="carpeta_destino"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Cargando carpetas...</option>
+          </select>
+        </div>
+
+        <!-- Descripción -->
+        <div>
+          <label
+            for="descripcion"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
+            <i class="fas fa-comment mr-2 text-purple-500"></i>
+            Descripción (opcional)
+          </label>
+          <textarea
+            id="descripcion"
+            name="descripcion"
+            rows="3"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Describe brevemente el contenido del archivo..."
+          ></textarea>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            onclick="cerrarModalImportar()"
+            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center"
+          >
+            <i class="fas fa-upload mr-2"></i>
+            Importar Archivo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Editar Usuario -->
+<div
+  id="modalEditar"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
+>
+  <div
+    class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden"
+  >
+    <div class="flex items-center justify-between p-6 border-b">
+      <div>
+        <h3 class="text-xl font-semibold text-gray-900">Editar Usuario</h3>
+        <p class="text-sm text-gray-500" id="editarUsuarioInfo"></p>
+      </div>
+      <button
+        onclick="cerrarModalEditar()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+      <form id="formEditar" class="space-y-6">
+        <input type="hidden" id="editarUsuarioId" name="usuario_id" />
+
+        <!-- Información Personal -->
+        <div class="border-b border-gray-200 pb-6">
+          <h4 class="text-lg font-medium text-gray-900 mb-4">
+            <i class="fas fa-user mr-2 text-blue-500"></i>
+            Información Personal
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label
+                for="nombre"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Nombre *</label
+              >
+              <input
+                type="text"
+                id="nombre"
+                name="nombre"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label
+                for="apellido"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Apellido</label
+              >
+              <input
+                type="text"
+                id="apellido"
+                name="apellido"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label
+                for="email"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Email *</label
+              >
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label
+                for="telefono"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Teléfono</label
+              >
+              <input
+                type="tel"
+                id="telefono"
+                name="telefono"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Dirección -->
+        <div class="border-b border-gray-200 pb-6">
+          <h4 class="text-lg font-medium text-gray-900 mb-4">
+            <i class="fas fa-map-marker-alt mr-2 text-green-500"></i>
+            Dirección
+          </h4>
+
+          <div class="space-y-4">
+            <div>
+              <label
+                for="direccion"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Dirección</label
+              >
+              <input
+                type="text"
+                id="direccion"
+                name="direccion"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label
+                  for="ciudad"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >Ciudad</label
+                >
+                <input
+                  type="text"
+                  id="ciudad"
+                  name="ciudad"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label
+                  for="estado"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >Estado</label
+                >
+                <input
+                  type="text"
+                  id="estado"
+                  name="estado"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label
+                  for="codigo_postal"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >Código Postal</label
+                >
+                <input
+                  type="text"
+                  id="codigo_postal"
+                  name="codigo_postal"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Configuración de Cuenta -->
+        <div>
+          <h4 class="text-lg font-medium text-gray-900 mb-4">
+            <i class="fas fa-cog mr-2 text-purple-500"></i>
+            Configuración de Cuenta
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label
+                for="rol"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Rol *</label
+              >
+              <select
+                id="rol"
+                name="rol"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="cliente">Cliente</option>
+                <option value="admin">Administrador</option>
+                <option value="lector">Lector</option>
+                <option value="superadmin">Super Administrador</option>
+              </select>
+            </div>
+
+            <div class="flex items-center">
+              <input
+                type="checkbox"
+                id="activo"
+                name="activo"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label for="activo" class="ml-2 block text-sm text-gray-900"
+                >Cuenta Activa</label
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            onclick="cerrarModalEditar()"
+            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center"
+          >
+            <i class="fas fa-save mr-2"></i>
+            Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Funciones para el modal de eliminar
+  function confirmarEliminarUsuario(usuarioId, nombreUsuario) {
+    document.getElementById("nombreUsuarioEliminar").textContent =
+      nombreUsuario;
+    document.getElementById("modalEliminar").classList.remove("hidden");
+
+    document.getElementById("btnConfirmarEliminar").onclick = function () {
+      // Crear formulario temporal para enviar POST
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = `/usuarios/${usuarioId}/eliminar`;
+      document.body.appendChild(form);
+      form.submit();
+    };
+  }
+
+  function cerrarModalEliminar() {
+    document.getElementById("modalEliminar").classList.add("hidden");
+  }
+
+  // Funciones para el modal de historial
+  function abrirModalHistorial(usuarioId, nombreUsuario) {
+    document.getElementById(
+      "historialUsuarioInfo"
+    ).textContent = `Cargando historial de ${nombreUsuario}...`;
+    document.getElementById("modalHistorial").classList.remove("hidden");
+
+    // Cargar contenido del historial
+    fetch(`/usuarios/${usuarioId}/historial`)
+      .then((response) => response.text())
+      .then((html) => {
+        // Extraer solo el contenido del body
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const contenido = doc.querySelector(".tab-content");
+
+        if (contenido) {
+          document.getElementById("historialContent").innerHTML =
+            contenido.innerHTML;
+          document.getElementById(
+            "historialUsuarioInfo"
+          ).textContent = `Historial de ${nombreUsuario}`;
+        } else {
+          document.getElementById("historialContent").innerHTML =
+            '<p class="text-center text-gray-500">Error al cargar el historial</p>';
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        document.getElementById("historialContent").innerHTML =
+          '<p class="text-center text-red-500">Error al cargar el historial</p>';
+      });
+  }
+
+  function cerrarModalHistorial() {
+    document.getElementById("modalHistorial").classList.add("hidden");
+  }
+
+  // Funciones para el modal de importar
+  function abrirModalImportar(usuarioId, nombreUsuario) {
+    document.getElementById(
+      "importarUsuarioInfo"
+    ).textContent = `Importar archivo para ${nombreUsuario}`;
+    document.getElementById("importarUsuarioId").value = usuarioId;
+    document.getElementById("modalImportar").classList.remove("hidden");
+
+    // Cargar carpetas del usuario
+    fetch(`/usuarios/${usuarioId}/carpetas-json`)
+      .then((response) => response.json())
+      .then((data) => {
+        const select = document.getElementById("carpeta_destino");
+        select.innerHTML = '<option value="">Selecciona una carpeta</option>';
+
+        data.carpetas.forEach((carpeta) => {
+          const option = document.createElement("option");
+          option.value = carpeta.id;
+          option.textContent = `${carpeta.name} (${carpeta.dropbox_path})`;
+          select.appendChild(option);
+        });
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        document.getElementById("carpeta_destino").innerHTML =
+          '<option value="">Error al cargar carpetas</option>';
+      });
+  }
+
+  function cerrarModalImportar() {
+    document.getElementById("modalImportar").classList.add("hidden");
+    document.getElementById("formImportar").reset();
+  }
+
+  // Funciones para el modal de editar
+  function abrirModalEditar(usuarioId, nombreUsuario) {
+    document.getElementById(
+      "editarUsuarioInfo"
+    ).textContent = `Editando información de ${nombreUsuario}`;
+    document.getElementById("editarUsuarioId").value = usuarioId;
+    document.getElementById("modalEditar").classList.remove("hidden");
+
+    // Cargar datos del usuario
+    fetch(`/usuarios/${usuarioId}/datos-json`)
+      .then((response) => response.json())
+      .then((data) => {
+        document.getElementById("nombre").value = data.nombre || "";
+        document.getElementById("apellido").value = data.apellido || "";
+        document.getElementById("email").value = data.email || "";
+        document.getElementById("telefono").value = data.telefono || "";
+        document.getElementById("direccion").value = data.direccion || "";
+        document.getElementById("ciudad").value = data.ciudad || "";
+        document.getElementById("estado").value = data.estado || "";
+        document.getElementById("codigo_postal").value =
+          data.codigo_postal || "";
+        document.getElementById("rol").value = data.rol || "cliente";
+        document.getElementById("activo").checked = data.activo || false;
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("Error al cargar los datos del usuario");
+      });
+  }
+
+  function cerrarModalEditar() {
+    document.getElementById("modalEditar").classList.add("hidden");
+    document.getElementById("formEditar").reset();
+  }
+
+  // Manejo de formularios
+  document
+    .getElementById("formImportar")
+    .addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const usuarioId = document.getElementById("importarUsuarioId").value;
+
+      fetch(`/usuarios/${usuarioId}/importar-archivo`, {
+        method: "POST",
+        body: formData,
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            alert("Archivo importado exitosamente");
+            cerrarModalImportar();
+            location.reload(); // Recargar para ver cambios
+          } else {
+            alert("Error: " + data.error);
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          alert("Error al importar el archivo");
+        });
+    });
+
+  document
+    .getElementById("formEditar")
+    .addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const usuarioId = document.getElementById("editarUsuarioId").value;
+
+      fetch(`/usuarios/${usuarioId}/editar`, {
+        method: "POST",
+        body: formData,
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            alert("Usuario actualizado exitosamente");
+            cerrarModalEditar();
+            location.reload(); // Recargar para ver cambios
+          } else {
+            alert("Error: " + data.error);
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          alert("Error al actualizar el usuario");
+        });
+    });
+
+  // Drag and drop para importar archivo
+  const dropZone = document.querySelector(".border-dashed");
+  const fileInput = document.getElementById("archivo");
+
+  if (dropZone && fileInput) {
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("border-blue-400", "bg-blue-50");
+    });
+
+    dropZone.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("border-blue-400", "bg-blue-50");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("border-blue-400", "bg-blue-50");
+
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        fileInput.dispatchEvent(new Event("change"));
+      }
+    });
+  }
+</script>
 {% endblock %}
