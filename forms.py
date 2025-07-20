@@ -78,3 +78,50 @@ class CreateUserForm(FlaskForm):
 class NewFolderForm(FlaskForm):
     name = StringField('Nombre de la carpeta', validators=[DataRequired()])
     description = TextAreaField('Descripción (opcional)')
+    
+class ClienteRegistrationForm(FlaskForm):
+    name = StringField('Nombres', validators=[DataRequired(), Length(max=120)])
+    lastname = StringField('Apellidos', validators=[DataRequired(), Length(max=120)])
+    email = StringField('Correo electrónico', validators=[DataRequired(), Email()])
+    telephone = StringField('Teléfono', validators=[DataRequired(), Length(max=20)])
+    zip_code = StringField('Código Postal', validators=[DataRequired(), Length(max=20)])
+    city = StringField('Ciudad', validators=[DataRequired(), Length(max=64)])
+    state = StringField('Estado', validators=[DataRequired(), Length(max=64)])
+    address = StringField('Dirección', validators=[DataRequired(), Length(max=255)])
+    nationality = SelectField('Nacionalidad', validators=[DataRequired()], choices=[
+        ('colombiana', 'Colombiana'),
+        ('venezolana', 'Venezolana'),
+        ('mexicana', 'Mexicana'),
+        ('ecuatoriana', 'Ecuatoriana'),
+        ('peruana', 'Peruana'),
+        ('argentina', 'Argentina'),
+        ('chilena', 'Chilena'),
+        ('brasileña', 'Brasileña'),
+        ('estadounidense', 'Estadounidense'),
+        ('canadiense', 'Canadiense'),
+        ('española', 'Española'),
+        ('francesa', 'Francesa'),
+        ('alemana', 'Alemana'),
+        ('italiana', 'Italiana'),
+        ('británica', 'Británica'),
+        ('china', 'China'),
+        ('japonesa', 'Japonesa'),
+        ('coreana', 'Coreana'),
+        ('india', 'India'),
+        ('otra', 'Otra')
+    ])
+    date_of_birth = DateField('Fecha de nacimiento', validators=[DataRequired()])
+    password = PasswordField('Contraseña', validators=[
+        DataRequired(),
+        Length(min=8, message='La contraseña debe tener al menos 8 caracteres')
+    ])
+    confirm_password = PasswordField('Confirmar Contraseña', validators=[
+        DataRequired(),
+        EqualTo('password', message='Las contraseñas no coinciden')
+    ])
+    communications = StringField('Comunicaciones', validators=[DataRequired()])
+    
+    def validate_email(self, field):
+        user_with_email = User.query.filter_by(email=field.data).first()
+        if user_with_email:
+            raise ValidationError('Este correo electrónico ya está registrado.')

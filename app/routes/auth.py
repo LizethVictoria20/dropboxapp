@@ -108,52 +108,63 @@ def logout():
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
-    # Solo permitir registro si está habilitado o es admin
-    if current_user.is_authenticated and not current_user.puede_administrar():
-        flash('No tienes permisos para registrar usuarios.', 'error')
-        return redirect(url_for('main.dashboard'))
+    """Página de registro de clientes"""
+    from forms import ClienteRegistrationForm
     
-    error = None
-    success = None
+    form = ClienteRegistrationForm()
+    errors = {}
     
     if request.method == 'POST':
-        email = request.form['email']
-        nombre = request.form['nombre']
-        password = request.form['password']
-        rol = request.form.get('rol', 'cliente')
-        
-        # Validar que el rol sea válido
-        roles_validos = ['cliente', 'lector', 'admin', 'superadmin']
-        if rol not in roles_validos:
-            rol = 'cliente'
-        
-        # Solo superadmin puede crear otros superadmin/admin
-        if rol in ['admin', 'superadmin'] and (not current_user.is_authenticated or not current_user.es_superadmin()):
-            rol = 'cliente'
-
-        if User.query.filter_by(email=email).first():
-            error = "Este correo ya está registrado."
+        if form.validate_on_submit():
+            try:
+                # Crear el usuario cliente
+                user = User(
+                    email=form.email.data,
+                    nombre=form.name.data,
+                    apellido=form.lastname.data,
+                    telefono=form.telephone.data,
+                    ciudad=form.city.data,
+                    estado=form.state.data,
+                    direccion=form.address.data,
+                    codigo_postal=form.zip_code.data,
+                    fecha_nacimiento=form.date_of_birth.data,
+                    rol='cliente',
+                    activo=True,
+                    fecha_registro=datetime.utcnow()
+                )
+                user.set_password(form.password.data)
+                
+                db.session.add(user)
+                db.session.commit()
+                
+                # Crear carpeta en Dropbox para el usuario
+                try:
+                    from app.dropbox_utils import create_dropbox_folder
+                    path = f"/{user.email}"
+                    create_dropbox_folder(path)
+                    user.dropbox_folder_path = path
+                    db.session.commit()
+                except Exception as e:
+                    # Si falla la creación de carpeta, no es crítico
+                    print(f"Error creando carpeta Dropbox: {e}")
+                
+                # Registrar actividad
+                user.registrar_actividad('user_registered', f'Cliente registrado desde {request.remote_addr}')
+                
+                return render_template('register.html', success=True)
+                
+            except Exception as e:
+                db.session.rollback()
+                errors['general'] = f"Error al crear la cuenta: {str(e)}"
         else:
-            user = User(
-                email=email, 
-                nombre=nombre, 
-                rol=rol,
-                activo=True,
-                fecha_registro=datetime.utcnow()
-            )
-            user.set_password(password)
-            db.session.add(user)
-            db.session.commit()
-            
-            # Registrar actividad
-            if current_user.is_authenticated:
-                registrar_actividad(current_user, 'user_created', f'Usuario {email} creado con rol {rol}')
-            
-            registrar_actividad(user, 'user_registered', f'Usuario registrado desde {request.remote_addr}')
-            
-            success = "Usuario creado exitosamente."
-            
-    return render_template('register.html', error=error, success=success)
+            # Errores de validación del formulario
+            for field, field_errors in form.errors.items():
+                if field == 'csrf_token':
+                    continue
+                field_name = getattr(form, field).label.text
+                errors[field] = f"{field_name}: {', '.join(field_errors)}"
+    
+    return render_template('register.html', form=form, errors=errors)
 
 @bp.route('/change-password', methods=['GET', 'POST'])
 @login_required
