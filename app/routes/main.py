@@ -8,6 +8,10 @@ from app import db
 from app.models import User, Folder, Archivo, UserActivityLog, Notification, Beneficiario, SystemSettings
 from forms import ProfileForm
 from app.routes.auth import role_required
+from app.utils.dashboard_stats import (
+    get_dashboard_stats, get_charts_data, get_file_types_stats, 
+    get_recent_files_with_users, get_recent_activity
+)
 
 bp = Blueprint('main', __name__)
 
@@ -45,6 +49,13 @@ def dashboard_cliente():
     total_archivos = Archivo.query.filter_by(usuario_id=current_user.id).count()
     total_carpetas = Folder.query.filter_by(user_id=current_user.id).count()
     beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).count()
+    
+    # Crear diccionario de estadísticas
+    stats = {
+        'total_archivos': total_archivos,
+        'total_carpetas': total_carpetas,
+        'beneficiarios': beneficiarios
+    }
     
     # Actividad reciente (últimas 5 actividades)
     actividades_recientes = UserActivityLog.query.filter_by(user_id=current_user.id)\
@@ -478,7 +489,7 @@ def listar_carpetas():
 @login_required
 @role_required('admin')
 def listar_usuarios_admin():
-    """Página de administración de usuarios"""
+    """Página de administración de usuarios administrativos (Admin, Lector, SuperAdmin)"""
     
     # Parámetros de búsqueda y filtros
     busqueda = request.args.get('q', '').strip()
@@ -487,8 +498,8 @@ def listar_usuarios_admin():
     page = request.args.get('page', 1, type=int)
     per_page = 20
     
-    # Query base
-    query = User.query
+    # Query base - SOLO usuarios administrativos (admin, lector, superadmin)
+    query = User.query.filter(User.rol.in_(['admin', 'lector', 'superadmin']))
     
     # Aplicar filtros
     if busqueda:
@@ -590,4 +601,178 @@ def system_settings():
     # Registrar actividad
     current_user.registrar_actividad('system_settings_access', 'Acceso a configuración del sistema')
     
-    return render_template('admin/system_settings.html', settings=settings) 
+    return render_template('admin/system_settings.html', settings=settings)
+
+# Rutas API para la gestión de usuarios administrativos
+@bp.route('/api/usuarios/<int:usuario_id>/historial')
+@login_required
+@role_required('admin')
+def api_usuario_historial(usuario_id):
+    """API para obtener el historial de actividad de un usuario"""
+    try:
+        usuario = User.query.get_or_404(usuario_id)
+        
+        # Verificar que el usuario sea administrativo
+        if usuario.rol not in ['admin', 'lector', 'superadmin']:
+            return jsonify({'error': 'Acceso denegado'}), 403
+        
+        # Obtener actividades del usuario
+        actividades = UserActivityLog.query.filter_by(user_id=usuario_id)\
+            .order_by(desc(UserActivityLog.fecha))\
+            .limit(50).all()
+        
+        actividades_data = []
+        for actividad in actividades:
+            actividades_data.append({
+                'id': actividad.id,
+                'accion': actividad.accion,
+                'descripcion': actividad.descripcion,
+                'fecha': actividad.fecha.isoformat() if actividad.fecha else None,
+                'ip_address': actividad.ip_address
+            })
+        
+        return jsonify({
+            'success': True,
+            'usuario': {
+                'id': usuario.id,
+                'nombre': usuario.nombre_completo,
+                'email': usuario.email,
+                'rol': usuario.rol
+            },
+            'actividades': actividades_data
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/api/usuarios/<int:usuario_id>/datos')
+@login_required
+@role_required('admin')
+def api_usuario_datos(usuario_id):
+    """API para obtener los datos de un usuario"""
+    try:
+        usuario = User.query.get_or_404(usuario_id)
+        
+        # Verificar que el usuario sea administrativo
+        if usuario.rol not in ['admin', 'lector', 'superadmin']:
+            return jsonify({'error': 'Acceso denegado'}), 403
+        
+        return jsonify({
+            'success': True,
+            'usuario': {
+                'id': usuario.id,
+                'nombre': usuario.nombre,
+                'apellido': usuario.apellido,
+                'email': usuario.email,
+                'rol': usuario.rol,
+                'activo': usuario.activo,
+                'fecha_registro': usuario.fecha_registro.isoformat() if usuario.fecha_registro else None,
+                'ultimo_acceso': usuario.ultimo_acceso.isoformat() if usuario.ultimo_acceso else None
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/api/usuarios/<int:usuario_id>/actualizar', methods=['POST'])
+@login_required
+@role_required('admin')
+def api_usuario_actualizar(usuario_id):
+    """API para actualizar los datos de un usuario"""
+    try:
+        usuario = User.query.get_or_404(usuario_id)
+        
+        # Verificar que el usuario sea administrativo
+        if usuario.rol not in ['admin', 'lector', 'superadmin']:
+            return jsonify({'error': 'Acceso denegado'}), 403
+        
+        # Obtener datos del formulario
+        nombre = request.form.get('nombre', '').strip()
+        apellido = request.form.get('apellido', '').strip()
+        email = request.form.get('email', '').strip()
+        rol = request.form.get('rol', 'admin')
+        activo = request.form.get('activo') == 'on'
+        
+        # Validaciones básicas
+        if not email:
+            return jsonify({'error': 'El email es obligatorio'}), 400
+        
+        if not rol in ['admin', 'lector', 'superadmin']:
+            return jsonify({'error': 'Rol no válido'}), 400
+        
+        # Verificar si el email ya existe (excluyendo el usuario actual)
+        email_existente = User.query.filter(
+            User.email == email,
+            User.id != usuario_id
+        ).first()
+        
+        if email_existente:
+            return jsonify({'error': 'El email ya está en uso'}), 400
+        
+        # Actualizar datos del usuario
+        usuario.nombre = nombre
+        usuario.apellido = apellido
+        usuario.email = email
+        usuario.rol = rol
+        usuario.activo = activo
+        
+        # Registrar la actividad
+        current_user.registrar_actividad(
+            'usuario_actualizado',
+            f'Actualizó información del usuario {usuario.email}'
+        )
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Usuario actualizado correctamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/api/usuarios/<int:usuario_id>/eliminar', methods=['POST'])
+@login_required
+@role_required('admin')
+def api_usuario_eliminar(usuario_id):
+    """API para eliminar un usuario"""
+    try:
+        usuario = User.query.get_or_404(usuario_id)
+        
+        # Verificar que el usuario sea administrativo
+        if usuario.rol not in ['admin', 'lector', 'superadmin']:
+            return jsonify({'error': 'Acceso denegado'}), 403
+        
+        # No permitir eliminar el usuario actual
+        if usuario.id == current_user.id:
+            return jsonify({'error': 'No puedes eliminar tu propia cuenta'}), 400
+        
+        # Verificar si el usuario tiene archivos o carpetas
+        archivos_count = Archivo.query.filter_by(usuario_id=usuario_id).count()
+        carpetas_count = Folder.query.filter_by(user_id=usuario_id).count()
+        
+        if archivos_count > 0 or carpetas_count > 0:
+            return jsonify({
+                'error': f'No se puede eliminar el usuario. Tiene {archivos_count} archivos y {carpetas_count} carpetas asociadas.'
+            }), 400
+        
+        # Registrar la actividad antes de eliminar
+        current_user.registrar_actividad(
+            'usuario_eliminado',
+            f'Eliminó al usuario {usuario.email}'
+        )
+        
+        # Eliminar el usuario
+        db.session.delete(usuario)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Usuario eliminado correctamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500 

@@ -115,7 +115,7 @@
                   Clientes
                 </a>
                 <a
-                  href="#"
+                  href="{{ url_for('main.listar_usuarios_admin') }}"
                   class="{% if request.endpoint == 'main.listar_usuarios_admin' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
                 >
                   Usuarios
@@ -160,7 +160,7 @@
                   Clientes
                 </a>
                 <a
-                  href="#"
+                  href="{{ url_for('main.listar_usuarios_admin') }}"
                   class="{% if request.endpoint == 'main.listar_usuarios_admin' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
                 >
                   Usuarios
@@ -331,9 +331,10 @@
                       Clientes
                     </a>
                     <a
-                      href="#"
+                      href="{{ url_for('main.listar_usuarios_admin') }}"
                       class="{% if request.endpoint == 'main.listar_usuarios_admin' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
                     >
+                      <i class="fas fa-user-shield mr-3 w-5 text-center"></i>
                       Usuarios
                     </a>
                     <a
@@ -368,9 +369,10 @@
                       Clientes
                     </a>
                     <a
-                      href="#"
+                      href="{{ url_for('main.listar_usuarios_admin') }}"
                       class="{% if request.endpoint == 'main.listar_usuarios_admin' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
                     >
+                      <i class="fas fa-user-shield mr-3 w-5 text-center"></i>
                       Usuarios
                     </a>
                     <a

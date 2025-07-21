@@ -1,335 +1,553 @@
-{% extends "base.html" %}
-{% block title %}Administración de Usuarios{% endblock %}
-
-{% block content %}
-<div class="max-w-7xl mx-auto px-6 py-8">
+{% extends "base.html" %} {% block title %}Usuarios Administrativos{% endblock
+%} {% block content %}
+<div class="max-w-6xl mx-auto px-6 py-8">
   <!-- Header -->
-  <div class="mb-8">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">Administración de Usuarios</h1>
-        <p class="text-gray-600 mt-2">Gestiona usuarios, roles y permisos del sistema.</p>
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-primary-dark">
+        Usuarios Administrativos
+      </h1>
+      <p class="text-gray-500 mt-1">
+        Gestiona los usuarios administrativos del sistema
+      </p>
+    </div>
+    <a
+      href="{{ url_for('usuarios.lista_usuarios', rol=rol_filtro) }}"
+      class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition"
+    >
+      + Agregar usuario
+    </a>
+  </div>
+
+  <!-- Search -->
+  <form
+    method="get"
+    action="{{ url_for('main.listar_usuarios_admin') }}"
+    class="mb-6"
+  >
+    <div>
+      <input
+        type="text"
+        name="q"
+        value="{{ busqueda }}"
+        placeholder="🔍 Nombre, email o rol"
+        class="w-[32rem] h-[3rem] text-sm px-4 py-3 rounded-xl border border-transparent focus:ring-2 focus:ring-blue-200 focus:outline-none placeholder-gray-400"
+      />
+    </div>
+  </form>
+
+  <!-- Tabla de usuarios -->
+  <div
+    class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden"
+  >
+    <div class="px-6 py-3 border-b bg-blue-50 flex items-center">
+      <div class="flex items-center gap-2 text-primary-dark font-semibold">
+        <i class="fas fa-users"></i> Usuarios Administrativos
       </div>
-      <div class="flex items-center space-x-3">
-        <a href="{{ url_for('main.dashboard_admin') }}" 
-           class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-          <i class="fas fa-arrow-left mr-2"></i>
-          Volver al Dashboard
-        </a>
-        <button class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          <i class="fas fa-user-plus mr-2"></i>
-          Nuevo Usuario
+      <span
+        class="ml-auto text-xs font-bold bg-blue-100 text-primary-dark px-3 py-1 rounded-full"
+        >{{ usuarios.total }} usuarios</span
+      >
+    </div>
+    {% if usuarios.items %}
+    <table class="min-w-full text-sm text-gray-700">
+      <thead>
+        <tr class="border-b text-gray-500">
+          <th class="py-3 px-6 text-left">NOMBRE</th>
+          <th class="py-3 px-2 text-left">EMAIL</th>
+          <th class="py-3 px-2 text-left">ROL</th>
+          <th class="py-3 px-2 text-left">ESTADO</th>
+          <th class="py-3 px-2 text-right">ACCIONES</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for usuario in usuarios.items %}
+        <!-- Fila de tabla en escritorio -->
+        <tr
+          class="border-b last:border-0 hover:bg-blue-50 transition hidden md:table-row"
+        >
+          <td class="flex items-center gap-3 py-3 px-6">
+            <span
+              class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-primary-dark font-bold text-lg"
+            >
+              {{ (usuario.nombre or usuario.email)[0]|upper }}
+            </span>
+            <div>
+              <div class="font-semibold text-gray-900">
+                {{ usuario.nombre_completo or usuario.email.split('@')[0] }}
+              </div>
+              <div class="text-xs text-gray-500">
+                @{{ usuario.email.split('@')[0] }}
+              </div>
+            </div>
+          </td>
+          <td class="px-2">{{ usuario.email }}</td>
+          <td class="px-2">
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.rol == 'superadmin' %}bg-red-100 text-red-800{% elif usuario.rol == 'admin' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}"
+            >
+              {{ usuario.rol|title }}
+            </span>
+          </td>
+          <td class="px-2">
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}"
+            >
+              {% if usuario.activo %}
+                <i class="fas fa-check-circle mr-1"></i>Activo
+              {% else %}
+                <i class="fas fa-times-circle mr-1"></i>Inactivo
+              {% endif %}
+            </span>
+          </td>
+          <td class="px-2 text-right">
+            <div class="relative" x-data="{ open: false }">
+              <button
+                @click="open = !open"
+                class="p-2 rounded hover:bg-gray-100 group relative"
+              >
+                <i class="fas fa-ellipsis-v text-gray-400"></i>
+              </button>
+
+              <!-- Menú desplegable de acciones -->
+              <div
+                x-show="open"
+                @click.away="open = false"
+                x-transition:enter="transition ease-out duration-100"
+                x-transition:enter-start="transform opacity-0 scale-95"
+                x-transition:enter-end="transform opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-75"
+                x-transition:leave-start="transform opacity-100 scale-100"
+                x-transition:leave-end="transform opacity-0 scale-95"
+                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+              >
+                <!-- Ver Historial -->
+                <button
+                  onclick="abrirModalHistorial({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-history mr-3 text-green-500"></i>
+                  Ver Historial
+                </button>
+
+                <!-- Editar Usuario -->
+                <button
+                  onclick="abrirModalEditar({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-edit mr-3 text-yellow-500"></i>
+                  Editar Usuario
+                </button>
+
+                <!-- Separador -->
+                <div class="border-t border-gray-100"></div>
+
+                <!-- Eliminar Usuario -->
+                <button
+                  onclick="confirmarEliminarUsuario({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                >
+                  <i class="fas fa-trash mr-3"></i>
+                  Eliminar Usuario
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Tarjeta en móvil -->
+        <tr class="md:hidden">
+          <td colspan="5" class="p-4">
+            <div
+              class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-2 hover:bg-blue-50 transition"
+            >
+              <div class="flex items-center gap-3 mb-2">
+                <span
+                  class="w-10 h-10 rounded-full bg-blue-100 text-primary-dark font-bold text-lg flex items-center justify-center"
+                >
+                  {{ (usuario.nombre or usuario.email)[0]|upper }}
+                </span>
+                <div>
+                  <div class="font-semibold text-gray-900 text-base">
+                    {{ usuario.nombre_completo or usuario.email.split('@')[0] }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    @{{ usuario.email.split('@')[0] }}
+                  </div>
+                </div>
+              </div>
+              <div class="text-sm text-gray-700">
+                <p><strong>Email:</strong> {{ usuario.email }}</p>
+                <p>
+                  <strong>Rol:</strong>
+                  <span
+                    class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.rol == 'superadmin' %}bg-red-100 text-red-800{% elif usuario.rol == 'admin' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}"
+                  >
+                    {{ usuario.rol|title }}
+                  </span>
+                </p>
+                <p>
+                  <strong>Estado:</strong>
+                  <span
+                    class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}"
+                  >
+                    {% if usuario.activo %}
+                      <i class="fas fa-check-circle mr-1"></i>Activo
+                    {% else %}
+                      <i class="fas fa-times-circle mr-1"></i>Inactivo
+                    {% endif %}
+                  </span>
+                </p>
+              </div>
+
+              <!-- Acciones en móvil -->
+              <div class="flex flex-wrap gap-2 mt-3">
+                <button
+                  onclick="abrirModalHistorial({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="flex-1 bg-green-100 text-green-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-200 transition text-center"
+                >
+                  <i class="fas fa-history mr-1"></i> Historial
+                </button>
+                <button
+                  onclick="abrirModalEditar({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="flex-1 bg-yellow-100 text-yellow-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-yellow-200 transition text-center"
+                >
+                  <i class="fas fa-edit mr-1"></i> Editar
+                </button>
+                <button
+                  onclick="confirmarEliminarUsuario({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="flex-1 bg-red-100 text-red-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-200 transition"
+                >
+                  <i class="fas fa-trash mr-1"></i> Eliminar
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Paginación -->
+    <div
+      class="flex items-center justify-between px-6 py-4 border-t bg-gray-50"
+    >
+      <div class="text-sm text-gray-500">
+        Mostrando {{ ((usuarios.page - 1) * usuarios.per_page) + 1 }} a {{ ((usuarios.page - 1) * usuarios.per_page) + usuarios.items|length }} de {{ usuarios.total }} usuarios
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-500 mr-2">Mostrar:</label>
+        <select class="text-sm border rounded px-2 py-1 text-gray-600">
+          <option>10</option>
+          <option>25</option>
+          <option>50</option>
+        </select>
+        <nav class="flex border rounded overflow-hidden text-sm">
+          {% if usuarios.has_prev %}
+          <a
+            href="{{ url_for('main.listar_usuarios_admin', q=busqueda, page=usuarios.prev_num) }}"
+            class="px-3 py-2 bg-white border-r hover:bg-gray-100"
+            >&lt;</a
+          >
+          {% else %}
+          <span class="px-3 py-2 bg-gray-100 text-gray-400 border-r">&lt;</span>
+          {% endif %} {% for p in usuarios.iter_pages(left_edge=1,
+          right_edge=1, left_current=1, right_current=1) %} {% if p %}
+          <a
+            href="{{ url_for('main.listar_usuarios_admin', q=busqueda, page=p) }}"
+            class="px-3 py-2 border-r {{ 'bg-blue-100 text-primary-dark font-bold' if usuarios.page == p else 'bg-white hover:bg-gray-100' }}"
+            >{{ p }}</a
+          >
+          {% else %}
+          <span class="px-3 py-2 bg-white border-r">…</span>
+          {% endif %} {% endfor %} {% if usuarios.has_next %}
+          <a
+            href="{{ url_for('main.listar_usuarios_admin', q=busqueda, page=usuarios.next_num) }}"
+            class="px-3 py-2 bg-white hover:bg-gray-100"
+            >&gt;</a
+          >
+          {% else %}
+          <span class="px-3 py-2 bg-gray-100 text-gray-400">&gt;</span>
+          {% endif %}
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<!-- Sin resultados -->
+<div class="p-12 text-center">
+  <i class="fas fa-users text-gray-300 text-6xl mb-4"></i>
+  <h3 class="text-lg font-medium text-gray-900 mb-2">
+    No se encontraron usuarios administrativos
+  </h3>
+  <p class="text-gray-500 mb-6">
+    {% if busqueda %}
+      Intenta ajustar los términos de búsqueda.
+    {% else %}
+      No hay usuarios administrativos registrados en el sistema.
+    {% endif %}
+  </p>
+  {% if not busqueda %}
+  <button class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+    <i class="fas fa-user-plus mr-2"></i>
+    Crear Primer Usuario Administrativo
+  </button>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Modal de confirmación para eliminar usuario -->
+<div id="modalEliminar" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-lg max-w-md w-full p-6">
+      <div class="flex items-center mb-4">
+        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+          <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Confirmar Eliminación</h3>
+          <p class="text-sm text-gray-600">Esta acción no se puede deshacer</p>
+        </div>
+      </div>
+      <p class="text-gray-700 mb-6">
+        ¿Estás seguro de que quieres eliminar al usuario <span id="nombreUsuarioEliminar" class="font-semibold"></span>?
+      </p>
+      <div class="flex justify-end space-x-3">
+        <button
+          onclick="cerrarModalEliminar()"
+          class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+        >
+          Cancelar
+        </button>
+        <button
+          id="confirmarEliminarBtn"
+          class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Eliminar
         </button>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Filtros y Búsqueda -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-    <div class="p-6">
-      <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <!-- Búsqueda -->
-        <div class="md:col-span-2">
-          <label for="q" class="block text-sm font-medium text-gray-700 mb-2">Buscar Usuario</label>
-          <div class="relative">
-            <input type="text" 
-                   name="q" 
-                   id="q"
-                   value="{{ busqueda }}"
-                   placeholder="Buscar por nombre, apellido o email..."
-                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <i class="fas fa-search text-gray-400"></i>
+<!-- Modal de Historial -->
+<div id="modalHistorial" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
+      <div class="flex items-center justify-between p-6 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">
+          Historial de Actividad - <span id="nombreUsuarioHistorial"></span>
+        </h3>
+        <button
+          onclick="cerrarModalHistorial()"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto max-h-[60vh]">
+        <div id="contenidoHistorial" class="space-y-4">
+          <!-- El contenido del historial se cargará aquí -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Editar Usuario -->
+<div id="modalEditar" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between p-6 border-b">
+        <h3 class="text-lg font-semibold text-gray-900" id="editarUsuarioInfo">
+          Editar Usuario
+        </h3>
+        <button
+          onclick="cerrarModalEditar()"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      <form id="formEditar" class="p-6 space-y-4">
+        <input type="hidden" id="editarUsuarioId" name="usuario_id">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+            <input type="text" id="nombre" name="nombre" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label for="apellido" class="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+            <input type="text" id="apellido" name="apellido" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input type="email" id="email" name="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="rol" class="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+            <select id="rol" name="rol" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="admin">Admin</option>
+              <option value="lector">Lector</option>
+              <option value="superadmin">Super Admin</option>
+            </select>
+          </div>
+          <div>
+            <label for="activo" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+            <div class="flex items-center mt-2">
+              <input type="checkbox" id="activo" name="activo" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+              <label for="activo" class="ml-2 text-sm text-gray-700">Usuario Activo</label>
             </div>
           </div>
         </div>
-
-        <!-- Filtro por Rol -->
-        <div>
-          <label for="rol" class="block text-sm font-medium text-gray-700 mb-2">Rol</label>
-          <select name="rol" 
-                  id="rol"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-            <option value="">Todos los roles</option>
-            <option value="superadmin" {% if rol_filtro == 'superadmin' %}selected{% endif %}>Super Admin</option>
-            <option value="admin" {% if rol_filtro == 'admin' %}selected{% endif %}>Admin</option>
-            <option value="cliente" {% if rol_filtro == 'cliente' %}selected{% endif %}>Cliente</option>
-            <option value="lector" {% if rol_filtro == 'lector' %}selected{% endif %}>Lector</option>
-          </select>
-        </div>
-
-        <!-- Filtro por Estado -->
-        <div>
-          <label for="estado" class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-          <select name="estado" 
-                  id="estado"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-            <option value="">Todos</option>
-            <option value="activo" {% if estado_filtro == 'activo' %}selected{% endif %}>Activos</option>
-            <option value="inactivo" {% if estado_filtro == 'inactivo' %}selected{% endif %}>Inactivos</option>
-          </select>
-        </div>
-
-        <!-- Botones -->
-        <div class="md:col-span-4 flex items-center space-x-3">
-          <button type="submit" 
-                  class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            <i class="fas fa-search mr-2"></i>
-            Buscar
+        
+        <div class="flex justify-end space-x-3 pt-4 border-t">
+          <button
+            type="button"
+            onclick="cerrarModalEditar()"
+            class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cancelar
           </button>
-          <a href="{{ url_for('main.listar_usuarios_admin') }}" 
-             class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-            <i class="fas fa-times mr-2"></i>
-            Limpiar
-          </a>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Guardar Cambios
+          </button>
         </div>
       </form>
     </div>
   </div>
-
-  <!-- Lista de Usuarios -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-    <div class="p-6 border-b border-gray-200">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-900">
-          Usuarios Encontrados ({{ usuarios.total }})
-        </h2>
-        <div class="flex items-center space-x-2 text-sm text-gray-600">
-          <span>Página {{ usuarios.page }} de {{ usuarios.pages }}</span>
-        </div>
-      </div>
-    </div>
-
-    {% if usuarios.items %}
-    <div class="overflow-x-auto">
-      <table class="w-full">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estadísticas</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Último Acceso</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          {% for usuario in usuarios.items %}
-          <tr class="hover:bg-gray-50">
-            <!-- Usuario -->
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="flex items-center">
-                <div class="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span class="text-blue-600 font-medium text-sm">
-                    {{ (usuario.nombre or usuario.email)[0]|upper }}
-                  </span>
-                </div>
-                <div class="ml-4">
-                  <div class="text-sm font-medium text-gray-900">
-                    {{ usuario.nombre_completo }}
-                  </div>
-                  <div class="text-sm text-gray-500">{{ usuario.email }}</div>
-                </div>
-              </div>
-            </td>
-
-            <!-- Rol -->
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                           {% if usuario.rol == 'superadmin' %}bg-red-100 text-red-800
-                           {% elif usuario.rol == 'admin' %}bg-blue-100 text-blue-800
-                           {% elif usuario.rol == 'cliente' %}bg-green-100 text-green-800
-                           {% else %}bg-gray-100 text-gray-800{% endif %}">
-                {{ usuario.rol|title }}
-              </span>
-            </td>
-
-            <!-- Estado -->
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                           {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
-                {% if usuario.activo %}
-                  <i class="fas fa-check-circle mr-1"></i>Activo
-                {% else %}
-                  <i class="fas fa-times-circle mr-1"></i>Inactivo
-                {% endif %}
-              </span>
-            </td>
-
-            <!-- Estadísticas -->
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-900">
-                <div class="flex items-center space-x-4">
-                  <span class="flex items-center">
-                    <i class="fas fa-file text-blue-600 mr-1"></i>
-                    {{ estadisticas_usuarios[usuario.id].archivos }}
-                  </span>
-                  <span class="flex items-center">
-                    <i class="fas fa-folder text-green-600 mr-1"></i>
-                    {{ estadisticas_usuarios[usuario.id].carpetas }}
-                  </span>
-                  {% if estadisticas_usuarios[usuario.id].beneficiarios > 0 %}
-                  <span class="flex items-center">
-                    <i class="fas fa-users text-purple-600 mr-1"></i>
-                    {{ estadisticas_usuarios[usuario.id].beneficiarios }}
-                  </span>
-                  {% endif %}
-                </div>
-              </div>
-            </td>
-
-            <!-- Último Acceso -->
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {% if estadisticas_usuarios[usuario.id].ultimo_acceso %}
-                {{ estadisticas_usuarios[usuario.id].ultimo_acceso.strftime('%d/%m/%Y') }}
-              {% else %}
-                Nunca
-              {% endif %}
-            </td>
-
-            <!-- Acciones -->
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-              <div class="flex items-center space-x-2">
-                <a href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=usuario.id) }}" 
-                   class="text-blue-600 hover:text-blue-800" title="Ver Carpetas">
-                  <i class="fas fa-folder-open"></i>
-                </a>
-                {% if usuario.rol == 'cliente' %}
-                  <!-- Enlace para ver beneficiarios del cliente -->
-                  <a href="{{ url_for('listar_dropbox.carpetas_dropbox') }}?cliente_id={{ usuario.id }}" 
-                     class="text-green-600 hover:text-green-800" title="Ver Beneficiarios">
-                    <i class="fas fa-users"></i>
-                  </a>
-                {% endif %}
-                <button class="text-green-600 hover:text-green-800" title="Editar Usuario">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="text-red-600 hover:text-red-800" title="Eliminar Usuario">
-                  <i class="fas fa-trash"></i>
-                </button>
-                <div class="relative group">
-                  <button class="text-gray-600 hover:text-gray-800" title="Más acciones">
-                    <i class="fas fa-ellipsis-v"></i>
-                  </button>
-                  <!-- Menú desplegable -->
-                  <div class="absolute right-0 top-8 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                    <div class="py-1">
-                      <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                        <i class="fas fa-key mr-2"></i>Cambiar Contraseña
-                      </a>
-                      <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                        <i class="fas fa-user-shield mr-2"></i>Cambiar Rol
-                      </a>
-                      <div class="border-t border-gray-100"></div>
-                      {% if usuario.activo %}
-                      <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                        <i class="fas fa-ban mr-2"></i>Desactivar
-                      </a>
-                      {% else %}
-                      <a href="#" class="block px-4 py-2 text-sm text-green-600 hover:bg-green-50">
-                        <i class="fas fa-check mr-2"></i>Activar
-                      </a>
-                      {% endif %}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Paginación -->
-    {% if usuarios.pages > 1 %}
-    <div class="px-6 py-4 border-t border-gray-200">
-      <div class="flex items-center justify-between">
-        <div class="text-sm text-gray-700">
-          Mostrando {{ ((usuarios.page - 1) * usuarios.per_page) + 1 }} a 
-          {{ ((usuarios.page - 1) * usuarios.per_page) + usuarios.items|length }} de 
-          {{ usuarios.total }} resultados
-        </div>
-        <div class="flex items-center space-x-2">
-          {% if usuarios.has_prev %}
-          <a href="{{ url_for('main.listar_usuarios_admin', page=usuarios.prev_num, q=busqueda, rol=rol_filtro, estado=estado_filtro) }}" 
-             class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-            Anterior
-          </a>
-          {% endif %}
-          
-          {% for page_num in usuarios.iter_pages() %}
-            {% if page_num %}
-              {% if page_num != usuarios.page %}
-              <a href="{{ url_for('main.listar_usuarios_admin', page=page_num, q=busqueda, rol=rol_filtro, estado=estado_filtro) }}" 
-                 class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                {{ page_num }}
-              </a>
-              {% else %}
-              <span class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg">
-                {{ page_num }}
-              </span>
-              {% endif %}
-            {% else %}
-              <span class="px-2 py-2 text-sm text-gray-500">…</span>
-            {% endif %}
-          {% endfor %}
-          
-          {% if usuarios.has_next %}
-          <a href="{{ url_for('main.listar_usuarios_admin', page=usuarios.next_num, q=busqueda, rol=rol_filtro, estado=estado_filtro) }}" 
-             class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-            Siguiente
-          </a>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    {% else %}
-    <!-- Sin resultados -->
-    <div class="p-12 text-center">
-      <i class="fas fa-users text-gray-300 text-6xl mb-4"></i>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">No se encontraron usuarios</h3>
-      <p class="text-gray-500 mb-6">
-        {% if busqueda or rol_filtro or estado_filtro %}
-          Intenta ajustar los filtros de búsqueda.
-        {% else %}
-          No hay usuarios registrados en el sistema.
-        {% endif %}
-      </p>
-      {% if not busqueda and not rol_filtro and not estado_filtro %}
-      <button class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-        <i class="fas fa-user-plus mr-2"></i>
-        Crear Primer Usuario
-      </button>
-      {% endif %}
-    </div>
-    {% endif %}
-  </div>
 </div>
 
-<!-- Scripts para funcionalidades adicionales -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Auto-submit formulario de búsqueda al cambiar filtros
-  const filtros = document.querySelectorAll('select[name="rol"], select[name="estado"]');
-  filtros.forEach(filtro => {
-    filtro.addEventListener('change', function() {
-      this.form.submit();
-    });
-  });
-
-  // Confirmación para acciones destructivas
-  document.querySelectorAll('[title="Eliminar Usuario"]').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      if (confirm('¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.')) {
-        // Aquí iría la lógica de eliminación
-        console.log('Eliminando usuario...');
+// Funciones para los modales
+function confirmarEliminarUsuario(usuarioId, nombreUsuario) {
+  document.getElementById('nombreUsuarioEliminar').textContent = nombreUsuario;
+  document.getElementById('modalEliminar').classList.remove('hidden');
+  
+  document.getElementById('confirmarEliminarBtn').onclick = function() {
+    // Lógica para eliminar el usuario
+    fetch(`/api/usuarios/${usuarioId}/eliminar`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Usuario eliminado correctamente');
+        cerrarModalEliminar();
+        location.reload(); // Recargar la página para mostrar los cambios
+      } else {
+        alert('Error al eliminar el usuario: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al eliminar el usuario');
     });
+  };
+}
+
+function cerrarModalEliminar() {
+  document.getElementById('modalEliminar').classList.add('hidden');
+}
+
+function abrirModalHistorial(usuarioId, nombreUsuario) {
+  document.getElementById('nombreUsuarioHistorial').textContent = nombreUsuario;
+  document.getElementById('modalHistorial').classList.remove('hidden');
+  
+  // Cargar historial del usuario
+  fetch(`/api/usuarios/${usuarioId}/historial`)
+    .then(response => response.json())
+    .then(data => {
+      const contenido = document.getElementById('contenidoHistorial');
+      if (data.actividades && data.actividades.length > 0) {
+        contenido.innerHTML = data.actividades.map(actividad => `
+          <div class="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+            <div class="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+            <div class="flex-1">
+              <p class="text-sm font-medium text-gray-900">${actividad.accion}</p>
+              <p class="text-sm text-gray-600">${actividad.descripcion || ''}</p>
+              <p class="text-xs text-gray-500">${new Date(actividad.fecha).toLocaleString()}</p>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        contenido.innerHTML = '<p class="text-gray-500 text-center py-8">No hay actividades registradas para este usuario.</p>';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      document.getElementById('contenidoHistorial').innerHTML = '<p class="text-red-500 text-center py-8">Error al cargar el historial.</p>';
+    });
+}
+
+function cerrarModalHistorial() {
+  document.getElementById('modalHistorial').classList.add('hidden');
+}
+
+function abrirModalEditar(usuarioId, nombreUsuario) {
+  document.getElementById('editarUsuarioInfo').textContent = `Editando información de ${nombreUsuario}`;
+  document.getElementById('editarUsuarioId').value = usuarioId;
+  document.getElementById('modalEditar').classList.remove('hidden');
+
+  // Cargar datos del usuario
+  fetch(`/api/usuarios/${usuarioId}/datos`)
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('nombre').value = data.nombre || '';
+      document.getElementById('apellido').value = data.apellido || '';
+      document.getElementById('email').value = data.email || '';
+      document.getElementById('rol').value = data.rol || 'admin';
+      document.getElementById('activo').checked = data.activo || false;
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al cargar los datos del usuario');
+    });
+}
+
+function cerrarModalEditar() {
+  document.getElementById('modalEditar').classList.add('hidden');
+  document.getElementById('formEditar').reset();
+}
+
+// Manejo del formulario de edición
+document.getElementById('formEditar').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const usuarioId = document.getElementById('editarUsuarioId').value;
+  
+  fetch(`/api/usuarios/${usuarioId}/actualizar`, {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Usuario actualizado correctamente');
+      cerrarModalEditar();
+      location.reload(); // Recargar la página para mostrar los cambios
+    } else {
+      alert('Error al actualizar el usuario: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error al actualizar el usuario');
   });
 });
 </script>
-{% endblock %} 
+{% endblock %}
