@@ -2,7 +2,7 @@
 styles %}
 <style>
   /* Estilos para el modal de progreso */
-ayuda  #progressModal.hidden {
+  ayuda #progressModal.hidden {
     display: none !important;
   }
 
@@ -230,6 +230,7 @@ ayuda  #progressModal.hidden {
               </option>
               {% endfor %}
             </optgroup>
+            {% if beneficiarios %}
             <optgroup label="Beneficiarios">
               {% for ben in beneficiarios %}
               <option value="beneficiario-{{ ben.id }}">
@@ -237,6 +238,7 @@ ayuda  #progressModal.hidden {
               </option>
               {% endfor %}
             </optgroup>
+            {% endif %}
           </select>
         </div>
 

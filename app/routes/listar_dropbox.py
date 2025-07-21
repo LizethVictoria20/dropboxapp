@@ -247,8 +247,21 @@ def subir_archivo():
 
     if request.method == "GET":
         print("GET: Mostrando formulario de subida")
-        titulares = User.query.all()
-        beneficiarios = Beneficiario.query.all()
+        
+        # Filtrar usuarios según el rol del usuario actual
+        if current_user.rol == "cliente":
+            # Cliente solo ve sus propias carpetas
+            titulares = [current_user]  # Solo el usuario actual
+            beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).all()
+        elif current_user.rol in ["admin", "superadmin"]:
+            # Admin ve todos los usuarios titulares (no beneficiarios)
+            titulares = User.query.filter_by(es_beneficiario=False).all()
+            beneficiarios = Beneficiario.query.all()
+        else:
+            # Otros roles (lector, etc.) - ajustar según necesidades
+            titulares = User.query.filter_by(es_beneficiario=False).all()
+            beneficiarios = Beneficiario.query.all()
+        
         print("Usuarios en DB:", [u.email for u in titulares])
         print("Beneficiarios en DB:", [b.email for b in beneficiarios])
         return render_template(
@@ -306,6 +319,21 @@ def subir_archivo():
         print("ERROR: Usuario no encontrado o inválido")
         flash("Usuario no encontrado en la base de datos", "error")
         return redirect(url_for("listar_dropbox.subir_archivo"))
+
+    # Validación de seguridad: cliente solo puede subir a sus propias carpetas
+    if current_user.rol == "cliente":
+        if usuario_id.startswith("user-"):
+            # Si es un titular, debe ser el usuario actual
+            if int(usuario_id[5:]) != current_user.id:
+                flash("No tienes permisos para subir archivos a esta carpeta.", "error")
+                return redirect(url_for("listar_dropbox.subir_archivo"))
+        elif usuario_id.startswith("beneficiario-"):
+            # Si es un beneficiario, debe pertenecer al usuario actual
+            beneficiario_id = int(usuario_id[13:])
+            beneficiario = Beneficiario.query.get(beneficiario_id)
+            if not beneficiario or beneficiario.titular_id != current_user.id:
+                flash("No tienes permisos para subir archivos a esta carpeta.", "error")
+                return redirect(url_for("listar_dropbox.subir_archivo"))
 
     # Leer el archivo una sola vez
     archivo_content = archivo.read()
