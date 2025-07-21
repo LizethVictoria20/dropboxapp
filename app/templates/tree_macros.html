@@ -28,11 +28,12 @@ folders_por_ruta={}) %}
       <span class="text-gray-700 font-medium">{{ archivo }}</span>
     </div>
 
-    {# Solo mostrar menú de tres puntos si es admin o cliente #} {% if usuario_actual and
-    (usuario_actual.rol == 'admin' or usuario_actual.rol == 'cliente') %}
+    {# Solo mostrar menú de tres puntos si es admin o cliente #} {% if
+    usuario_actual and (usuario_actual.rol == 'admin' or usuario_actual.rol ==
+    'cliente') %}
     <div class="relative">
       <button
-        onclick="toggleFileMenu('file-menu-{{ loop.index }}', event)"
+        onclick="toggleFileMenu('file-menu-{{ parent.replace('/', '-').replace('\\', '-') }}-{{ archivo.replace('/', '-').replace('\\', '-') }}', event)"
         class="p-1 hover:bg-gray-200 rounded-full transition-colors"
       >
         <svg
@@ -48,13 +49,13 @@ folders_por_ruta={}) %}
 
       <!-- Menú desplegable para archivos -->
       <div
-        id="file-menu-{{ loop.index }}"
+        id="file-menu-{{ parent.replace('/', '-').replace('\\', '-') }}-{{ archivo.replace('/', '-').replace('\\', '-') }}"
         class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden"
         style="position: fixed"
       >
         <div class="py-1">
           <button
-            onclick="openMoveModal('{{ archivo }}', '{{ parent }}')"
+            onclick="openMoveModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
           >
             <svg
@@ -73,7 +74,7 @@ folders_por_ruta={}) %}
             Mover archivo
           </button>
           <button
-            onclick="openRenameModal('{{ archivo }}', '{{ parent }}', 'archivo')"
+            onclick="openRenameModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
           >
             <svg
@@ -158,13 +159,14 @@ folders_por_ruta={}) %}
           </div>
         </div>
 
-        {# Solo mostrar menú de tres puntos si es admin o cliente #} {% if usuario_actual
-        and (usuario_actual.rol == 'admin' or usuario_actual.rol == 'cliente') %}
+        {# Solo mostrar menú de tres puntos si es admin o cliente #} {% if
+        usuario_actual and (usuario_actual.rol == 'admin' or usuario_actual.rol
+        == 'cliente') %}
         <div class="relative">
-          <button
-            onclick="toggleFolderMenu('folder-menu-{{ loop.index }}', event)"
-            class="p-1 hover:bg-gray-200 rounded-full transition-colors"
-          >
+                            <button
+                    onclick="toggleFolderMenu('folder-menu-{{ parent.replace('/', '-').replace('\\', '-') }}-{{ carpeta.replace('/', '-').replace('\\', '-') }}', event)"
+                    class="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                  >
             <svg
               class="w-5 h-5 text-gray-600"
               fill="currentColor"
@@ -178,13 +180,13 @@ folders_por_ruta={}) %}
 
           <!-- Menú desplegable para carpetas -->
           <div
-            id="folder-menu-{{ loop.index }}"
+            id="folder-menu-{{ parent.replace('/', '-').replace('\\', '-') }}-{{ carpeta.replace('/', '-').replace('\\', '-') }}"
             class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden"
-            style="position: fixed;"
+            style="position: fixed"
           >
             <div class="py-1">
               <button
-                onclick="openCreateFolderModal('{{ parent ~ '/' ~ carpeta }}')"
+                onclick="openCreateFolderModal('{{ parent ~ '/' ~ carpeta }}', '{{ usuario_id }}')"
                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
               >
                 <svg
@@ -222,7 +224,7 @@ folders_por_ruta={}) %}
                 Subir archivo
               </button>
               <button
-                onclick="openRenameModal('{{ carpeta }}', '{{ parent }}', 'carpeta')"
+                onclick="openRenameModal('{{ carpeta }}', '{{ parent }}', '{{ usuario_id }}')"
                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
               >
                 <svg

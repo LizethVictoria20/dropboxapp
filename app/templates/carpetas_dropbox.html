@@ -138,6 +138,90 @@ block content %}
             </svg>
             Crear carpeta raíz
           </button>
+
+          <!-- Botón para sincronizar -->
+          <a
+            href="{{ url_for('listar_dropbox.sincronizar_dropbox') }}"
+            class="inline-flex items-center px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200 ml-4"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Sincronizar BD
+          </a>
+
+          <!-- Botón para sincronización completa -->
+          <a
+            href="{{ url_for('listar_dropbox.sincronizar_dropbox_completo') }}"
+            class="inline-flex items-center px-6 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors duration-200 ml-4"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"
+              />
+            </svg>
+            Sincronización Completa
+          </a>
+
+          <!-- Botón para verificar BD -->
+          <a
+            href="{{ url_for('listar_dropbox.verificar_bd') }}"
+            class="inline-flex items-center px-6 py-2 bg-yellow-600 text-white font-medium rounded-lg hover:bg-yellow-700 transition-colors duration-200 ml-4"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+            Verificar BD
+          </a>
+
+          <!-- Botón para verificar Dropbox -->
+          <a
+            href="{{ url_for('listar_dropbox.verificar_dropbox') }}"
+            class="inline-flex items-center px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors duration-200 ml-4"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+              />
+            </svg>
+            Verificar Dropbox
+          </a>
         </form>
       </div>
     </div>
@@ -919,12 +1003,29 @@ block content %}
     cargarInfoVisibilidad();
 
     console.log("Todas las funciones inicializadas correctamente");
+
+    // Verificar el contenido de las estructuras de usuarios
+    try {
+      const dataElement = document.getElementById("estructuras-usuarios-data");
+      if (dataElement && dataElement.textContent) {
+        const estructuras = JSON.parse(dataElement.textContent);
+        console.log("Estructuras de usuarios cargadas:", estructuras);
+        console.log("Claves disponibles:", Object.keys(estructuras));
+      }
+    } catch (e) {
+      console.error("Error verificando estructuras de usuarios:", e);
+    }
   });
 </script>
 
 <!-- Elemento oculto para almacenar datos de estructuras de usuarios -->
 <script id="estructuras-usuarios-data" type="application/json">
   {{ estructuras_usuarios_json|safe }}
+</script>
+
+<!-- Elemento oculto para almacenar emails de usuarios -->
+<script id="usuarios-emails-data" type="application/json">
+  {{ usuarios_emails_json|safe }}
 </script>
 
 <!-- Script de respaldo para asegurar que las funciones estén disponibles -->
@@ -997,6 +1098,37 @@ block content %}
     openUploadModal: typeof window.openUploadModal,
     openRenameModal: typeof window.openRenameModal,
     openMoveModal: typeof window.openMoveModal,
+  });
+
+  // Función para verificar que todos los elementos necesarios estén presentes
+  window.verificarElementosModales = function () {
+    const elementos = [
+      "createFolderModal",
+      "uploadFileModal",
+      "renameModal",
+      "moveModal",
+      "createFolderParent",
+      "uploadFileFolder",
+      "renameArchivoNombreActual",
+      "renameCarpetaActual",
+      "renameUsuarioId",
+      "nuevoNombre",
+    ];
+
+    console.log("Verificando elementos de modales:");
+    elementos.forEach((id) => {
+      const elemento = document.getElementById(id);
+      if (elemento) {
+        console.log(`✅ ${id}: encontrado`);
+      } else {
+        console.error(`❌ ${id}: NO encontrado`);
+      }
+    });
+  };
+
+  // Ejecutar verificación cuando se carga la página
+  document.addEventListener("DOMContentLoaded", function () {
+    setTimeout(verificarElementosModales, 1000);
   });
 </script>
 

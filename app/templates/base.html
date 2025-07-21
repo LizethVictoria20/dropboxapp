@@ -532,43 +532,140 @@
         openModal("uploadFileModal");
       };
 
-      window.openRenameModal = function (name, path, type) {
-        document.getElementById("renameArchivoNombreActual").value = name;
-        document.getElementById("renameCarpetaActual").value = path;
-        document.getElementById("nuevoNombre").value = name;
+      window.openRenameModal = function (archivo, carpetaActual, usuarioId) {
+        console.log("openRenameModal llamado con:", {
+          archivo,
+          carpetaActual,
+          usuarioId,
+        });
         document.getElementById("renameModal").classList.remove("hidden");
+        document.getElementById("renameArchivoNombreActual").value = archivo;
+        document.getElementById("renameCarpetaActual").value = carpetaActual;
+        document.getElementById("renameUsuarioId").value = usuarioId;
+        document.getElementById("nuevoNombre").value = archivo;
+      };
+
+      window.closeRenameModal = function () {
+        document.getElementById("renameModal").classList.add("hidden");
+      };
+
+      window.openCreateFolderModal = function (parentPath, userId) {
+        console.log("openCreateFolderModal llamado con:", {
+          parentPath,
+          userId,
+        });
+        document.getElementById("createFolderParent").value = parentPath;
+        document.querySelector(
+          '#createFolderForm input[name="usuario_id"]'
+        ).value = userId;
+        openModal("createFolderModal");
+      };
+
+      window.openUploadModal = function (folderPath, userId) {
+        console.log("openUploadModal llamado con:", { folderPath, userId });
+        document.getElementById("uploadFileFolder").value = folderPath;
+        document.querySelector(
+          '#uploadFileForm input[name="usuario_id"]'
+        ).value = userId;
+        openModal("uploadFileModal");
       };
 
       // Funciones para manejar los menús desplegables - disponibles globalmente
       window.toggleFileMenu = function (menuId, event) {
+        console.log("toggleFileMenu llamado con:", { menuId, event });
         const menu = document.getElementById(menuId);
+        console.log("Elemento del menú encontrado:", menu);
+
         if (menu) {
           if (menu.classList.contains("hidden")) {
             // Posicionar el menú cerca del botón
             const button = event.currentTarget;
             const rect = button.getBoundingClientRect();
-            menu.style.top = rect.bottom + 5 + "px";
-            menu.style.left = rect.right - menu.offsetWidth + "px";
+            console.log("Posición del botón:", rect);
+
+            // Calcular posición del menú
+            const menuWidth = 192; // w-48 = 12rem = 192px
+            const menuHeight = menu.offsetHeight;
+
+            // Posicionar el menú a la derecha del botón
+            let left = rect.right - menuWidth;
+            let top = rect.bottom + 5;
+
+            // Asegurar que el menú no se salga de la pantalla
+            if (left < 0) left = 0;
+            if (top + menuHeight > window.innerHeight) {
+              top = rect.top - menuHeight - 5;
+            }
+
+            menu.style.position = "fixed";
+            menu.style.top = top + "px";
+            menu.style.left = left + "px";
+            menu.style.zIndex = "99999";
+
             menu.classList.remove("hidden");
+            console.log("Menú de archivo abierto:", menuId, "en posición:", {
+              top,
+              left,
+            });
           } else {
             menu.classList.add("hidden");
+            console.log("Menú de archivo cerrado:", menuId);
           }
+        } else {
+          console.error("Menú no encontrado:", menuId);
+          console.log("Elementos con 'file-menu' en el DOM:");
+          document.querySelectorAll('[id^="file-menu"]').forEach((el) => {
+            console.log("-", el.id);
+          });
         }
       };
 
       window.toggleFolderMenu = function (menuId, event) {
+        console.log("toggleFolderMenu llamado con:", { menuId, event });
         const menu = document.getElementById(menuId);
+        console.log("Elemento del menú de carpeta encontrado:", menu);
+
         if (menu) {
           if (menu.classList.contains("hidden")) {
             // Posicionar el menú cerca del botón
             const button = event.currentTarget;
             const rect = button.getBoundingClientRect();
-            menu.style.top = rect.bottom + 5 + "px";
-            menu.style.left = rect.right - menu.offsetWidth + "px";
+            console.log("Posición del botón de carpeta:", rect);
+
+            // Calcular posición del menú
+            const menuWidth = 192; // w-48 = 12rem = 192px
+            const menuHeight = menu.offsetHeight;
+
+            // Posicionar el menú a la derecha del botón
+            let left = rect.right - menuWidth;
+            let top = rect.bottom + 5;
+
+            // Asegurar que el menú no se salga de la pantalla
+            if (left < 0) left = 0;
+            if (top + menuHeight > window.innerHeight) {
+              top = rect.top - menuHeight - 5;
+            }
+
+            menu.style.position = "fixed";
+            menu.style.top = top + "px";
+            menu.style.left = left + "px";
+            menu.style.zIndex = "99999";
+
             menu.classList.remove("hidden");
+            console.log("Menú de carpeta abierto:", menuId, "en posición:", {
+              top,
+              left,
+            });
           } else {
             menu.classList.add("hidden");
+            console.log("Menú de carpeta cerrado:", menuId);
           }
+        } else {
+          console.error("Menú de carpeta no encontrado:", menuId);
+          console.log("Elementos con 'folder-menu' en el DOM:");
+          document.querySelectorAll('[id^="folder-menu"]').forEach((el) => {
+            console.log("-", el.id);
+          });
         }
       };
 
@@ -614,6 +711,12 @@
 
       // Funciones adicionales necesarias para el contenido dinámico
       window.openMoveModal = function (archivo, carpetaActual, usuarioId) {
+        console.log("openMoveModal llamado con:", {
+          archivo,
+          carpetaActual,
+          usuarioId,
+        });
+
         document.getElementById("moveModal").classList.remove("hidden");
         document.getElementById("moveArchivoNombre").value = archivo;
         document.getElementById("moveCarpetaActual").value = carpetaActual;
@@ -621,21 +724,70 @@
         document.getElementById("nuevaCarpetaSeleccionada").value = "";
         document.getElementById("selectedFolder").classList.add("hidden");
 
+        // Almacenar el usuarioId en el modal para usarlo en selectDestino
+        document.getElementById("moveModal").dataset.usuarioId = usuarioId;
+
+        // Obtener el email del usuario para construir rutas completas
+        let usuarioEmail = "";
+        try {
+          const dataElement = document.getElementById(
+            "estructuras-usuarios-data"
+          );
+          if (dataElement && dataElement.textContent) {
+            const estructurasUsuarios = JSON.parse(dataElement.textContent);
+            // Buscar el email del usuario en las estructuras
+            for (const [id, estructura] of Object.entries(
+              estructurasUsuarios
+            )) {
+              if (id == usuarioId) {
+                // Extraer el email del usuario de la estructura
+                // Asumimos que el email está en algún lugar de la estructura
+                usuarioEmail = id; // Por ahora usamos el ID como email
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error obteniendo email del usuario:", e);
+        }
+
+        console.log("Email del usuario para rutas:", usuarioEmail);
+
         // Obtener las estructuras de usuarios del DOM
         let estructurasUsuarios = {};
         try {
-          estructurasUsuarios = JSON.parse(
-            document.getElementById("estructuras-usuarios-data").textContent ||
-              "{}"
+          const dataElement = document.getElementById(
+            "estructuras-usuarios-data"
           );
+          console.log("Elemento de datos encontrado:", dataElement);
+
+          if (dataElement && dataElement.textContent) {
+            console.log("Contenido del elemento:", dataElement.textContent);
+            estructurasUsuarios = JSON.parse(dataElement.textContent);
+            console.log(
+              "Estructuras de usuarios parseadas:",
+              estructurasUsuarios
+            );
+            console.log("Usuario ID buscado:", usuarioId);
+            console.log("Tipos de usuario ID:", typeof usuarioId);
+            console.log(
+              "Claves disponibles:",
+              Object.keys(estructurasUsuarios)
+            );
+          } else {
+            console.error("No se encontró el elemento de datos o está vacío");
+          }
         } catch (e) {
           console.error("Error parsing estructuras usuarios:", e);
         }
 
         if (estructurasUsuarios[usuarioId]) {
+          console.log("Estructura encontrada para usuario:", usuarioId);
           document.getElementById("destinoTree").innerHTML =
             renderDestinoTreeExpandible(estructurasUsuarios[usuarioId], "");
         } else {
+          console.log("No se encontró estructura para usuario:", usuarioId);
+          console.log("Estructuras disponibles:", estructurasUsuarios);
           document.getElementById("destinoTree").innerHTML =
             '<div class="text-red-500 text-sm p-4 text-center">No hay carpetas disponibles para este usuario.</div>';
         }
@@ -692,12 +844,59 @@
       };
 
       window.selectDestino = function (path) {
-        document.getElementById("nuevaCarpetaSeleccionada").value = path;
+        // Obtener el email del usuario usando el usuarioId almacenado globalmente
+        let usuarioEmail = "";
+        try {
+          // Obtener el usuarioId del modal actual
+          const moveModal = document.getElementById("moveModal");
+          if (moveModal && moveModal.dataset.usuarioId) {
+            const usuarioId = moveModal.dataset.usuarioId;
+            console.log("Usuario ID del modal:", usuarioId);
+
+            // Buscar el email del usuario en el diccionario de emails
+            const emailsElement = document.getElementById(
+              "usuarios-emails-data"
+            );
+            if (emailsElement && emailsElement.textContent) {
+              const usuariosEmails = JSON.parse(emailsElement.textContent);
+
+              // Buscar el email del usuario por ID
+              if (usuariosEmails[usuarioId]) {
+                usuarioEmail = usuariosEmails[usuarioId];
+                console.log(
+                  "Email encontrado para usuario ID",
+                  usuarioId,
+                  ":",
+                  usuarioEmail
+                );
+              } else {
+                console.log("No se encontró email para usuario ID:", usuarioId);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error obteniendo email del usuario:", e);
+        }
+
+        // Construir la ruta completa con el email del usuario
+        let rutaCompleta = path;
+        if (usuarioEmail && !path.startsWith("/" + usuarioEmail)) {
+          rutaCompleta = "/" + usuarioEmail + path;
+        }
+
+        console.log("Ruta seleccionada:", {
+          pathOriginal: path,
+          usuarioEmail: usuarioEmail,
+          rutaCompleta: rutaCompleta,
+        });
+
+        document.getElementById("nuevaCarpetaSeleccionada").value =
+          rutaCompleta;
         const selectedDiv = document.getElementById("selectedFolder");
         selectedDiv.classList.remove("hidden");
         selectedDiv.querySelector(
           "span"
-        ).innerText = `Destino seleccionado: ${path}`;
+        ).innerText = `Destino seleccionado: ${rutaCompleta}`;
         document.querySelector(
           '#moveForm button[type="submit"]'
         ).disabled = false;
