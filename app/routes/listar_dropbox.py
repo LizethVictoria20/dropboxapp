@@ -114,13 +114,11 @@ def carpetas_dropbox():
             # Admin ve todas las carpetas
             folders = Folder.query.all()
         elif current_user.rol == "cliente":
-            # Cliente ve sus propias carpetas y las de sus beneficiarios
+            # Cliente ve solo sus propias carpetas (no beneficiarios en la vista principal)
             usuarios = [current_user]
-            # Obtener beneficiarios del cliente
-            beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).all()
-            usuarios.extend(beneficiarios)
             
-            # Obtener carpetas del cliente y sus beneficiarios
+            # Obtener carpetas del cliente y sus beneficiarios (para permisos)
+            beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).all()
             user_ids = [current_user.id] + [b.id for b in beneficiarios]
             folders = Folder.query.filter(Folder.user_id.in_(user_ids)).all()
         else:
