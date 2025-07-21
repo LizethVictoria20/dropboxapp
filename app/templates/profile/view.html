@@ -1,323 +1,1336 @@
-{% extends "base.html" %} {% block title %}Mi Perfil{% endblock %} {% block
-content %}
-<div class="max-w-4xl mx-auto px-6 py-8">
-  <!-- Header del Perfil -->
-  <div class="mb-8">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center space-x-4">
-        <div
-          class="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center"
+{% extends 'base.html' %} {% block content %}
+<div class="min-h-screen flex flex-col">
+  <main class="flex-grow py-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div
+        class="flex flex-col md:flex-row md:items-center md:justify-between mb-8"
+      >
+        <div>
+          <h1 class="text-3xl font-bold font-montserrat text-primary-dark">
+            Mi Perfil
+          </h1>
+          <p class="text-sm text-text-secondary mt-1">
+            Gestiona tu información personal y configuración de cuenta
+          </p>
+        </div>
+        <button
+          type="button"
+          class="mt-4 md:mt-0 inline-flex items-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out"
+          onclick="openModal()"
         >
-          <span class="text-blue-600 font-bold text-2xl">
-            {{ (user.nombre or user.email)[0]|upper }}
-          </span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828l-11.142 11.142a4 4 0 01-1.414 1.414L3 21l1.414-4.142a4 4 0 011.414-1.414l9.9-9.9z"
+            />
+          </svg>
+          Editar Perfil
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-8">
+        <div
+          class="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden"
+        >
+          <div class="px-6 py-5 border-b border-gray-100 flex items-center">
+            <div class="flex-shrink-0 mr-6">
+              <div
+                class="h-20 w-20 rounded-full bg-primary-light/20 border-2 border-primary-light flex items-center justify-center text-primary text-2xl font-bold"
+              >
+                {{ user.nombre[0]|upper if user.nombre else '' }}{{
+                user.apellido[0]|upper if user.apellido else '' }}
+              </div>
+            </div>
+            <div class="flex-grow flex items-center justify-between">
+              <div>
+                <h2
+                  class="text-2xl font-bold font-montserrat text-primary-dark"
+                >
+                  {{ user.nombre }} {{ user.apellido }}
+                </h2>
+                <span
+                  class="text-sm text-text-secondary mt-1 md:mt-0 flex items-center"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4 inline-block mr-1 text-primary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Miembro desde {{ user.fecha_registro.strftime('%d %B, %Y') if
+                  user.fecha_registro else '' }}
+                </span>
+              </div>
+
+              <button
+                id="openActivityLogModal"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium text-primary bg-surface-dark border border-primary/20 rounded-xl hover:bg-surface transition-colors"
+              >
+                <i class="fas fa-history mr-2"></i>
+                Ver historial de actividad
+              </button>
+            </div>
+          </div>
+
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Sección de Información Personal -->
+              <div
+                class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden md:col-span-2"
+              >
+                <div class="px-5 py-4 bg-gray-50 border-b border-gray-100">
+                  <div class="flex items-center">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5 text-accent mr-2"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                    <h3
+                      class="text-lg font-semibold font-montserrat text-primary-dark"
+                    >
+                      Información Personal
+                    </h3>
+                  </div>
+                </div>
+
+                <div class="p-5">
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-5">
+                    <!-- Nombre -->
+                    <div class="border-b border-gray-100 pb-3">
+                      <div class="flex">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Nombre
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">{{ user.nombre }}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Apellido -->
+                    <div class="border-b border-gray-100 pb-3">
+                      <div class="flex">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Apellido
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">{{ user.apellido }}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Teléfono -->
+                    <div class="border-b border-gray-100 pb-3">
+                      <div class="flex">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Teléfono
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">{{ user.telefono }}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Usuario -->
+                    <div class="border-b border-gray-100 pb-3">
+                      <div class="flex">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Usuario
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">{{ user.username }}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="border-b border-gray-100 pb-3">
+                      <div class="flex">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Email
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">{{ user.email }}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Fecha reg. -->
+                    <div class="border-b border-gray-100 pb-3">
+                      <div class="flex">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Fecha reg.
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                            {{ user.fecha_registro.strftime('%d/%m/%Y') if
+                            user.fecha_registro }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Rol -->
+                    <div class="border-b border-gray-100 pb-3">
+                      <div class="flex">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Rol
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                            <span
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light/20 text-primary mr-2 mb-1"
+                            >
+                              {{ user.rol|title }}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Ultimo Acceso -->
+                    <div class="border-b border-gray-100 pb-3">
+                      <div class="flex">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Ultimo Acceso
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                            <span class="text-sm font-medium text-gray-700">
+                              <i class="far fa-clock mr-1 text-primary"></i>
+                              {% if last_login_colombia %} {{
+                              last_login_colombia.strftime('%Y-%m-%d %H:%M') }}
+                              {% else %} Nunca {% endif %}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sección: Beneficiarios -->
+              {% if user.rol == 'cliente' %}
+              <div
+                class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden md:col-span-2"
+              >
+                <div class="px-5 py-4 bg-gray-50 border-b border-gray-100">
+                  <div class="flex items-center">
+                    <i class="fas fa-users text-accent mr-2"></i>
+                    <h3
+                      class="text-lg font-semibold font-montserrat text-primary-dark"
+                    >
+                      Beneficiarios Asociados
+                    </h3>
+                  </div>
+                </div>
+                <div class="p-5">
+                  {% if beneficiarios %}
+                  <ul class="divide-y divide-gray-100">
+                    {% for b in beneficiarios %}
+                    <li class="py-4 flex items-center justify-between">
+                      <div>
+                        <p class="text-base font-semibold text-text">
+                          {{ b.nombre }} {{ b.lastname }}
+                        </p>
+                        <p class="text-sm text-text-secondary">
+                          {{ b.nationality }} – {{
+                          b.fecha_nacimiento.strftime('%d/%m/%Y') if b.fecha_nacimiento }}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        class="text-sm font-medium text-primary hover:underline"
+                        onclick="openEditBeneficiaryModal({{ b.id }}, '{{ b.nombre }}', '{{ b.lastname }}', '{{ b.nationality }}', '{{ b.fecha_nacimiento.strftime('%Y-%m-%d') if b.fecha_nacimiento }}')"
+                      >
+                        Editar
+                      </button>
+                    </li>
+                    {% endfor %}
+                  </ul>
+                  {% else %}
+                  <p class="text-sm text-text-secondary">
+                    No hay beneficiarios registrados.
+                  </p>
+                  {% endif %}
+                  <!-- Botón para agregar nuevo beneficiario -->
+                  <button
+                    type="button"
+                    class="bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-dark transition"
+                    onclick="showBeneficiaryInfoMessage()"
+                  >
+                    Agregar Nuevo Beneficiario
+                  </button>
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- Sección de Otros Datos -->
+              <div
+                class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden md:col-span-2"
+              >
+                <div class="px-5 py-4 bg-gray-50 border-b border-gray-100">
+                  <div class="flex items-center">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5 text-accent mr-2"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 14v6m-3-3h6M6 10h2m3-3h2M9 21V3m0 18h-1a2 2 0 01-2-2v-1a2 2 0 00-2-2H5a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 002-2V3a1 1 0 011-1h3a1 1 0 011 1v2a2 2 0 002 2h4a2 2 0 012 2v10a2 2 0 01-2 2h-1a2 2 0 00-2 2v1a2 2 0 01-2 2h-1z"
+                      ></path>
+                    </svg>
+                    <h3
+                      class="text-lg font-semibold font-montserrat text-primary-dark"
+                    >
+                      Otros Datos
+                    </h3>
+                  </div>
+                </div>
+
+                <div class="p-5">
+                  <div class="flex flex-wrap">
+                    <!-- Primera fila: 3 columnas -->
+                    <div class="w-1/3 pr-4 mb-5">
+                      <div class="flex border-b border-gray-100 pb-3">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Ciudad
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                            {{ user.ciudad if user.ciudad else 'No registrado' }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="w-1/3 pr-4 mb-5">
+                      <div class="flex border-b border-gray-100 pb-3">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Departamento
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                            {{ user.estado if user.estado else 'No registrado' }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="w-1/3 mb-5">
+                      <div class="flex border-b border-gray-100 pb-3">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Dirección
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                            {{ user.direccion if user.direccion else 'No registrado'
+                            }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Segunda fila: 3 columnas -->
+                    <div class="w-1/3 pr-4 mb-5">
+                      <div class="flex border-b border-gray-100 pb-3">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Código Postal
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                            {{ user.codigo_postal if user.codigo_postal else 'No
+                            registrado' }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="w-1/3 pr-4 mb-5">
+                      <div class="flex border-b border-gray-100 pb-3">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Nacionalidad
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                            {{ user.nacionality if user.nacionality else 'No
+                            registrado' }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="w-1/3 mb-5">
+                      <div class="flex border-b border-gray-100 pb-3">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Fecha de Nacimiento
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                            {{ user.fecha_nacimiento.strftime('%d %B, %Y') if
+                            user.fecha_nacimiento else 'No registrado' }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal editar beneficiario -->
+<div id="editBeneficiaryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl relative">
+    <h3 class="text-xl font-bold mb-4 text-primary-dark">
+      Editar Beneficiario
+    </h3>
+    <form method="POST" action="{{ url_for('main.editar_beneficiario') }}">
+      {{ form.hidden_tag() }}
+      {% if csrf_token %}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      {% endif %}
+      <input type="hidden" name="beneficiary_id" id="edit_beneficiary_id" />
+      <div class="grid grid-cols-1 gap-4">
+        <div>
+          <label class="text-sm text-text font-medium">Nombres</label>
+          <input
+            type="text"
+            name="name"
+            id="edit_beneficiary_name"
+            class="w-full border rounded-lg px-3 py-2"
+            required
+          />
         </div>
         <div>
-          <h1 class="text-3xl font-bold text-gray-900">
-            {{ user.nombre_completo }}
-          </h1>
-          <p class="text-gray-600">{{ user.email }}</p>
-          <span
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.rol == 'superadmin' %}bg-red-100 text-red-800 {% elif user.rol == 'admin' %}bg-blue-100 text-blue-800 {% elif user.rol == 'cliente' %}bg-green-100 text-green-800 {% else %}bg-gray-100 text-gray-800{% endif %}"
-          >
-            {{ user.rol|title }}
-          </span>
+          <label class="text-sm text-text font-medium">Apellidos</label>
+          <input
+            type="text"
+            name="lastname"
+            id="edit_beneficiary_lastname"
+            class="w-full border rounded-lg px-3 py-2"
+            required
+          />
+        </div>
+        <div>
+          <label class="text-sm text-text font-medium">Nacionalidad</label>
+          <input
+            type="text"
+            name="nationality"
+            id="edit_beneficiary_nationality"
+            class="w-full border rounded-lg px-3 py-2"
+            required
+          />
+        </div>
+        <div>
+          <label class="text-sm text-text font-medium">Fecha de Nacimiento</label>
+          <input
+            type="date"
+            name="birth_date"
+            id="edit_beneficiary_birth_date"
+            class="w-full border rounded-lg px-3 py-2"
+            required
+          />
         </div>
       </div>
-      <a
-        href="{{ url_for('main.edit_profile') }}"
-        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-      >
-        <i class="fas fa-edit mr-2"></i>
-        Editar Perfil
-      </a>
-    </div>
+      <div class="mt-6 flex justify-end space-x-3">
+        <button
+          type="button"
+          onclick="closeEditBeneficiaryModal()"
+          class="bg-gray-200 text-sm px-4 py-2 rounded-lg"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="bg-primary text-white text-sm px-4 py-2 rounded-lg"
+        >
+          Guardar Cambios
+        </button>
+      </div>
+    </form>
   </div>
+</div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- Información Personal -->
-    <div class="lg:col-span-2 space-y-6">
-      <!-- Datos Básicos -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div class="p-6 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">
-            Información Personal
-          </h2>
-        </div>
-        <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Nombre</label
-              >
-              <p class="text-gray-900">
-                {{ user.nombre or 'No especificado' }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Apellido</label
-              >
-              <p class="text-gray-900">
-                {{ user.apellido or 'No especificado' }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Correo Electrónico</label
-              >
-              <p class="text-gray-900">{{ user.email }}</p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Teléfono</label
-              >
-              <p class="text-gray-900">
-                {{ user.telefono or 'No especificado' }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Fecha de Nacimiento</label
-              >
-              <p class="text-gray-900">
-                {% if user.fecha_nacimiento %} {{
-                user.fecha_nacimiento.strftime('%d/%m/%Y') }} {% else %} No
-                especificado {% endif %}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Estado de la Cuenta</label
-              >
-              <span
-                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}"
-              >
-                {% if user.activo %}
-                <i class="fas fa-check-circle mr-1"></i>Activa {% else %}
-                <i class="fas fa-times-circle mr-1"></i>Inactiva {% endif %}
-              </span>
-            </div>
-          </div>
-        </div>
+<div id="beneficiaryInfoMessage" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+  <div class="bg-white rounded-xl p-6 w-full max-w-md text-center shadow-xl">
+    <h2 class="text-lg font-semibold text-primary-dark mb-3">
+      ¿Deseas agregar un beneficiario?
+    </h2>
+    <p class="text-sm text-text">
+      Para agregar un nuevo beneficiario a su proceso, por favor, póngase en contacto con nuestro equipo a través de
+      <strong>info@inmigracionok.esq</strong> o escríbenos al
+      <strong><a class="underline underline-offset-3" href="https://api.whatsapp.com/send?phone=19085854523&text=Hola%20%F0%9F%91%8B%20Quisiera%20conocer%20m%C3%A1s%20sobre%20sus%20servicios">+1 908 758 3931</a></strong>.
+    </p>
+    <button
+      onclick="closeBeneficiaryInfoMessage()"
+      class="mt-5 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-light transition"
+    >
+      Entendido
+    </button>
+  </div>
+</div>
+
+<!-- Modal de edición de perfil -->
+<div id="modalOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-500 bg-opacity-75 transition-opacity" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="w-full max-w-3xl px-4">
+    <div id="modalContent" class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all modal-enter">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-xl font-bold font-montserrat text-text flex items-center" id="modal-title">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Editar Perfil
+        </h3>
+        <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" onclick="closeModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
-      <!-- Información de Contacto -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div class="p-6 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">
-            Información de Contacto
-          </h2>
-        </div>
-        <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Ciudad</label
-              >
-              <p class="text-gray-900">
-                {{ user.ciudad or 'No especificado' }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Estado/Departamento</label
-              >
-              <p class="text-gray-900">
-                {{ user.estado or 'No especificado' }}
-              </p>
-            </div>
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Dirección</label
-              >
-              <p class="text-gray-900">
-                {{ user.direccion or 'No especificado' }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Código Postal</label
-              >
-              <p class="text-gray-900">
-                {{ user.codigo_postal or 'No especificado' }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Actividad Reciente -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div class="p-6 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">
-            Actividad Reciente
-          </h2>
-        </div>
-        <div class="p-6">
-          {% if actividades_recientes %}
-          <div class="space-y-4">
-            {% for actividad in actividades_recientes %}
-            <div class="flex items-start space-x-3">
-              <div
-                class="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0"
-              >
-                {% if actividad.accion == 'login' %}
-                <i class="fas fa-sign-in-alt text-green-600 text-sm"></i>
-                {% elif actividad.accion == 'upload' %}
-                <i class="fas fa-upload text-blue-600 text-sm"></i>
-                {% elif actividad.accion == 'create_folder' %}
-                <i class="fas fa-folder-plus text-yellow-600 text-sm"></i>
-                {% elif actividad.accion == 'profile_update' %}
-                <i class="fas fa-user-edit text-purple-600 text-sm"></i>
-                {% else %}
-                <i class="fas fa-activity text-gray-600 text-sm"></i>
-                {% endif %}
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm text-gray-900">
-                  {% if actividad.accion == 'login' %} Iniciaste sesión {% elif
-                  actividad.accion == 'upload' %} Subiste un archivo {% elif
-                  actividad.accion == 'create_folder' %} Creaste una carpeta {%
-                  elif actividad.accion == 'profile_update' %} Actualizaste tu
-                  perfil {% else %} {{ actividad.accion|title }} {% endif %}
-                </p>
-                {% if actividad.descripcion %}
-                <p class="text-xs text-gray-500">{{ actividad.descripcion }}</p>
-                {% endif %}
-                <p class="text-xs text-gray-400 mt-1">
-                  {{ actividad.fecha.strftime('%d/%m/%Y %H:%M') }}
-                </p>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div class="text-center py-8">
-            <i class="fas fa-activity text-gray-300 text-4xl mb-4"></i>
-            <p class="text-gray-500">No hay actividad reciente.</p>
-          </div>
+      <div class="max-h-[70vh] overflow-auto">
+        <form id="profileForm" action="{{ url_for('main.profile') }}" method="POST" class="p-6">
+          {% if csrf_token %}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           {% endif %}
-        </div>
-      </div>
-    </div>
 
-    <!-- Sidebar con Estadísticas -->
-    <div class="space-y-6">
-      <!-- Estadísticas Rápidas -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div class="p-6 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Mis Estadísticas</h2>
-        </div>
-        <div class="p-6 space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <div
-                class="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center"
-              >
-                <i class="fas fa-file text-blue-600 text-sm"></i>
-              </div>
-              <span class="text-sm font-medium text-gray-900">Archivos</span>
+          <div class="px-6 py-5 bg-gray-50">
+            <div id="messageBox" class="message-box hidden" role="alert"></div>
+            <!-- Tabs de navegación -->
+            <div class="border-b border-gray-200 mb-6 sticky top-0 bg-gray-50 z-10">
+              <nav class="-mb-px flex space-x-8">
+                <button type="button" class="tab-button active border-primary text-primary font-medium border-b-2 py-3 px-1" data-tab="personal-tab">
+                  Información Personal
+                </button>
+                <button type="button" class="tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent font-medium border-b-2 py-3 px-1" data-tab="address-tab">
+                  Dirección y Ubicación
+                </button>
+                <button type="button" class="tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent font-medium border-b-2 py-3 px-1" data-tab="security-tab">
+                  Seguridad
+                </button>
+              </nav>
             </div>
-            <span class="text-lg font-bold text-blue-600"
-              >{{ total_archivos }}</span
-            >
-          </div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <div
-                class="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center"
-              >
-                <i class="fas fa-folder text-green-600 text-sm"></i>
+
+            <!-- Contenido de las pestañas -->
+            <div class="tab-content">
+              <!-- Pestaña 1: Información Personal -->
+              <div id="personal-tab" class="tab-pane">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label for="nombreInput" class="block text-sm font-medium text-text">Nombre</label>
+                    <input type="text" id="nombreInput" name="nombre" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Tu nombre" value="{{ user.nombre if user.nombre else '' }}" />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="apellidoInput" class="block text-sm font-medium text-text">Apellido</label>
+                    <input type="text" id="apellidoInput" name="apellido" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Tu apellido" value="{{ user.apellido if user.apellido else '' }}" />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="emailInput" class="block text-sm font-medium text-text">Correo electrónico</label>
+                    <input type="email" id="emailInput" name="email" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="ejemplo@correo.com" value="{{ user.email if user.email else '' }}" />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="telefonoInput" class="block text-sm font-medium text-text">Teléfono</label>
+                    <input type="tel" id="telefonoInput" name="telefono" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Número de teléfono" value="{{ user.telefono if user.telefono else '' }}" />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="fechaNacimientoInput" class="block text-sm font-medium text-text">Fecha de Nacimiento</label>
+                    <input type="date" id="fechaNacimientoInput" name="fecha_nacimiento" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" value="{{ user.fecha_nacimiento.strftime('%Y-%m-%d') if user.fecha_nacimiento else '' }}" />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="nacionalidadInput" class="block text-sm font-medium text-text">Nacionalidad</label>
+                    <select id="nacionalidadInput" name="nacionalidad" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm">
+                      <option value="">-- Seleccionar país --</option>
+                      <option value="Colombia" {% if user.nacionality == 'Colombia' %}selected{% endif %}>Colombia</option>
+                      <option value="Estados Unidos" {% if user.nacionality == 'Estados Unidos' %}selected{% endif %}>Estados Unidos</option>
+                      <option value="México" {% if user.nacionality == 'México' %}selected{% endif %}>México</option>
+                      <option value="España" {% if user.nacionality == 'España' %}selected{% endif %}>España</option>
+                      <option value="Venezuela" {% if user.nacionality == 'Venezuela' %}selected{% endif %}>Venezuela</option>
+                      <option value="Argentina" {% if user.nacionality == 'Argentina' %}selected{% endif %}>Argentina</option>
+                      <option value="Chile" {% if user.nacionality == 'Chile' %}selected{% endif %}>Chile</option>
+                      <option value="Perú" {% if user.nacionality == 'Perú' %}selected{% endif %}>Perú</option>
+                      <option value="Ecuador" {% if user.nacionality == 'Ecuador' %}selected{% endif %}>Ecuador</option>
+                      <option value="Brasil" {% if user.nacionality == 'Brasil' %}selected{% endif %}>Brasil</option>
+                      <option value="Uruguay" {% if user.nacionality == 'Uruguay' %}selected{% endif %}>Uruguay</option>
+                      <option value="Paraguay" {% if user.nacionality == 'Paraguay' %}selected{% endif %}>Paraguay</option>
+                      <option value="Bolivia" {% if user.nacionality == 'Bolivia' %}selected{% endif %}>Bolivia</option>
+                      <option value="Canadá" {% if user.nacionality == 'Canadá' %}selected{% endif %}>Canadá</option>
+                      <option value="Reino Unido" {% if user.nacionality == 'Reino Unido' %}selected{% endif %}>Reino Unido</option>
+                      <option value="Francia" {% if user.nacionality == 'Francia' %}selected{% endif %}>Francia</option>
+                      <option value="Alemania" {% if user.nacionality == 'Alemania' %}selected{% endif %}>Alemania</option>
+                      <option value="Italia" {% if user.nacionality == 'Italia' %}selected{% endif %}>Italia</option>
+                      <option value="China" {% if user.nacionality == 'China' %}selected{% endif %}>China</option>
+                      <option value="Japón" {% if user.nacionality == 'Japón' %}selected{% endif %}>Japón</option>
+                      <option value="Corea del Sur" {% if user.nacionality == 'Corea del Sur' %}selected{% endif %}>Corea del Sur</option>
+                      <option value="India" {% if user.nacionality == 'India' %}selected{% endif %}>India</option>
+                      <option value="Otro" {% if user.nacionality and user.nacionality not in ['Colombia', 'Estados Unidos', 'México', 'España', 'Venezuela', 'Argentina', 'Chile', 'Perú', 'Ecuador', 'Brasil', 'Uruguay', 'Paraguay', 'Bolivia', 'Canadá', 'Reino Unido', 'Francia', 'Alemania', 'Italia', 'China', 'Japón', 'Corea del Sur', 'India'] %}selected{% endif %}>Otro</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-              <span class="text-sm font-medium text-gray-900">Carpetas</span>
+
+              <!-- Pestaña 2: Dirección y Ubicación -->
+              <div id="address-tab" class="tab-pane hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="space-y-2 col-span-2">
+                    <label for="direccionInput" class="block text-sm font-medium text-text">Dirección completa</label>
+                    <input type="text" id="direccionInput" name="direccion" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Tu dirección" value="{{ user.direccion if user.direccion else '' }}" />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="ciudadInput" class="block text-sm font-medium text-text">Ciudad</label>
+                    <input type="text" id="ciudadInput" name="ciudad" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Tu ciudad" value="{{ user.ciudad if user.ciudad else '' }}" />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="estadoInput" class="block text-sm font-medium text-text">Estado/Departamento</label>
+                    <input type="text" id="estadoInput" name="estado" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Tu estado/departamento" value="{{ user.estado if user.estado else '' }}" />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="codigoPostalInput" class="block text-sm font-medium text-text">Código Postal</label>
+                    <input type="text" id="codigoPostalInput" name="codigo_postal" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Tu código postal" value="{{ user.codigo_postal if user.codigo_postal else '' }}" />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="paisInput" class="block text-sm font-medium text-text">País</label>
+                    <input type="text" id="paisInput" name="pais" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Tu país" value="{{ user.country if user.country else '' }}" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pestaña 3: Seguridad -->
+              <div id="security-tab" class="tab-pane hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="space-y-2 col-span-2">
+                    <div class="bg-yellow-50 p-4 rounded-lg mb-6">
+                      <div class="flex">
+                        <div class="flex-shrink-0">
+                          <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                          </svg>
+                        </div>
+                        <div class="ml-3">
+                          <h3 class="text-sm font-medium text-yellow-800">Información importante</h3>
+                          <div class="mt-2 text-sm text-yellow-700">
+                            <p>Para cambiar tu contraseña, primero debes ingresar tu contraseña actual por seguridad.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="oldPassword" class="block text-sm font-medium text-text">Contraseña Actual</label>
+                    <div class="relative">
+                      <input type="password" id="oldPassword" name="old_password" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="••••••••" />
+                      <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 password-toggle" tabindex="-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="newPassword" class="block text-sm font-medium text-text">Nueva Contraseña</label>
+                    <div class="relative">
+                      <input type="password" id="newPassword" name="new_password" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="••••••••" />
+                      <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 password-toggle" tabindex="-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label for="confirmPassword" class="block text-sm font-medium text-text">Confirmar Contraseña</label>
+                    <div class="relative">
+                      <input type="password" id="confirmPassword" name="confirm_password" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="••••••••" />
+                      <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 password-toggle" tabindex="-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <span class="text-lg font-bold text-green-600"
-              >{{ total_carpetas }}</span
-            >
           </div>
-        </div>
-      </div>
 
-      <!-- Información de la Cuenta -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div class="p-6 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">
-            Información de la Cuenta
-          </h2>
-        </div>
-        <div class="p-6 space-y-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1"
-              >FECHA DE REGISTRO</label
-            >
-            <p class="text-sm text-gray-900">
-              {% if user.fecha_registro %} {{ user.fecha_registro.strftime('%d
-              de %B de %Y') }} {% else %} No disponible {% endif %}
-            </p>
+          <div class="px-6 py-4 bg-white border-t border-gray-100 flex flex-col-reverse sm:flex-row sm:justify-end space-y-reverse space-y-3 sm:space-y-0 sm:space-x-3">
+            <button type="button" class="sm:order-1 inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-text bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" onclick="closeModal()">
+              Cancelar
+            </button>
+            <button type="submit" class="sm:order-2 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              Guardar Cambios
+            </button>
           </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1"
-              >ÚLTIMO ACCESO</label
-            >
-            <p class="text-sm text-gray-900">
-              {% if user.ultimo_acceso %} {{
-              user.ultimo_acceso.strftime('%d/%m/%Y %H:%M') }} {% else %} Nunca
-              {% endif %}
-            </p>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1"
-              >ROL DEL USUARIO</label
-            >
-            <span
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.rol == 'superadmin' %}bg-red-100 text-red-800 {% elif user.rol == 'admin' %}bg-blue-100 text-blue-800 {% elif user.rol == 'cliente' %}bg-green-100 text-green-800 {% else %}bg-gray-100 text-gray-800{% endif %}"
-            >
-              {{ user.rol|title }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Acciones Rápidas -->
-      <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
-        <h3 class="text-lg font-medium text-blue-900 mb-4">Acciones Rápidas</h3>
-        <div class="space-y-3">
-          <a
-            href="{{ url_for('main.edit_profile') }}"
-            class="block w-full text-center py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <i class="fas fa-edit mr-2"></i>
-            Editar Perfil
-          </a>
-
-          {% if user.es_cliente() %}
-          <a
-            href="{{ url_for('listar_dropbox.subir_archivo') }}"
-            class="block w-full text-center py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <i class="fas fa-upload mr-2"></i>
-            Subir Archivo
-          </a>
-          <a
-            href="{{ url_for('listar_dropbox.carpetas_dropbox') }}"
-            class="block w-full text-center py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            <i class="fas fa-folder-open mr-2"></i>
-            Mis Archivos
-          </a>
-          {% endif %} {% if user.puede_administrar() %}
-          <a
-            href="{{ url_for('main.dashboard_admin') }}"
-            class="block w-full text-center py-2 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <i class="fas fa-chart-line mr-2"></i>
-            Dashboard Admin
-          </a>
-          {% endif %}
-        </div>
+        </form>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Modal de historial de actividad -->
+<div id="activityLogModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+  <div class="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+    <div class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all sm:my-8 w-full max-w-4xl">
+      <div class="bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="text-xl font-bold font-montserrat text-primary-dark">
+          Historial de Actividad
+        </h2>
+        <div class="flex items-center space-x-4">
+          <span id="activityPageInfo" class="text-sm text-gray-500">
+            Página {{ activity_logs_pagination.page }} de {{ activity_logs_pagination.pages }}
+          </span>
+          <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" onclick="closeActivityLogModal()">
+            <span class="sr-only">Cerrar</span>
+            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white p-6">
+        <div id="activityTableContainer" class="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Fecha</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Acción</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Descripción</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">IP</th>
+              </tr>
+            </thead>
+            <tbody id="activityTableBody" class="bg-white divide-y divide-gray-200">
+              {% for log_entry in activity_logs_pagination.items %}
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {% if log_entry.fecha %}
+                    {{ (log_entry.fecha | format_colombia_time).strftime('%Y-%m-%d %H:%M:%S') }}
+                  {% else %}
+                    N/A
+                  {% endif %}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                    {% if log_entry.accion == 'login' %}bg-green-100 text-green-800
+                    {% elif log_entry.accion == 'logout' %}bg-red-100 text-red-800
+                    {% elif log_entry.accion == 'profile_view' %}bg-blue-100 text-blue-800
+                    {% elif log_entry.accion == 'profile_update' %}bg-yellow-100 text-yellow-800
+                    {% elif log_entry.accion == 'dashboard_access' %}bg-purple-100 text-purple-800
+                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ log_entry.accion|title }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                  {{ log_entry.descripcion or 'Sin descripción' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ log_entry.ip_address or 'N/A' }}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
+                  No hay actividad reciente para este usuario.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if activity_logs_pagination.pages > 1 %}
+        <div id="activityPaginationContainer" class="flex justify-center mt-4">
+          <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            {% if activity_logs_pagination.has_prev %}
+            <button onclick="loadActivityPage({{ activity_logs_pagination.prev_num }}, {{ activity_logs_pagination.per_page }})" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              <i class="fas fa-chevron-left text-xs"></i>
+            </button>
+            {% else %}
+            <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-500 cursor-not-allowed">
+              <i class="fas fa-chevron-left text-xs"></i>
+            </span>
+            {% endif %}
+
+            {% for p in activity_logs_pagination.iter_pages() %}
+              {% if p %}
+              <button onclick="loadActivityPage({{ p }}, {{ activity_logs_pagination.per_page }})" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 {% if p == activity_logs_pagination.page %} bg-primary-light text-primary-dark font-bold {% endif %}">
+                {{ p }}
+              </button>
+              {% else %}
+              <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>
+              {% endif %}
+            {% endfor %}
+
+            {% if activity_logs_pagination.has_next %}
+            <button onclick="loadActivityPage({{ activity_logs_pagination.next_num }}, {{ activity_logs_pagination.per_page }})" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              <i class="fas fa-chevron-right text-xs"></i>
+            </button>
+            {% else %}
+            <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-500 cursor-not-allowed">
+              <i class="fas fa-chevron-right text-xs"></i>
+            </span>
+            {% endif %}
+          </nav>
+          
+          <!-- Selector de elementos por página -->
+          <div class="ml-4 flex items-center space-x-2">
+            <label for="perPageSelect" class="text-sm text-gray-600">Mostrar:</label>
+            <select id="perPageSelect" class="text-sm border border-gray-300 rounded px-2 py-1" onchange="changePerPage(this.value)">
+              <option value="5" {% if activity_logs_pagination.per_page == 5 %}selected{% endif %}>5</option>
+              <option value="10" {% if activity_logs_pagination.per_page == 10 %}selected{% endif %}>10</option>
+              <option value="20" {% if activity_logs_pagination.per_page == 20 %}selected{% endif %}>20</option>
+              <option value="50" {% if activity_logs_pagination.per_page == 50 %}selected{% endif %}>50</option>
+            </select>
+            <span class="text-sm text-gray-600">por página</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="bg-gray-50 px-6 py-4 flex justify-end">
+        <button type="button" class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-text bg-white hover:bg-gray-50 focus:outline-none" onclick="closeActivityLogModal()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes modal-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+  .modal-enter {
+    animation: modal-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+  .modal-leave {
+    animation: modal-out 0.2s ease-in forwards;
+  }
+  .message-box {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .message-box.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+  .message-box.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+</style>
+
+<script>
+  // JavaScript para manejar las pestañas
+  document.addEventListener("DOMContentLoaded", function () {
+    // Variables del modal (definidas después de que el DOM esté cargado)
+    const profileForm = document.getElementById("profileForm");
+    const messageBox = document.getElementById("messageBox");
+    const modalOverlay = document.getElementById("modalOverlay");
+    const modalContent = document.getElementById("modalContent");
+    const logoutUrl = "{{ url_for('main.logout') }}";
+
+    const tabButtons = document.querySelectorAll(".tab-button");
+    const tabPanes = document.querySelectorAll(".tab-pane");
+
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        // Desactivar todas las pestañas
+        tabButtons.forEach((btn) => {
+          btn.classList.remove("active", "border-primary", "text-primary");
+          btn.classList.add("border-transparent", "text-gray-500");
+        });
+
+        // Ocultar todos los paneles
+        tabPanes.forEach((pane) => {
+          pane.classList.add("hidden");
+        });
+
+        // Activar la pestaña actual
+        this.classList.add("active", "border-primary", "text-primary");
+        this.classList.remove("border-transparent", "text-gray-500");
+
+        // Mostrar el panel correspondiente
+        const tabId = this.getAttribute("data-tab");
+        document.getElementById(tabId).classList.remove("hidden");
+      });
+    });
+
+    // Toggle para mostrar/ocultar contraseñas
+    const toggleButtons = document.querySelectorAll(".password-toggle");
+    toggleButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const input = this.parentNode.querySelector("input");
+        if (input.type === "password") {
+          input.type = "text";
+          this.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+          `;
+        } else {
+          input.type = "password";
+          this.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          `;
+        }
+      });
+    });
+
+    // Funciones del modal (definidas dentro del DOMContentLoaded)
+    function showTab(tabId) {
+      // Ocultar todos los paneles
+      document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.add('hidden');
+      });
+      
+      // Desactivar todas las pestañas
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active', 'border-primary', 'text-primary');
+        button.classList.add('border-transparent', 'text-gray-500');
+      });
+      
+      // Activar la pestaña seleccionada
+      const activeButton = document.querySelector(`[data-tab="${tabId}"]`);
+      if (activeButton) {
+        activeButton.classList.add('active', 'border-primary', 'text-primary');
+        activeButton.classList.remove('border-transparent', 'text-gray-500');
+      }
+      
+      // Mostrar el panel correspondiente
+      const activePane = document.getElementById(tabId);
+      if (activePane) {
+        activePane.classList.remove('hidden');
+      }
+    }
+
+    function showMessage(message, type) {
+      if (!messageBox) {
+        console.error('Message box not found');
+        return;
+      }
+      messageBox.textContent = message;
+      messageBox.className = `message-box ${type}`;
+      messageBox.classList.remove("hidden");
+    }
+
+    function hideMessage() {
+      if (!messageBox) {
+        console.error('Message box not found');
+        return;
+      }
+      messageBox.classList.add("hidden");
+      messageBox.textContent = "";
+      messageBox.className = "message-box";
+    }
+
+    // Hacer las funciones disponibles globalmente
+    window.openModal = function() {
+      if (!modalOverlay || !modalContent) {
+        console.error('Modal elements not found');
+        return;
+      }
+      modalOverlay.classList.remove("hidden");
+      modalOverlay.classList.add("flex");
+      modalContent.classList.remove("modal-leave");
+      modalContent.classList.add("modal-enter");
+      showTab("personal-tab");
+      hideMessage();
+    };
+
+    window.closeModal = function() {
+      if (!modalOverlay || !modalContent) {
+        console.error('Modal elements not found');
+        return;
+      }
+      modalContent.classList.remove("modal-enter");
+      modalContent.classList.add("modal-leave");
+      modalContent.addEventListener("animationend", function () {
+        modalOverlay.classList.add("hidden");
+        modalOverlay.classList.remove("flex");
+        if (profileForm) profileForm.reset();
+        hideMessage();
+      }, { once: true });
+    };
+
+    // Event listener para el formulario
+    if (profileForm) {
+      profileForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    hideMessage();
+
+    const formData = new FormData(profileForm);
+    const formObject = Object.fromEntries(formData.entries());
+    const securityTabActive = document.getElementById("security-tab").classList.contains("hidden") === false;
+    const oldPassword = formObject["old_password"];
+    const newPassword = formObject["new_password"];
+    const confirmPassword = formObject["confirm_password"];
+
+    if (securityTabActive && (oldPassword || newPassword || confirmPassword)) {
+      if (!oldPassword || !newPassword || !confirmPassword) {
+        showMessage("Para cambiar la contraseña, debes completar los campos de Contraseña Actual, Nueva Contraseña y Confirmar Nueva Contraseña.", "error");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        showMessage("La nueva contraseña y la confirmación de contraseña no coinciden.", "error");
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(profileForm.action, {
+        method: profileForm.method,
+        body: JSON.stringify(formObject),
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": formObject["csrf_token"],
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showMessage(result.message || "Perfil actualizado exitosamente.", "success");
+
+        if (securityTabActive && newPassword) {
+          setTimeout(() => {
+            window.location.href = logoutUrl;
+          }, 3000);
+        } else {
+          setTimeout(() => {
+            closeModal();
+            window.location.reload();
+          }, 2000);
+        }
+      } else {
+        showMessage(result.error || "Ocurrió un error al actualizar el perfil.", "error");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      showMessage("Ocurrió un error al comunicarse con el servidor.", "error");
+    }
+  });
+  }
+
+  // Funciones adicionales del modal
+  window.openActivityLogModal = function() {
+    document.getElementById("activityLogModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  };
+
+  window.closeActivityLogModal = function() {
+    document.getElementById("activityLogModal").classList.add("hidden");
+    document.body.style.overflow = "";
+  };
+
+  window.openEditBeneficiaryModal = function(id, name, lastname, nationality, birthDate) {
+    document.getElementById("edit_beneficiary_id").value = id;
+    document.getElementById("edit_beneficiary_name").value = name;
+    document.getElementById("edit_beneficiary_lastname").value = lastname;
+    document.getElementById("edit_beneficiary_nationality").value = nationality;
+    document.getElementById("edit_beneficiary_birth_date").value = birthDate;
+    document.getElementById("editBeneficiaryModal").classList.remove("hidden");
+  };
+
+  window.closeEditBeneficiaryModal = function() {
+    document.getElementById("editBeneficiaryModal").classList.add("hidden");
+  };
+
+  window.showBeneficiaryInfoMessage = function() {
+    document.getElementById("beneficiaryInfoMessage").classList.remove("hidden");
+  };
+
+  window.closeBeneficiaryInfoMessage = function() {
+    document.getElementById("beneficiaryInfoMessage").classList.add("hidden");
+  };
+
+  // Event listeners adicionales
+  const openActivityLogButton = document.getElementById("openActivityLogModal");
+  if (openActivityLogButton) {
+    openActivityLogButton.addEventListener("click", openActivityLogModal);
+  }
+
+  const activityLogModal = document.getElementById("activityLogModal");
+  if (activityLogModal) {
+    activityLogModal.addEventListener("click", function (event) {
+      if (event.target === this) {
+        closeActivityLogModal();
+      }
+    });
+  }
+
+  // Función para cargar página de actividad dinámicamente
+  window.loadActivityPage = function(page, perPage) {
+    const loadingHtml = `
+      <tr>
+        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
+          <div class="flex items-center justify-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Cargando actividades...
+          </div>
+        </td>
+      </tr>
+    `;
+    
+    // Mostrar loading
+    document.getElementById('activityTableBody').innerHTML = loadingHtml;
+    
+    // Hacer petición AJAX a la API
+    fetch(`{{ url_for('main.api_activity_logs') }}?page=${page}&per_page=${perPage}`)
+      .then(response => response.json())
+      .then(data => {
+        // Generar HTML de la tabla
+        let tableHtml = '';
+        
+        if (data.logs.length > 0) {
+          data.logs.forEach(log => {
+            // Determinar clase de badge según la acción
+            let badgeClass = 'bg-gray-100 text-gray-800';
+            if (log.accion === 'login') badgeClass = 'bg-green-100 text-green-800';
+            else if (log.accion === 'logout') badgeClass = 'bg-red-100 text-red-800';
+            else if (log.accion === 'profile_view') badgeClass = 'bg-blue-100 text-blue-800';
+            else if (log.accion === 'profile_update') badgeClass = 'bg-yellow-100 text-yellow-800';
+            else if (log.accion.includes('dashboard')) badgeClass = 'bg-purple-100 text-purple-800';
+            
+            // Formatear fecha
+            let fechaFormateada = 'N/A';
+            if (log.fecha) {
+              const fecha = new Date(log.fecha);
+              // Ajustar a zona horaria de Colombia (UTC-5)
+              fecha.setHours(fecha.getHours() - 5);
+              fechaFormateada = fecha.toLocaleString('es-CO', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              });
+            }
+            
+            tableHtml += `
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  ${fechaFormateada}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass}">
+                    ${log.accion.charAt(0).toUpperCase() + log.accion.slice(1)}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                  ${log.descripcion || 'Sin descripción'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  ${log.ip_address || 'N/A'}
+                </td>
+              </tr>
+            `;
+          });
+        } else {
+          tableHtml = `
+            <tr>
+              <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
+                No hay actividad reciente para este usuario.
+              </td>
+            </tr>
+          `;
+        }
+        
+        // Actualizar tabla
+        document.getElementById('activityTableBody').innerHTML = tableHtml;
+        
+        // Actualizar indicador de página
+        document.getElementById('activityPageInfo').textContent = `Página ${data.pagination.page} de ${data.pagination.pages}`;
+        
+        // Actualizar selector de elementos por página
+        const perPageSelect = document.getElementById('perPageSelect');
+        if (perPageSelect) {
+          perPageSelect.value = data.pagination.per_page;
+        }
+        
+        // Generar paginación
+        if (data.pagination.pages > 1) {
+          let paginationHtml = '<nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">';
+          
+          // Botón anterior
+          if (data.pagination.has_prev) {
+            paginationHtml += `
+              <button onclick="loadActivityPage(${data.pagination.prev_num}, ${data.pagination.per_page})" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <i class="fas fa-chevron-left text-xs"></i>
+              </button>
+            `;
+          } else {
+            paginationHtml += `
+              <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-500 cursor-not-allowed">
+                <i class="fas fa-chevron-left text-xs"></i>
+              </span>
+            `;
+          }
+          
+          // Números de página
+          for (let i = 1; i <= data.pagination.pages; i++) {
+            const isActive = i === data.pagination.page;
+            paginationHtml += `
+              <button onclick="loadActivityPage(${i}, ${data.pagination.per_page})" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 ${isActive ? 'bg-primary-light text-primary-dark font-bold' : ''}">
+                ${i}
+              </button>
+            `;
+          }
+          
+          // Botón siguiente
+          if (data.pagination.has_next) {
+            paginationHtml += `
+              <button onclick="loadActivityPage(${data.pagination.next_num}, ${data.pagination.per_page})" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <i class="fas fa-chevron-right text-xs"></i>
+              </button>
+            `;
+          } else {
+            paginationHtml += `
+              <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-500 cursor-not-allowed">
+                <i class="fas fa-chevron-right text-xs"></i>
+              </span>
+            `;
+          }
+          
+          paginationHtml += '</nav>';
+          document.getElementById('activityPaginationContainer').innerHTML = paginationHtml;
+        } else {
+          document.getElementById('activityPaginationContainer').innerHTML = '';
+        }
+      })
+      .catch(error => {
+        console.error('Error cargando página de actividad:', error);
+        document.getElementById('activityTableBody').innerHTML = `
+          <tr>
+            <td colspan="4" class="px-6 py-4 text-center text-sm text-red-500">
+              Error al cargar las actividades. Inténtalo de nuevo.
+            </td>
+          </tr>
+        `;
+      });
+  };
+
+  // Función para cambiar el número de elementos por página
+  window.changePerPage = function(perPage) {
+    // Obtener la página actual de la información mostrada
+    const pageInfo = document.getElementById('activityPageInfo').textContent;
+    const currentPage = parseInt(pageInfo.match(/Página (\d+)/)[1]);
+    
+    loadActivityPage(currentPage, parseInt(perPage));
+  };
+});
+</script>
+
 {% endblock %}

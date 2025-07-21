@@ -20,10 +20,10 @@ def auth_direct():
 @bp.route('/dashboard')
 @login_required
 def dashboard():
-    """Dashboard principal con diferentes vistas según el rol del usuario"""
+    """Dashboard principal - redirige según el rol"""
     
-    # Registrar actividad
-    current_user.registrar_actividad('dashboard_access', 'Acceso al dashboard')
+    # Registrar actividad de acceso al dashboard
+    current_user.registrar_actividad('dashboard_access', 'Acceso al dashboard principal')
     
     if current_user.es_cliente():
         return redirect(url_for('main.dashboard_cliente'))
@@ -36,20 +36,20 @@ def dashboard():
 @login_required
 @role_required('cliente')
 def dashboard_cliente():
-    """Dashboard específico para clientes con datos reales únicamente"""
+    """Dashboard específico para clientes"""
     
-    # Estadísticas reales del usuario actual
-    stats = {
-        'mis_carpetas': Folder.query.filter_by(user_id=current_user.id).count(),
-        'mis_archivos': Archivo.query.filter_by(usuario_id=current_user.id).count(),
-        'mis_beneficiarios': User.query.filter_by(titular_id=current_user.id, es_beneficiario=True).count(),
-        'mis_actividades': UserActivityLog.query.filter_by(user_id=current_user.id).count()
-    }
+    # Registrar actividad de acceso al dashboard de cliente
+    current_user.registrar_actividad('dashboard_cliente_access', 'Acceso al dashboard de cliente')
     
-    # Actividades recientes reales del usuario (últimas 10)
+    # Obtener estadísticas del cliente
+    total_archivos = Archivo.query.filter_by(usuario_id=current_user.id).count()
+    total_carpetas = Folder.query.filter_by(user_id=current_user.id).count()
+    beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).count()
+    
+    # Actividad reciente (últimas 5 actividades)
     actividades_recientes = UserActivityLog.query.filter_by(user_id=current_user.id)\
-        .order_by(UserActivityLog.fecha.desc())\
-        .limit(10).all()
+                                                .order_by(desc(UserActivityLog.fecha))\
+                                                .limit(5).all()
     
     # Carpetas recientes del usuario (últimas 5)
     carpetas_recientes = Folder.query.filter_by(user_id=current_user.id)\
@@ -113,11 +113,23 @@ def dashboard_test():
 @login_required
 @role_required('admin')
 def dashboard_admin():
-    """Dashboard específico para administradores con estadísticas reales del sistema"""
-    from app.utils.dashboard_stats import (
-        get_dashboard_stats, get_charts_data, get_file_types_stats, 
-        get_recent_files_with_users, get_recent_activity
-    )
+    """Dashboard específico para administradores"""
+    
+    # Registrar actividad de acceso al dashboard de admin
+    current_user.registrar_actividad('dashboard_admin_access', 'Acceso al dashboard de administrador')
+    
+    # Estadísticas del sistema
+    stats = {
+        'total_usuarios': User.query.count(),
+        'total_archivos': Archivo.query.count(),
+        'total_carpetas': Folder.query.count(),
+        'usuarios_activos': User.query.filter_by(activo=True).count(),
+        'usuarios_inactivos': User.query.filter_by(activo=False).count(),
+        'clientes': User.query.filter_by(rol='cliente').count(),
+        'admins': User.query.filter_by(rol='admin').count(),
+        'superadmins': User.query.filter_by(rol='superadmin').count(),
+        'lectores': User.query.filter_by(rol='lector').count()
+    }
     
     # Obtener el período seleccionado (por defecto 'month')
     period = request.args.get('period', 'month')
@@ -206,16 +218,91 @@ def dashboard_admin():
 @login_required
 @role_required('lector')
 def dashboard_lector():
-    """Dashboard para usuarios con rol lector"""
+    """Dashboard específico para lectores"""
     
-    # Estadísticas limitadas para lectores
-    total_usuarios = User.query.count()
-    total_archivos = Archivo.query.count()
+    # Registrar actividad de acceso al dashboard de lector
+    current_user.registrar_actividad('dashboard_lector_access', 'Acceso al dashboard de lector')
     
-    # Solo pueden ver actividad reciente general (sin detalles sensibles)
+    # Estadísticas para lectores (solo archivos y carpetas)
+    stats = {
+        'total_archivos': Archivo.query.count(),
+        'total_carpetas': Folder.query.count(),
+        'archivos_recientes': Archivo.query.order_by(Archivo.fecha_subida.desc()).limit(10).count()
+    }
+    
+    # Actividad reciente (últimas 5 actividades)
+    actividades_recientes = UserActivityLog.query.filter_by(user_id=current_user.id)\
+                                                .order_by(desc(UserActivityLog.fecha))\
+                                                .limit(5).all()
+    
+    # Carpetas recientes del usuario (últimas 5)
+    carpetas_recientes = Folder.query.filter_by(user_id=current_user.id)\
+        .order_by(Folder.fecha_creacion.desc())\
+        .limit(5).all()
+    
+    # Notificaciones no leídas del usuario
+    notificaciones = Notification.query.filter_by(user_id=current_user.id, leida=False)\
+        .order_by(Notification.fecha_creacion.desc())\
+        .limit(5).all()
+    
     return render_template('dashboard/lector.html',
-                         total_usuarios=total_usuarios,
-                         total_archivos=total_archivos)
+                         stats=stats,
+                         actividades_recientes=actividades_recientes,
+                         carpetas_recientes=carpetas_recientes,
+                         notificaciones=notificaciones)
+
+@bp.route('/api/activity_logs')
+@login_required
+def api_activity_logs():
+    """API para obtener logs de actividad paginados"""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+    activity_logs_pagination = UserActivityLog.query.filter_by(user_id=current_user.id)\
+        .order_by(desc(UserActivityLog.fecha))\
+        .paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Preparar datos para JSON
+    logs_data = []
+    for log_entry in activity_logs_pagination.items:
+        logs_data.append({
+            'id': log_entry.id,
+            'fecha': log_entry.fecha.isoformat() if log_entry.fecha else None,
+            'accion': log_entry.accion,
+            'descripcion': log_entry.descripcion,
+            'ip_address': log_entry.ip_address
+        })
+    
+    return jsonify({
+        'logs': logs_data,
+        'pagination': {
+            'page': activity_logs_pagination.page,
+            'pages': activity_logs_pagination.pages,
+            'per_page': activity_logs_pagination.per_page,
+            'total': activity_logs_pagination.total,
+            'has_prev': activity_logs_pagination.has_prev,
+            'has_next': activity_logs_pagination.has_next,
+            'prev_num': activity_logs_pagination.prev_num,
+            'next_num': activity_logs_pagination.next_num
+        }
+    })
+
+@bp.route('/logout')
+@login_required
+def logout():
+    """Cerrar sesión del usuario"""
+    from flask_login import logout_user
+    from flask import session
+    
+    # Registrar actividad antes de cerrar sesión
+    current_user.registrar_actividad('logout', 'Cierre de sesión')
+    
+    # Limpiar sesión
+    session.clear()
+    logout_user()
+    
+    flash('Has cerrado sesión exitosamente.', 'success')
+    return redirect(url_for('auth.login'))
 
 @bp.route('/profile')
 @login_required
@@ -233,61 +320,138 @@ def profile():
                                                 .order_by(desc(UserActivityLog.fecha))\
                                                 .limit(5).all()
     
-    return render_template('profile/view.html',
-                         user=current_user,
-                         total_archivos=total_archivos,
-                         total_carpetas=total_carpetas,
-                         actividades_recientes=actividades_recientes)
-
-@bp.route('/profile/edit', methods=['GET', 'POST'])
-@login_required
-def edit_profile():
-    """Editar perfil del usuario"""
+    # Obtener beneficiarios del usuario (si es cliente)
+    beneficiarios = []
+    if current_user.es_cliente():
+        beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).all()
+    
+    # Obtener último acceso en zona horaria de Colombia
+    last_login_colombia = None
+    if current_user.ultimo_acceso:
+        from datetime import timedelta
+        colombia_offset = timedelta(hours=5)
+        last_login_colombia = current_user.ultimo_acceso - colombia_offset
+    
+    # Paginación para historial de actividad
+    page_activity = request.args.get('page_activity', 1, type=int)
+    per_page_activity = request.args.get('per_page_activity', 10, type=int)
+    
+    activity_logs_pagination = UserActivityLog.query.filter_by(user_id=current_user.id)\
+        .order_by(desc(UserActivityLog.fecha))\
+        .paginate(page=page_activity, per_page=per_page_activity, error_out=False)
     
     form = ProfileForm()
     
-    if form.validate_on_submit():
-        # Actualizar datos básicos
-        current_user.nombre = form.nombre.data
-        current_user.apellido = form.apellido.data
-        current_user.email = form.email.data
-        current_user.telefono = form.telefono.data
-        current_user.ciudad = form.ciudad.data
-        current_user.estado = form.estado.data
-        current_user.direccion = form.direccion.data
-        current_user.codigo_postal = form.codigo_postal.data
-        current_user.fecha_nacimiento = form.fecha_nacimiento.data
+    return render_template('profile/view.html',
+                         user=current_user,
+                         form=form,
+                         total_archivos=total_archivos,
+                         total_carpetas=total_carpetas,
+                         actividades_recientes=actividades_recientes,
+                         beneficiarios=beneficiarios,
+                         last_login_colombia=last_login_colombia,
+                         activity_logs_pagination=activity_logs_pagination)
+
+@bp.route('/profile', methods=['POST'])
+@login_required
+def profile_update():
+    """Actualizar perfil del usuario"""
+    try:
+        data = request.get_json()
+        
+        # Actualizar información personal
+        if 'nombre' in data:
+            current_user.nombre = data['nombre']
+        if 'apellido' in data:
+            current_user.apellido = data['apellido']
+        if 'email' in data:
+            current_user.email = data['email']
+        if 'telefono' in data:
+            current_user.telefono = data['telefono']
+        if 'fecha_nacimiento' in data and data['fecha_nacimiento']:
+            current_user.fecha_nacimiento = datetime.strptime(data['fecha_nacimiento'], '%Y-%m-%d').date()
+        if 'nacionalidad' in data:
+            current_user.nacionality = data['nacionalidad']
+        
+        # Actualizar información de dirección
+        if 'direccion' in data:
+            current_user.direccion = data['direccion']
+        if 'ciudad' in data:
+            current_user.ciudad = data['ciudad']
+        if 'estado' in data:
+            current_user.estado = data['estado']
+        if 'codigo_postal' in data:
+            current_user.codigo_postal = data['codigo_postal']
+        if 'pais' in data:
+            current_user.country = data['pais']
         
         # Cambiar contraseña si se proporcionó
-        if form.new_password.data:
-            if not current_user.check_password(form.old_password.data):
-                flash('La contraseña actual es incorrecta.', 'error')
-                return render_template('profile/edit.html', form=form)
+        if data.get('old_password') and data.get('new_password') and data.get('confirm_password'):
+            if not current_user.check_password(data['old_password']):
+                return jsonify({'error': 'La contraseña actual es incorrecta'}), 400
             
-            current_user.set_password(form.new_password.data)
-            flash('Contraseña actualizada correctamente.', 'success')
+            if data['new_password'] != data['confirm_password']:
+                return jsonify({'error': 'La nueva contraseña y la confirmación no coinciden'}), 400
+            
+            current_user.set_password(data['new_password'])
+            message = 'Perfil y contraseña actualizados exitosamente. Serás redirigido al login.'
+        else:
+            message = 'Perfil actualizado exitosamente.'
         
         db.session.commit()
         
         # Registrar actividad
         current_user.registrar_actividad('profile_update', 'Actualización del perfil')
         
-        flash('Perfil actualizado correctamente.', 'success')
+        return jsonify({'message': message}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al actualizar perfil: {str(e)}'}), 500
+
+@bp.route('/profile/editar_beneficiario', methods=['POST'])
+@login_required
+def editar_beneficiario():
+    """Editar beneficiario"""
+    try:
+        beneficiary_id = request.form.get('beneficiary_id')
+        name = request.form.get('name')
+        lastname = request.form.get('lastname')
+        nationality = request.form.get('nationality')
+        birth_date = request.form.get('birth_date')
+        
+        if not all([beneficiary_id, name, lastname, nationality, birth_date]):
+            flash('Todos los campos son obligatorios', 'error')
+            return redirect(url_for('main.profile'))
+        
+        # Verificar que el beneficiario pertenece al usuario actual
+        beneficiario = Beneficiario.query.filter_by(
+            id=beneficiary_id, 
+            titular_id=current_user.id
+        ).first()
+        
+        if not beneficiario:
+            flash('Beneficiario no encontrado', 'error')
+            return redirect(url_for('main.profile'))
+        
+        # Actualizar datos
+        beneficiario.nombre = name
+        beneficiario.lastname = lastname
+        beneficiario.nationality = nationality
+        beneficiario.fecha_nacimiento = datetime.strptime(birth_date, '%Y-%m-%d').date()
+        
+        db.session.commit()
+        
+        # Registrar actividad
+        current_user.registrar_actividad('beneficiary_update', f'Actualizó beneficiario {name} {lastname}')
+        
+        flash('Beneficiario actualizado exitosamente', 'success')
         return redirect(url_for('main.profile'))
-    
-    # Pre-llenar el formulario con los datos actuales
-    elif request.method == 'GET':
-        form.nombre.data = current_user.nombre
-        form.apellido.data = current_user.apellido
-        form.email.data = current_user.email
-        form.telefono.data = current_user.telefono
-        form.ciudad.data = current_user.ciudad
-        form.estado.data = current_user.estado
-        form.direccion.data = current_user.direccion
-        form.codigo_postal.data = current_user.codigo_postal
-        form.fecha_nacimiento.data = current_user.fecha_nacimiento
-    
-    return render_template('profile/edit.html', form=form)
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al actualizar beneficiario: {str(e)}', 'error')
+        return redirect(url_for('main.profile'))
 
 @bp.route('/listar_carpetas')
 @login_required

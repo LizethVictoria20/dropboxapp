@@ -22,6 +22,8 @@ class User(UserMixin, db.Model):
     es_beneficiario = db.Column(db.Boolean, default=False)
     titular_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     rol = db.Column(db.String(20), nullable=False, default='cliente')
+    nacionality = db.Column(db.String(100), nullable=True)
+    country = db.Column(db.String(100), nullable=True)
     
     # Relaciones
     beneficiarios = db.relationship('User', backref=db.backref('titular', remote_side=[id]), lazy=True)
@@ -30,6 +32,56 @@ class User(UserMixin, db.Model):
     def username(self):
         """Propiedad para compatibilidad con el template"""
         return self.nombre or self.email.split('@')[0]
+    
+    @property
+    def name(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.nombre
+    
+    @property
+    def lastname(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.apellido
+    
+    @property
+    def phone(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.telefono
+    
+    @property
+    def city(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.ciudad
+    
+    @property
+    def state(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.estado
+    
+    @property
+    def address(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.direccion
+    
+    @property
+    def zip_code(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.codigo_postal
+    
+    @property
+    def nationality(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.nacionality
+    
+    @property
+    def date_of_birth(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.fecha_nacimiento
+    
+    @property
+    def created_at(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.fecha_registro
     
     @property
     def nombre_completo(self):
@@ -69,10 +121,14 @@ class User(UserMixin, db.Model):
         
     def registrar_actividad(self, accion, descripcion=None):
         """Registra una actividad del usuario"""
+        from flask import request
+        
         actividad = UserActivityLog(
             user_id=self.id,
             accion=accion,
-            descripcion=descripcion
+            descripcion=descripcion,
+            ip_address=request.remote_addr if request else None,
+            user_agent=request.headers.get('User-Agent') if request else None
         )
         db.session.add(actividad)
         
@@ -83,13 +139,25 @@ class User(UserMixin, db.Model):
 class Beneficiario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(120), nullable=False)
+    lastname = db.Column(db.String(120), nullable=True)
     email = db.Column(db.String(120), nullable=False)
     fecha_nacimiento = db.Column(db.Date, nullable=True)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     titular_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     dropbox_folder_path = db.Column(db.String, nullable=True)
+    nationality = db.Column(db.String(100), nullable=True)
     
     titular = db.relationship('User', backref=db.backref('beneficiarios_ben', lazy=True))
+
+    @property
+    def name(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.nombre
+    
+    @property
+    def birth_date(self):
+        """Propiedad para compatibilidad con el template"""
+        return self.fecha_nacimiento
 
     def __repr__(self):
         return f"<Beneficiario {self.nombre} ({self.email}) de titular {self.titular_id}>"

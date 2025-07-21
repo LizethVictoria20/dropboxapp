@@ -369,6 +369,9 @@ def crear_carpeta():
         db.session.add(nueva_carpeta)
         db.session.commit()
         
+        # Registrar actividad
+        current_user.registrar_actividad('folder_created', f'Carpeta "{nombre}" creada en {ruta}')
+        
         tipo_carpeta = "pública" if es_publica else "privada"
         flash(f"Carpeta '{ruta}' creada correctamente como {tipo_carpeta}.", "success")
     except dropbox.exceptions.ApiError as e:
@@ -591,6 +594,9 @@ def subir_archivo():
         db.session.commit()
         print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
 
+        # Registrar actividad
+        current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a {categoria}/{subcategoria}')
+
         # Redirección correcta según si es AJAX o no
         redirect_url = url_for("listar_dropbox.carpetas_dropbox")
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -675,6 +681,10 @@ def mover_archivo(archivo_nombre, carpeta_actual):
     archivo.subcategoria = subcategoria
     archivo.usuario_id = usuario.id
     db.session.commit()
+    
+    # Registrar actividad
+    current_user.registrar_actividad('file_moved', f'Archivo "{archivo_nombre}" movido a {categoria}/{subcategoria}')
+    
     flash("Archivo movido correctamente.", "success")
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
@@ -933,6 +943,9 @@ def mover_archivo_modal():
             db.session.commit()
             print(f"DEBUG | Base de datos actualizada")
             
+            # Registrar actividad
+            current_user.registrar_actividad('file_moved', f'Archivo "{archivo_nombre}" movido de {archivo_path} a {result_path}')
+            
             flash(f"Archivo '{archivo_nombre}' movido exitosamente", "success")
             
         except Exception as e:
@@ -1022,6 +1035,9 @@ def renombrar_archivo():
     archivo.nombre = nuevo_nombre
     archivo.dropbox_path = new_path
     db.session.commit()
+
+    # Registrar actividad
+    current_user.registrar_actividad('file_renamed', f'Archivo renombrado de "{archivo_nombre_actual}" a "{nuevo_nombre}"')
 
     print(f"DEBUG | Renombrado exitoso: {old_path} -> {new_path}")
     flash("Archivo renombrado correctamente.", "success")
@@ -1679,8 +1695,16 @@ def subir_archivo_rapido():
         db.session.commit()
         print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
 
-        flash("Archivo subido exitosamente a la carpeta seleccionada.", "success")
-        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        # Registrar actividad
+        current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a Subida Rápida/Directo')
+
+        # Redirección correcta según si es AJAX o no
+        redirect_url = url_for("listar_dropbox.carpetas_dropbox")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"success": True, "redirectUrl": redirect_url})
+        else:
+            flash("Archivo subido exitosamente a la carpeta seleccionada.", "success")
+            return redirect(redirect_url)
 
     except Exception as e:
         print(f"ERROR general en subida rápida de archivo: {e}")

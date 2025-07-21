@@ -1,7 +1,8 @@
 import os
+import secrets
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "cambiaesto")
+    SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
     # Usar ruta absoluta para SQLite
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     SQLALCHEMY_DATABASE_URI = os.environ.get(
