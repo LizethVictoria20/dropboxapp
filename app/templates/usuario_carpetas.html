@@ -97,10 +97,10 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
     </div>
 
     <div class="p-6">
-      {% if estructura._subcarpetas or estructura._archivos %} 
-        {% import "tree_macros.html" as macros with context %} 
-        {{ macros.render_tree(estructura, '', usuario_id, usuario_actual, folders_por_ruta) }} 
-      {% else %}
+      {% if estructura._subcarpetas or estructura._archivos %} {% import
+      "tree_macros.html" as macros with context %} {{
+      macros.render_tree(estructura, '', usuario_id, usuario_actual,
+      folders_por_ruta) }} {% else %}
       <div class="text-center py-12">
         <svg
           class="w-16 h-16 text-gray-400 mx-auto mb-4"
@@ -115,26 +115,347 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
             d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
           />
         </svg>
-                  <h3 class="text-lg font-medium text-gray-900 mb-2">No hay carpetas</h3>
-          <p class="text-gray-500 mb-4">
-            {% if beneficiario %}
-              Este beneficiario aún no tiene carpetas creadas.
-            {% else %}
-              Este usuario aún no tiene carpetas creadas.
-            {% endif %}
-          </p>
-                  {% if usuario_actual.rol == 'admin' %}
-          <p class="text-sm text-gray-400">
-            Las carpetas se crearán automáticamente cuando se suban archivos.
-          </p>
-          <a href="{{ url_for('listar_dropbox.subir_archivo') }}" 
-             class="inline-flex items-center px-4 py-2 mt-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            <i class="fas fa-upload mr-2"></i>
-            Subir archivo
-          </a>
-          {% endif %}
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No hay carpetas</h3>
+        <p class="text-gray-500 mb-4">
+          {% if beneficiario %} Este beneficiario aún no tiene carpetas creadas.
+          {% else %} Este usuario aún no tiene carpetas creadas. {% endif %}
+        </p>
+        {% if usuario_actual.rol == 'admin' %}
+        <p class="text-sm text-gray-400">
+          Las carpetas se crearán automáticamente cuando se suban archivos.
+        </p>
+        <button
+          onclick="openUploadModal('', '{{ usuario_id }}')"
+          class="inline-flex items-center px-4 py-2 mt-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <i class="fas fa-upload mr-2"></i>
+          Subir archivo
+        </button>
+        {% endif %}
       </div>
       {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal para crear carpeta -->
+<div
+  id="createFolderModal"
+  class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
+>
+  <div
+    class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
+  >
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Crear nueva carpeta</h3>
+        <button
+          onclick="closeModal('createFolderModal')"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+      </div>
+      <form
+        id="createFolderForm"
+        action="{{ url_for('listar_dropbox.crear_carpeta') }}"
+        method="post"
+      >
+        <input type="hidden" id="createFolderParent" name="padre" value="" />
+        <input type="hidden" name="usuario_id" value="{{ usuario_id }}" />
+        <div class="mb-4">
+          <label
+            for="folderName"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Nombre de la carpeta</label
+          >
+          <input
+            type="text"
+            id="folderName"
+            name="nombre"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <div class="mb-4">
+          <label
+            for="folderVisibility"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Visibilidad</label
+          >
+          <select
+            id="folderVisibility"
+            name="es_publica"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="true">Pública</option>
+            <option value="false">Privada</option>
+          </select>
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button
+            type="button"
+            onclick="closeModal('createFolderModal')"
+            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+          >
+            Crear carpeta
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para subir archivo -->
+<div
+  id="uploadFileModal"
+  class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
+>
+  <div
+    class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
+  >
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Subir archivo</h3>
+        <button
+          onclick="closeModal('uploadFileModal')"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+      </div>
+      <form
+        id="uploadFileForm"
+        action="{{ url_for('listar_dropbox.subir_archivo_rapido') }}"
+        method="post"
+        enctype="multipart/form-data"
+      >
+        <input
+          type="hidden"
+          id="uploadFileFolder"
+          name="carpeta_destino"
+          value=""
+        />
+        <input
+          type="hidden"
+          name="usuario_id"
+          value="user-{{ usuario_id|string }}"
+        />
+        <div class="mb-4">
+          <label
+            for="fileInput"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Seleccionar archivo</label
+          >
+          <input
+            type="file"
+            id="fileInput"
+            name="archivo"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button
+            type="button"
+            onclick="closeModal('uploadFileModal')"
+            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Subir archivo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para renombrar -->
+<div
+  id="renameModal"
+  class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
+>
+  <div
+    class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
+  >
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Renombrar</h3>
+        <button
+          onclick="closeModal('renameModal')"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+      </div>
+      <form
+        id="renameForm"
+        action="{{ url_for('listar_dropbox.renombrar_archivo') }}"
+        method="post"
+      >
+        <input
+          type="hidden"
+          id="renameOldName"
+          name="archivo_nombre_actual"
+          value=""
+        />
+        <input type="hidden" id="renamePath" name="carpeta_actual" value="" />
+        <input type="hidden" name="usuario_id" value="{{ usuario_id }}" />
+        <div class="mb-4">
+          <label
+            for="newName"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Nuevo nombre</label
+          >
+          <input
+            type="text"
+            id="newName"
+            name="nuevo_nombre"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button
+            type="button"
+            onclick="closeModal('renameModal')"
+            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Renombrar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para mover archivo -->
+<div
+  id="moveModal"
+  class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
+>
+  <div
+    class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
+  >
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Mover archivo</h3>
+        <button
+          onclick="closeModal('moveModal')"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+      </div>
+      <form
+        id="moveForm"
+        action="{{ url_for('listar_dropbox.mover_archivo_modal') }}"
+        method="post"
+      >
+        <input type="hidden" id="moveFileName" name="archivo_nombre" value="" />
+        <input
+          type="hidden"
+          id="moveCurrentPath"
+          name="carpeta_actual"
+          value=""
+        />
+        <div class="mb-4">
+          <label
+            for="moveDestination"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Carpeta destino</label
+          >
+          <select
+            id="moveDestination"
+            name="nueva_carpeta"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="">Seleccionar carpeta...</option>
+            <!-- Se llenará dinámicamente con JavaScript -->
+          </select>
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button
+            type="button"
+            onclick="closeModal('moveModal')"
+            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors"
+          >
+            Mover archivo
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -157,5 +478,123 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       }
     }
   }
+
+  // Funciones para manejar modales
+  function openModal(modalId) {
+    document.getElementById(modalId).classList.remove("hidden");
+  }
+
+  function closeModal(modalId) {
+    document.getElementById(modalId).classList.add("hidden");
+  }
+
+  function openCreateFolderModal(parentPath) {
+    document.getElementById("createFolderParent").value = parentPath;
+    openModal("createFolderModal");
+  }
+
+  function openUploadModal(folderPath, userId) {
+    document.getElementById("uploadFileFolder").value = folderPath;
+    openModal("uploadFileModal");
+  }
+
+  function openRenameModal(name, path, type) {
+    document.getElementById("renameOldName").value = name;
+    document.getElementById("renamePath").value = path;
+    document.getElementById("newName").value = name;
+    openModal("renameModal");
+  }
+
+  function openMoveModal(fileName, currentPath) {
+    document.getElementById("moveFileName").value = fileName;
+    document.getElementById("moveCurrentPath").value = currentPath;
+
+    // Aquí podrías cargar dinámicamente las carpetas disponibles
+    // Por ahora, usaremos una lista estática
+    const select = document.getElementById("moveDestination");
+    select.innerHTML = '<option value="">Seleccionar carpeta...</option>';
+
+    // Agregar opciones de carpetas (esto se puede mejorar con una llamada AJAX)
+    const folders = ["/carpeta1", "/carpeta2", "/carpeta3"]; // Ejemplo
+    folders.forEach((folder) => {
+      if (folder !== currentPath) {
+        const option = document.createElement("option");
+        option.value = folder;
+        option.textContent = folder;
+        select.appendChild(option);
+      }
+    });
+
+    openModal("moveModal");
+  }
+
+  // Cerrar modales al hacer clic fuera de ellos
+  window.onclick = function (event) {
+    const modals = [
+      "createFolderModal",
+      "uploadFileModal",
+      "renameModal",
+      "moveModal",
+    ];
+    modals.forEach((modalId) => {
+      const modal = document.getElementById(modalId);
+      if (event.target === modal) {
+        closeModal(modalId);
+      }
+    });
+  };
+
+  // Funciones para manejar los menús desplegables
+  function toggleFileMenu(menuId, event) {
+    const menu = document.getElementById(menuId);
+    if (menu) {
+      if (menu.classList.contains('hidden')) {
+        // Posicionar el menú cerca del botón
+        const button = event.currentTarget;
+        const rect = button.getBoundingClientRect();
+        menu.style.top = (rect.bottom + 5) + 'px';
+        menu.style.left = (rect.right - menu.offsetWidth) + 'px';
+        menu.classList.remove('hidden');
+      } else {
+        menu.classList.add('hidden');
+      }
+    }
+  }
+
+  function toggleFolderMenu(menuId, event) {
+    const menu = document.getElementById(menuId);
+    if (menu) {
+      if (menu.classList.contains('hidden')) {
+        // Posicionar el menú cerca del botón
+        const button = event.currentTarget;
+        const rect = button.getBoundingClientRect();
+        menu.style.top = (rect.bottom + 5) + 'px';
+        menu.style.left = (rect.right - menu.offsetWidth) + 'px';
+        menu.classList.remove('hidden');
+      } else {
+        menu.classList.add('hidden');
+      }
+    }
+  }
+
+  // Cerrar todos los menús al hacer clic fuera de ellos
+  document.addEventListener('click', function(event) {
+    const menus = document.querySelectorAll('[id^="file-menu-"], [id^="folder-menu-"]');
+    menus.forEach(menu => {
+      if (!menu.contains(event.target) && !event.target.closest('button')) {
+        menu.classList.add('hidden');
+      }
+    });
+  });
+
+  // Cerrar menús al hacer scroll
+  window.addEventListener('scroll', function() {
+    const menus = document.querySelectorAll('[id^="file-menu-"], [id^="folder-menu-"]');
+    menus.forEach(menu => {
+      if (!menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+      }
+    });
+  });
 </script>
 {% endblock %}
