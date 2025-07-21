@@ -251,7 +251,6 @@ def update_user():
         user.nacionality = request.form.get('nacionality')
         user.country = request.form.get('country')
         user.rol = request.form.get('rol')
-        user.activo = request.form.get('activo') == 'true'
         
         # Procesar permisos adicionales para lectores
         if user.rol == 'lector':
