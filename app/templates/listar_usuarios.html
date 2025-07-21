@@ -1,0 +1,1676 @@
+{% extends "base.html" %} {% block title %}Gestión de Usuarios Administrativos -
+Inmigración OK{% endblock %} {% block content %}
+<div class="min-h-screen bg-surface py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">
+            Gestión de Usuarios Administrativos
+          </h1>
+          <p class="mt-2 text-gray-600">
+            Administre usuarios con roles administrativos (Lector, Admin, Super
+            Admin)
+          </p>
+        </div>
+        <button
+          onclick="openCreateUserModal()"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+        >
+          <i class="fas fa-plus mr-2"></i>
+          Crear Nuevo Usuario
+        </button>
+      </div>
+    </div>
+
+    <!-- Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %}
+    <div class="mb-6">
+      {% for category, message in messages %}
+      <div
+        class="rounded-md p-4 mb-4 {% if category == 'error' %}bg-red-50 border border-red-200 text-red-700{% elif category == 'success' %}bg-green-50 border border-green-200 text-green-700{% elif category == 'warning' %}bg-yellow-50 border border-yellow-200 text-yellow-700{% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %}"
+      >
+        <div class="flex">
+          <div class="flex-shrink-0">
+            {% if category == 'error' %}
+            <i class="fas fa-exclamation-circle"></i>
+            {% elif category == 'success' %}
+            <i class="fas fa-check-circle"></i>
+            {% elif category == 'warning' %}
+            <i class="fas fa-exclamation-triangle"></i>
+            {% else %}
+            <i class="fas fa-info-circle"></i>
+            {% endif %}
+          </div>
+          <div class="ml-3">
+            <p class="text-sm font-medium">{{ message }}</p>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %} {% endwith %}
+
+    <!-- Filtros y Búsqueda -->
+    <div class="bg-white shadow-sm rounded-lg p-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label
+            for="search"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Buscar</label
+          >
+          <input
+            type="text"
+            id="search"
+            placeholder="Buscar por nombre, email..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+          />
+        </div>
+        <div>
+          <label
+            for="filter-rol"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Filtrar por Rol</label
+          >
+          <select
+            id="filter-rol"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+          >
+            <option value="">Todos los roles</option>
+            <option value="lector">Lector</option>
+            <option value="admin">Admin</option>
+            <option value="superadmin">Super Admin</option>
+          </select>
+        </div>
+        <div>
+          <label
+            for="filter-status"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Estado</label
+          >
+          <select
+            id="filter-status"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+          >
+            <option value="">Todos</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button
+            type="button"
+            id="clear-filters"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          >
+            <i class="fas fa-times mr-2"></i>
+            Limpiar Filtros
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de Usuarios -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Usuario
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Contacto
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Rol
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Estado
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Fecha Registro
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody
+            class="bg-white divide-y divide-gray-200"
+            id="users-table-body"
+          >
+            {% for usuario in usuarios %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0 h-10 w-10">
+                    <div
+                      class="h-10 w-10 rounded-full bg-primary flex items-center justify-center"
+                    >
+                      <span class="text-white font-medium text-sm">
+                        {{ usuario.nombre[0] if usuario.nombre else
+                        usuario.email[0].upper() }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="ml-4">
+                    <div class="text-sm font-medium text-gray-900">
+                      {{ usuario.nombre_completo }}
+                    </div>
+                    <div class="text-sm text-gray-500">
+                      ID: {{ usuario.id }}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900">{{ usuario.email }}</div>
+                {% if usuario.telefono %}
+                <div class="text-sm text-gray-500">{{ usuario.telefono }}</div>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.rol == 'superadmin' %}bg-purple-100 text-purple-800 {% elif usuario.rol == 'admin' %}bg-red-100 text-red-800 {% elif usuario.rol == 'lector' %}bg-blue-100 text-blue-800 {% else %}bg-green-100 text-green-800{% endif %}"
+                >
+                  {% if usuario.rol == 'superadmin' %}
+                  <i class="fas fa-crown mr-1"></i>
+                  {% elif usuario.rol == 'admin' %}
+                  <i class="fas fa-user-shield mr-1"></i>
+                  {% elif usuario.rol == 'lector' %}
+                  <i class="fas fa-eye mr-1"></i>
+                  {% else %}
+                  <i class="fas fa-user mr-1"></i>
+                  {% endif %} {{ usuario.rol|title }}
+                </span>
+                {% if usuario.rol == 'lector' and
+                usuario.lector_extra_permissions %}
+                <div class="mt-1">
+                  <span class="text-xs text-gray-500"
+                    >Permisos adicionales</span
+                  >
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    {% set permisos = usuario.lector_extra_permissions|from_json
+                    %} {% for permiso in permisos %}
+                    <span
+                      class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-700"
+                    >
+                      {{ permiso|replace('_', ' ')|title }}
+                    </span>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}"
+                >
+                  {% if usuario.activo %}
+                  <i class="fas fa-check-circle mr-1"></i>
+                  Activo {% else %}
+                  <i class="fas fa-times-circle mr-1"></i>
+                  Inactivo {% endif %}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {{ usuario.fecha_registro.strftime('%d/%m/%Y') if
+                usuario.fecha_registro else 'N/A' }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div class="relative" x-data="{ open: false }">
+                  <button
+                    @click="open = !open"
+                    class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary rounded-full p-1"
+                  >
+                    <i class="fas fa-ellipsis-v"></i>
+                  </button>
+
+                  <!-- Menú desplegable -->
+                  <div
+                    x-show="open"
+                    @click.away="open = false"
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="transform opacity-0 scale-95"
+                    x-transition:enter-end="transform opacity-100 scale-100"
+                    x-transition:leave="transition ease-in duration-75"
+                    x-transition:leave-start="transform opacity-100 scale-100"
+                    x-transition:leave-end="transform opacity-0 scale-95"
+                    class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+                  >
+                    <div class="py-1">
+                      <!-- Ver historial -->
+                      <button
+                        @click="open = false; openHistoryModal({{ usuario.id }})"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      >
+                        <i
+                          class="fas fa-history mr-3 text-gray-400 group-hover:text-gray-500"
+                        ></i>
+                        Ver historial
+                      </button>
+
+                      <!-- Editar -->
+                      <button
+                        @click="open = false; openEditModal({{ usuario.id }})"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      >
+                        <i
+                          class="fas fa-edit mr-3 text-gray-400 group-hover:text-blue-500"
+                        ></i>
+                        Editar
+                      </button>
+
+                      <!-- Separador -->
+                      <div class="border-t border-gray-100 my-1"></div>
+
+                      <!-- Activar/Desactivar -->
+                      {% if usuario.activo %}
+                      <button
+                        class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      >
+                        <i
+                          class="fas fa-pause mr-3 text-gray-400 group-hover:text-yellow-500"
+                        ></i>
+                        Desactivar
+                      </button>
+                      {% else %}
+                      <button
+                        class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      >
+                        <i
+                          class="fas fa-play mr-3 text-gray-400 group-hover:text-green-500"
+                        ></i>
+                        Activar
+                      </button>
+                      {% endif %}
+
+                      <!-- Separador -->
+                      <div class="border-t border-gray-100 my-1"></div>
+
+                      <!-- Eliminar -->
+                      <button
+                        class="group flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+                      >
+                        <i
+                          class="fas fa-trash mr-3 text-red-400 group-hover:text-red-500"
+                        ></i>
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <div
+        class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6"
+      >
+        <div class="flex-1 flex justify-between sm:hidden">
+          {% if pagination.has_prev %}
+          <a
+            href="{{ url_for('users.listar_usuarios', page=pagination.prev_num) }}"
+            class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          >
+            Anterior
+          </a>
+          {% else %}
+          <span
+            class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed"
+          >
+            Anterior
+          </span>
+          {% endif %} {% if pagination.has_next %}
+          <a
+            href="{{ url_for('users.listar_usuarios', page=pagination.next_num) }}"
+            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          >
+            Siguiente
+          </a>
+          {% else %}
+          <span
+            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed"
+          >
+            Siguiente
+          </span>
+          {% endif %}
+        </div>
+
+        <div
+          class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between"
+        >
+          <div>
+            <p class="text-sm text-gray-700">
+              Mostrando
+              <span class="font-medium"
+                >{{ ((pagination.page - 1) * pagination.per_page) + 1 }}</span
+              >
+              a
+              <span class="font-medium"
+                >{{ (pagination.page * pagination.per_page) if pagination.page *
+                pagination.per_page <= pagination.total else pagination.total
+                }}</span
+              >
+              de
+              <span class="font-medium">{{ pagination.total }}</span> resultados
+            </p>
+          </div>
+          <div>
+            <nav
+              class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+              aria-label="Pagination"
+            >
+              <!-- Botón Anterior -->
+              {% if pagination.has_prev %}
+              <a
+                href="{{ url_for('users.listar_usuarios', page=pagination.prev_num) }}"
+                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+              >
+                <span class="sr-only">Anterior</span>
+                <i class="fas fa-chevron-left"></i>
+              </a>
+              {% else %}
+              <span
+                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed"
+              >
+                <span class="sr-only">Anterior</span>
+                <i class="fas fa-chevron-left"></i>
+              </span>
+              {% endif %}
+
+              <!-- Números de página -->
+              {% for page_num in pagination.iter_pages(left_edge=1,
+              right_edge=1, left_current=1, right_current=2) %} {% if page_num
+              %} {% if page_num != pagination.page %}
+              <a
+                href="{{ url_for('users.listar_usuarios', page=page_num) }}"
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                {{ page_num }}
+              </a>
+              {% else %}
+              <span
+                class="relative inline-flex items-center px-4 py-2 border border-primary bg-primary text-sm font-medium text-white"
+              >
+                {{ page_num }}
+              </span>
+              {% endif %} {% else %}
+              <span
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+              >
+                ...
+              </span>
+              {% endif %} {% endfor %}
+
+              <!-- Botón Siguiente -->
+              {% if pagination.has_next %}
+              <a
+                href="{{ url_for('users.listar_usuarios', page=pagination.next_num) }}"
+                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+              >
+                <span class="sr-only">Siguiente</span>
+                <i class="fas fa-chevron-right"></i>
+              </a>
+              {% else %}
+              <span
+                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed"
+              >
+                <span class="sr-only">Siguiente</span>
+                <i class="fas fa-chevron-right"></i>
+              </span>
+              {% endif %}
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Crear Usuario -->
+<div
+  id="createUserModal"
+  class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
+>
+  <div
+    class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white"
+  >
+    <div class="mt-3">
+      <!-- Header del Modal -->
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-2xl font-bold text-gray-900">Crear Nuevo Usuario</h3>
+        <button
+          onclick="closeCreateUserModal()"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <!-- Formulario del Modal -->
+      <form
+        id="createUserForm"
+        method="POST"
+        action="{{ url_for('users.crear_usuario') }}"
+        class="space-y-6"
+        x-data="{ rolSeleccionado: 'cliente' }"
+      >
+        <!-- Información Básica -->
+        <div>
+          <h4
+            class="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2"
+          >
+            <i class="fas fa-user mr-2 text-primary"></i>
+            Información Básica
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Email -->
+            <div class="col-span-2">
+              <label
+                for="email"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Email <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="usuario@ejemplo.com"
+              />
+            </div>
+
+            <!-- Contraseña -->
+            <div class="col-span-2">
+              <label
+                for="password"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Contraseña <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <!-- Nombre -->
+            <div>
+              <label
+                for="nombre"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Nombre
+              </label>
+              <input
+                type="text"
+                id="nombre"
+                name="nombre"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="Juan"
+              />
+            </div>
+
+            <!-- Apellido -->
+            <div>
+              <label
+                for="apellido"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Apellido
+              </label>
+              <input
+                type="text"
+                id="apellido"
+                name="apellido"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="Pérez"
+              />
+            </div>
+
+            <!-- Teléfono -->
+            <div>
+              <label
+                for="telefono"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Teléfono
+              </label>
+              <input
+                type="tel"
+                id="telefono"
+                name="telefono"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+
+            <!-- Fecha de Nacimiento -->
+            <div>
+              <label
+                for="fecha_nacimiento"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Fecha de Nacimiento
+              </label>
+              <input
+                type="date"
+                id="fecha_nacimiento"
+                name="fecha_nacimiento"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Información de Ubicación -->
+        <div>
+          <h4
+            class="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2"
+          >
+            <i class="fas fa-map-marker-alt mr-2 text-primary"></i>
+            Información de Ubicación
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Ciudad -->
+            <div>
+              <label
+                for="ciudad"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Ciudad
+              </label>
+              <input
+                type="text"
+                id="ciudad"
+                name="ciudad"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="Nueva York"
+              />
+            </div>
+
+            <!-- Estado -->
+            <div>
+              <label
+                for="estado"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Estado
+              </label>
+              <input
+                type="text"
+                id="estado"
+                name="estado"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="NY"
+              />
+            </div>
+
+            <!-- Código Postal -->
+            <div>
+              <label
+                for="codigo_postal"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Código Postal
+              </label>
+              <input
+                type="text"
+                id="codigo_postal"
+                name="codigo_postal"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="10001"
+              />
+            </div>
+
+            <!-- Dirección -->
+            <div class="col-span-2">
+              <label
+                for="direccion"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Dirección
+              </label>
+              <input
+                type="text"
+                id="direccion"
+                name="direccion"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="123 Main St, Apt 4B"
+              />
+            </div>
+
+            <!-- Nacionalidad -->
+            <div>
+              <label
+                for="nacionality"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Nacionalidad
+              </label>
+              <input
+                type="text"
+                id="nacionality"
+                name="nacionality"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="Mexicana"
+              />
+            </div>
+
+            <!-- País -->
+            <div>
+              <label
+                for="country"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                País
+              </label>
+              <input
+                type="text"
+                id="country"
+                name="country"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="México"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Rol y Permisos -->
+        <div>
+          <h4
+            class="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2"
+          >
+            <i class="fas fa-user-shield mr-2 text-primary"></i>
+            Rol y Permisos
+          </h4>
+
+          <div class="space-y-4">
+            <!-- Selección de Rol -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-3">
+                Rol del Usuario <span class="text-red-500">*</span>
+              </label>
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <label
+                  class="relative flex cursor-pointer rounded-lg border border-gray-300 bg-white p-3 shadow-sm focus:outline-none"
+                >
+                  <input
+                    type="radio"
+                    name="rol"
+                    value="cliente"
+                    x-model="rolSeleccionado"
+                    class="sr-only"
+                    checked
+                  />
+                  <span class="flex flex-1">
+                    <span class="flex flex-col">
+                      <span class="block text-sm font-medium text-gray-900"
+                        >Cliente</span
+                      >
+                      <span class="mt-1 flex items-center text-xs text-gray-500"
+                        >Acceso básico</span
+                      >
+                    </span>
+                  </span>
+                  <span
+                    class="pointer-events-none absolute -inset-px rounded-lg border-2"
+                    :class="rolSeleccionado === 'cliente' ? 'border-primary' : 'border-transparent'"
+                  ></span>
+                </label>
+
+                <label
+                  class="relative flex cursor-pointer rounded-lg border border-gray-300 bg-white p-3 shadow-sm focus:outline-none"
+                >
+                  <input
+                    type="radio"
+                    name="rol"
+                    value="lector"
+                    x-model="rolSeleccionado"
+                    class="sr-only"
+                  />
+                  <span class="flex flex-1">
+                    <span class="flex flex-col">
+                      <span class="block text-sm font-medium text-gray-900"
+                        >Lector</span
+                      >
+                      <span class="mt-1 flex items-center text-xs text-gray-500"
+                        >Solo lectura</span
+                      >
+                    </span>
+                  </span>
+                  <span
+                    class="pointer-events-none absolute -inset-px rounded-lg border-2"
+                    :class="rolSeleccionado === 'lector' ? 'border-primary' : 'border-transparent'"
+                  ></span>
+                </label>
+
+                <label
+                  class="relative flex cursor-pointer rounded-lg border border-gray-300 bg-white p-3 shadow-sm focus:outline-none"
+                >
+                  <input
+                    type="radio"
+                    name="rol"
+                    value="admin"
+                    x-model="rolSeleccionado"
+                    class="sr-only"
+                  />
+                  <span class="flex flex-1">
+                    <span class="flex flex-col">
+                      <span class="block text-sm font-medium text-gray-900"
+                        >Admin</span
+                      >
+                      <span class="mt-1 flex items-center text-xs text-gray-500"
+                        >Gestión completa</span
+                      >
+                    </span>
+                  </span>
+                  <span
+                    class="pointer-events-none absolute -inset-px rounded-lg border-2"
+                    :class="rolSeleccionado === 'admin' ? 'border-primary' : 'border-transparent'"
+                  ></span>
+                </label>
+
+                <label
+                  class="relative flex cursor-pointer rounded-lg border border-gray-300 bg-white p-3 shadow-sm focus:outline-none"
+                >
+                  <input
+                    type="radio"
+                    name="rol"
+                    value="superadmin"
+                    x-model="rolSeleccionado"
+                    class="sr-only"
+                  />
+                  <span class="flex flex-1">
+                    <span class="flex flex-col">
+                      <span class="block text-sm font-medium text-gray-900"
+                        >Super Admin</span
+                      >
+                      <span class="mt-1 flex items-center text-xs text-gray-500"
+                        >Control total</span
+                      >
+                    </span>
+                  </span>
+                  <span
+                    class="pointer-events-none absolute -inset-px rounded-lg border-2"
+                    :class="rolSeleccionado === 'superadmin' ? 'border-primary' : 'border-transparent'"
+                  ></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Permisos Adicionales para Lector -->
+            <div
+              x-show="rolSeleccionado === 'lector'"
+              x-transition
+              class="bg-gray-50 p-4 rounded-lg"
+            >
+              <h5 class="text-md font-medium text-gray-900 mb-3">
+                <i class="fas fa-cogs mr-2 text-primary"></i>
+                Permisos Adicionales para Lector
+              </h5>
+
+              <!-- Permisos de Gestión de Archivos -->
+              <div class="mb-4">
+                <h6 class="text-sm font-medium text-gray-800 mb-2">
+                  <i class="fas fa-file-alt mr-1"></i>
+                  Gestión de Archivos
+                </h6>
+                <p class="text-xs text-gray-600 mb-3">
+                  El usuario podrá modificar archivos además de visualizarlos.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <label class="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="puede_renombrar"
+                      class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    />
+                    <span class="ml-3 text-sm text-gray-700">Renombrar</span>
+                  </label>
+                  <label class="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="puede_mover"
+                      class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    />
+                    <span class="ml-3 text-sm text-gray-700">Mover</span>
+                  </label>
+                  <label class="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="puede_eliminar"
+                      class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    />
+                    <span class="ml-3 text-sm text-gray-700">Eliminar</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Permisos de Gestión de Beneficiarios -->
+              <div>
+                <h6 class="text-sm font-medium text-gray-800 mb-2">
+                  <i class="fas fa-users mr-1"></i>
+                  Gestión de Beneficiarios
+                </h6>
+                <p class="text-xs text-gray-600 mb-3">
+                  El usuario podrá agregar nuevos beneficiarios a los clientes.
+                </p>
+                <div>
+                  <label class="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="puede_agregar_beneficiarios"
+                      class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    />
+                    <span class="ml-3 text-sm text-gray-700"
+                      >Permitir agregar beneficiarios</span
+                    >
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            onclick="closeCreateUserModal()"
+            class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          >
+            <i class="fas fa-save mr-2"></i>
+            Crear Usuario
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Ver Historial de Usuario -->
+<div
+  id="historyUserModal"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
+>
+  <div
+    class="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden"
+  >
+    <div class="flex items-center justify-between p-6 border-b">
+      <div>
+        <h3 class="text-xl font-semibold text-gray-900">
+          Historial de Usuario
+        </h3>
+        <p class="text-sm text-gray-500" id="historyUserInfo"></p>
+      </div>
+      <button
+        onclick="closeHistoryModal()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+      <div id="historyUserContent" class="space-y-4">
+        <!-- El contenido se cargará dinámicamente -->
+        <div class="flex justify-center">
+          <div
+            class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Editar Usuario -->
+<div
+  id="editUserModal"
+  class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
+>
+  <div
+    class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white"
+  >
+    <div class="mt-3">
+      <!-- Header del Modal -->
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-2xl font-bold text-gray-900">Editar Usuario</h3>
+        <button
+          onclick="closeEditModal()"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <!-- Formulario de Edición -->
+      <form
+        id="editUserForm"
+        method="POST"
+        action="{{ url_for('users.update_user') }}"
+        class="space-y-6"
+      >
+        <input type="hidden" id="editUserId" name="user_id" />
+
+        <!-- Información Básica -->
+        <div>
+          <h4
+            class="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2"
+          >
+            <i class="fas fa-user mr-2 text-primary"></i>
+            Información Básica
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Email -->
+            <div class="col-span-2">
+              <label
+                for="editEmail"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Email <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                id="editEmail"
+                name="email"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <!-- Nombre -->
+            <div>
+              <label
+                for="editNombre"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Nombre
+              </label>
+              <input
+                type="text"
+                id="editNombre"
+                name="nombre"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <!-- Apellido -->
+            <div>
+              <label
+                for="editApellido"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Apellido
+              </label>
+              <input
+                type="text"
+                id="editApellido"
+                name="apellido"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <!-- Teléfono -->
+            <div>
+              <label
+                for="editTelefono"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Teléfono
+              </label>
+              <input
+                type="tel"
+                id="editTelefono"
+                name="telefono"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <!-- Fecha de Nacimiento -->
+            <div>
+              <label
+                for="editFechaNacimiento"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Fecha de Nacimiento
+              </label>
+              <input
+                type="date"
+                id="editFechaNacimiento"
+                name="fecha_nacimiento"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Información de Ubicación -->
+        <div>
+          <h4
+            class="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2"
+          >
+            <i class="fas fa-map-marker-alt mr-2 text-primary"></i>
+            Información de Ubicación
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Ciudad -->
+            <div>
+              <label
+                for="editCiudad"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Ciudad
+              </label>
+              <input
+                type="text"
+                id="editCiudad"
+                name="ciudad"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <!-- Estado -->
+            <div>
+              <label
+                for="editEstado"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Estado
+              </label>
+              <input
+                type="text"
+                id="editEstado"
+                name="estado"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <!-- Código Postal -->
+            <div>
+              <label
+                for="editCodigoPostal"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Código Postal
+              </label>
+              <input
+                type="text"
+                id="editCodigoPostal"
+                name="codigo_postal"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <!-- Dirección -->
+            <div class="col-span-2">
+              <label
+                for="editDireccion"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Dirección
+              </label>
+              <input
+                type="text"
+                id="editDireccion"
+                name="direccion"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <!-- Nacionalidad -->
+            <div>
+              <label
+                for="editNacionality"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Nacionalidad
+              </label>
+              <input
+                type="text"
+                id="editNacionality"
+                name="nacionality"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <!-- País -->
+            <div>
+              <label
+                for="editCountry"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                País
+              </label>
+              <input
+                type="text"
+                id="editCountry"
+                name="country"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Rol y Estado -->
+        <div>
+          <h4
+            class="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2"
+          >
+            <i class="fas fa-user-shield mr-2 text-primary"></i>
+            Rol y Estado
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Rol -->
+            <div>
+              <label
+                for="editRol"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Rol <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="editRol"
+                name="rol"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              >
+                <option value="lector">Lector</option>
+                <option value="admin">Admin</option>
+                <option value="superadmin">Super Admin</option>
+              </select>
+            </div>
+
+            <!-- Estado -->
+            <div>
+              <label
+                for="editActivo"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Estado
+              </label>
+              <select
+                id="editActivo"
+                name="activo"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              >
+                <option value="true">Activo</option>
+                <option value="false">Inactivo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            onclick="closeEditModal()"
+            class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          >
+            <i class="fas fa-save mr-2"></i>
+            Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  // Funciones para el modal de crear usuario
+  function openCreateUserModal() {
+    document.getElementById("createUserModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeCreateUserModal() {
+    document.getElementById("createUserModal").classList.add("hidden");
+    document.body.style.overflow = "auto";
+    // Limpiar formulario
+    document.getElementById("createUserForm").reset();
+  }
+
+  // Funciones para el modal de ver historial
+  function openHistoryModal(userId) {
+    // Actualizar información del usuario en el header
+    document.getElementById("historyUserInfo").textContent =
+      "Cargando historial...";
+    document.getElementById("historyUserModal").classList.remove("hidden");
+
+    // Cargar historial del usuario
+    fetch(`/users/get_user_history/${userId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          const user = data.user;
+          const history = data.history;
+          const content = document.getElementById("historyUserContent");
+
+          // Actualizar información del usuario en el header
+          document.getElementById(
+            "historyUserInfo"
+          ).textContent = `Historial de ${user.nombre || user.email}`;
+
+          content.innerHTML = generateHistoryHTML(user, history);
+        } else {
+          document.getElementById("historyUserInfo").textContent =
+            "Error al cargar historial";
+          document.getElementById("historyUserContent").innerHTML =
+            '<p class="text-center text-red-500">Error al cargar el historial del usuario</p>';
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        document.getElementById("historyUserInfo").textContent =
+          "Error al cargar historial";
+        document.getElementById("historyUserContent").innerHTML =
+          '<p class="text-center text-red-500">Error al cargar el historial del usuario</p>';
+      });
+  }
+
+  function generateHistoryHTML(user, history) {
+    return `
+      <!-- Tabs -->
+      <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+        <div class="border-b border-gray-200">
+          <nav class="flex space-x-8 px-6" aria-label="Tabs">
+            <button onclick="mostrarTabHistorial('actividades')" id="tab-actividades" 
+                    class="tab-button active py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600">
+              <i class="fas fa-history mr-2"></i>Actividades
+            </button>
+            <button onclick="mostrarTabHistorial('archivos')" id="tab-archivos" 
+                    class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+              <i class="fas fa-file-alt mr-2"></i>Archivos
+            </button>
+            <button onclick="mostrarTabHistorial('carpetas')" id="tab-carpetas" 
+                    class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+              <i class="fas fa-folder mr-2"></i>Carpetas
+            </button>
+          </nav>
+        </div>
+
+        <!-- Contenido de Actividades -->
+        <div id="contenido-actividades" class="tab-content">
+          <div class="p-6">
+            ${
+              history.length > 0
+                ? `
+              <div class="space-y-4">
+                ${history
+                  .map(
+                    (activity) => `
+                  <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <i class="fas fa-${getActivityIcon(
+                        activity.tipo
+                      )} text-blue-600"></i>
+                    </div>
+                    <div class="flex-1">
+                      <p class="font-medium text-gray-900">${
+                        activity.titulo
+                      }</p>
+                      <p class="text-sm text-gray-600">${
+                        activity.descripcion || "Sin descripción"
+                      }</p>
+                      <p class="text-xs text-gray-500 mt-1">${
+                        activity.fecha
+                      }</p>
+                      ${
+                        activity.ip_address
+                          ? `<p class="text-xs text-gray-400">IP: ${activity.ip_address}</p>`
+                          : ""
+                      }
+                    </div>
+                    <div class="flex-shrink-0">
+                      <span class="bg-${getActivityColor(
+                        activity.tipo
+                      )}-100 text-${getActivityColor(
+                      activity.tipo
+                    )}-800 px-2 py-1 rounded-full text-xs font-medium">
+                        ${getActivityStatus(activity.tipo)}
+                      </span>
+                    </div>
+                  </div>
+                `
+                  )
+                  .join("")}
+              </div>
+            `
+                : `
+              <div class="text-center py-8">
+                <i class="fas fa-history text-gray-300 text-4xl mb-4"></i>
+                <p class="text-gray-500">No hay actividades registradas para este usuario</p>
+              </div>
+            `
+            }
+          </div>
+        </div>
+
+        <!-- Contenido de Archivos -->
+        <div id="contenido-archivos" class="tab-content hidden">
+          <div class="p-6">
+            <div class="text-center py-8">
+              <i class="fas fa-file-alt text-gray-300 text-4xl mb-4"></i>
+              <p class="text-gray-500">No hay archivos registrados para este usuario</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contenido de Carpetas -->
+        <div id="contenido-carpetas" class="tab-content hidden">
+          <div class="p-6">
+            <div class="text-center py-8">
+              <i class="fas fa-folder text-gray-300 text-3xl mb-3"></i>
+              <p class="text-gray-500">No hay carpetas registradas para este usuario</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function closeHistoryModal() {
+    document.getElementById("historyUserModal").classList.add("hidden");
+    document.body.style.overflow = "auto";
+    // Limpiar contenido
+    document.getElementById("historyUserInfo").textContent = "";
+    document.getElementById("historyUserContent").innerHTML = `
+      <div class="flex justify-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    `;
+  }
+
+  // Funciones auxiliares para el historial
+  function getActivityIcon(tipo) {
+    const icons = {
+      login: "fa-sign-in-alt",
+      logout: "fa-sign-out-alt",
+      file_upload: "fa-upload",
+      file_delete: "fa-trash",
+      file_rename: "fa-edit",
+      file_move: "fa-exchange-alt",
+      user_update: "fa-user-edit",
+      beneficiary_add: "fa-user-plus",
+      beneficiary_remove: "fa-user-minus",
+      permission_change: "fa-key",
+      system: "fa-cog",
+    };
+    return icons[tipo] || "fa-circle";
+  }
+
+  function getActivityColor(tipo) {
+    const colors = {
+      login: "green",
+      logout: "gray",
+      file_upload: "blue",
+      file_delete: "red",
+      file_rename: "yellow",
+      file_move: "purple",
+      user_update: "indigo",
+      beneficiary_add: "green",
+      beneficiary_remove: "red",
+      permission_change: "orange",
+      system: "gray",
+    };
+    return colors[tipo] || "gray";
+  }
+
+  function getActivityStatus(tipo) {
+    const status = {
+      login: "Exitoso",
+      logout: "Completado",
+      file_upload: "Subido",
+      file_delete: "Eliminado",
+      file_rename: "Renombrado",
+      file_move: "Movido",
+      user_update: "Actualizado",
+      beneficiary_add: "Agregado",
+      beneficiary_remove: "Eliminado",
+      permission_change: "Modificado",
+      system: "Realizado",
+    };
+    return status[tipo] || "Completado";
+  }
+
+  function mostrarTabHistorial(tabName) {
+    // Ocultar todos los contenidos
+    document.querySelectorAll(".tab-content").forEach((content) => {
+      content.classList.add("hidden");
+    });
+
+    // Remover clase active de todos los tabs
+    document.querySelectorAll(".tab-button").forEach((button) => {
+      button.classList.remove("active", "border-blue-500", "text-blue-600");
+      button.classList.add("border-transparent", "text-gray-500");
+    });
+
+    // Mostrar contenido seleccionado
+    document.getElementById(`contenido-${tabName}`).classList.remove("hidden");
+
+    // Activar tab seleccionado
+    document
+      .getElementById(`tab-${tabName}`)
+      .classList.add("active", "border-blue-500", "text-blue-600");
+    document
+      .getElementById(`tab-${tabName}`)
+      .classList.remove("border-transparent", "text-gray-500");
+  }
+
+  // Funciones para el modal de editar
+  function openEditModal(userId) {
+    // Cargar datos del usuario para editar
+    fetch(`/users/get_user/${userId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          const user = data.user;
+
+          // Llenar el formulario con los datos del usuario
+          document.getElementById("editUserId").value = user.id;
+          document.getElementById("editEmail").value = user.email;
+          document.getElementById("editNombre").value = user.nombre || "";
+          document.getElementById("editApellido").value = user.apellido || "";
+          document.getElementById("editTelefono").value = user.telefono || "";
+          document.getElementById("editFechaNacimiento").value =
+            user.fecha_nacimiento || "";
+          document.getElementById("editCiudad").value = user.ciudad || "";
+          document.getElementById("editEstado").value = user.estado || "";
+          document.getElementById("editCodigoPostal").value =
+            user.codigo_postal || "";
+          document.getElementById("editDireccion").value = user.direccion || "";
+          document.getElementById("editNacionality").value =
+            user.nacionality || "";
+          document.getElementById("editCountry").value = user.country || "";
+          document.getElementById("editRol").value = user.rol;
+          document.getElementById("editActivo").value = user.activo.toString();
+
+          document.getElementById("editUserModal").classList.remove("hidden");
+          document.body.style.overflow = "hidden";
+        } else {
+          alert("Error al cargar los datos del usuario");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("Error al cargar los datos del usuario");
+      });
+  }
+
+  function closeEditModal() {
+    document.getElementById("editUserModal").classList.add("hidden");
+    document.body.style.overflow = "auto";
+  }
+
+  // Cerrar modal al hacer clic fuera de él
+  document
+    .getElementById("createUserModal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeCreateUserModal();
+      }
+    });
+
+  // Manejo del formulario
+  document
+    .getElementById("createUserForm")
+    .addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      // Validación básica
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        alert("Email y contraseña son obligatorios");
+        return;
+      }
+
+      if (password.length < 6) {
+        alert("La contraseña debe tener al menos 6 caracteres");
+        return;
+      }
+
+      // Enviar formulario
+      this.submit();
+    });
+
+  // Manejo del formulario de edición
+  document
+    .getElementById("editUserForm")
+    .addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      // Validación básica
+      const email = document.getElementById("editEmail").value;
+
+      if (!email) {
+        alert("Email es obligatorio");
+        return;
+      }
+
+      // Enviar formulario
+      this.submit();
+    });
+
+  // Cerrar modales al hacer clic fuera de ellos
+  document
+    .getElementById("historyUserModal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeHistoryModal();
+      }
+    });
+
+  document
+    .getElementById("editUserModal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeEditModal();
+      }
+    });
+
+  // Filtros de la tabla (solo para la página actual)
+  document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("search");
+    const filterRol = document.getElementById("filter-rol");
+    const filterStatus = document.getElementById("filter-status");
+    const clearFiltersBtn = document.getElementById("clear-filters");
+    const tableBody = document.getElementById("users-table-body");
+    const rows = tableBody.querySelectorAll("tr");
+
+    function filterUsers() {
+      const searchTerm = searchInput.value.toLowerCase();
+      const selectedRol = filterRol.value.toLowerCase();
+      const selectedStatus = filterStatus.value.toLowerCase();
+
+      rows.forEach((row) => {
+        const userName = row
+          .querySelector("td:first-child")
+          .textContent.toLowerCase();
+        const userEmail = row
+          .querySelector("td:nth-child(2)")
+          .textContent.toLowerCase();
+        const userRol = row
+          .querySelector("td:nth-child(3)")
+          .textContent.toLowerCase();
+        const userStatus = row
+          .querySelector("td:nth-child(4)")
+          .textContent.toLowerCase();
+
+        const matchesSearch =
+          userName.includes(searchTerm) || userEmail.includes(searchTerm);
+        const matchesRol = !selectedRol || userRol.includes(selectedRol);
+        const matchesStatus =
+          !selectedStatus || userStatus.includes(selectedStatus);
+
+        if (matchesSearch && matchesRol && matchesStatus) {
+          row.style.display = "";
+        } else {
+          row.style.display = "none";
+        }
+      });
+    }
+
+    // Solo aplicar filtros si hay usuarios en la página actual
+    if (rows.length > 0) {
+      searchInput.addEventListener("input", filterUsers);
+      filterRol.addEventListener("change", filterUsers);
+      filterStatus.addEventListener("change", filterUsers);
+
+      clearFiltersBtn.addEventListener("click", function () {
+        searchInput.value = "";
+        filterRol.value = "";
+        filterStatus.value = "";
+        filterUsers();
+      });
+    }
+  });
+</script>
+{% endblock %}

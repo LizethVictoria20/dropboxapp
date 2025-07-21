@@ -64,6 +64,17 @@ def create_app():
         }
         return role_map.get(role, role.title())
 
+    @app.template_filter('from_json')
+    def from_json(json_string):
+        """Convierte una cadena JSON a un objeto Python"""
+        import json
+        if json_string is None:
+            return []
+        try:
+            return json.loads(json_string)
+        except (json.JSONDecodeError, TypeError):
+            return []
+
     from .routes.auth import bp as auth_bp
     from .routes.main import bp as main_bp
     from .routes.users import bp as users_bp
