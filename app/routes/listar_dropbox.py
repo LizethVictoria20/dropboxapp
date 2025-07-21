@@ -120,8 +120,18 @@ def carpetas_dropbox():
             usuarios = User.query.all()
             # Admin ve todas las carpetas
             folders = Folder.query.all()
+        elif current_user.rol == "cliente":
+            # Cliente ve sus propias carpetas y las de sus beneficiarios
+            usuarios = [current_user]
+            # Obtener beneficiarios del cliente
+            beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).all()
+            usuarios.extend(beneficiarios)
+            
+            # Obtener carpetas del cliente y sus beneficiarios
+            user_ids = [current_user.id] + [b.id for b in beneficiarios]
+            folders = Folder.query.filter(Folder.user_id.in_(user_ids)).all()
         else:
-            # Solo el usuario actual (cliente ve solo sus carpetas públicas)
+            # Otros roles (lector, etc.)
             usuarios = [current_user]
             folders = Folder.query.filter_by(user_id=current_user.id, es_publica=True).all()
 
@@ -129,8 +139,13 @@ def carpetas_dropbox():
         folders_por_ruta = {f.dropbox_path: f for f in folders}
 
         for user in usuarios:
+            # Crear carpeta raíz si no existe
             if not user.dropbox_folder_path:
-                user.dropbox_folder_path = f"/{user.email}"
+                if hasattr(user, 'email'):  # Es un User
+                    user.dropbox_folder_path = f"/{user.email}"
+                else:  # Es un Beneficiario
+                    user.dropbox_folder_path = f"/{user.titular.email}/{user.nombre}"
+                
                 try:
                     dbx.files_create_folder_v2(user.dropbox_folder_path)
                 except dropbox.exceptions.ApiError as e:
@@ -142,14 +157,21 @@ def carpetas_dropbox():
             try:
                 estructura = obtener_estructura_dropbox(path=path)
             except Exception as e:
-                print(f"Error obteniendo estructura para usuario {user.email}: {e}")
+                user_identifier = user.email if hasattr(user, 'email') else user.nombre
+                print(f"Error obteniendo estructura para usuario {user_identifier}: {e}")
                 estructura = {"_subcarpetas": {}, "_archivos": []}
             
             # Filtrar la estructura según los permisos del usuario
-            if current_user.rol != "admin":
-                # Para clientes, solo mostrar carpetas que estén en folders_por_ruta
+            if current_user.rol == "cliente":
+                # Para clientes, mostrar carpetas de ellos mismos y sus beneficiarios
                 rutas_visibles = set(folders_por_ruta.keys())
-                estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user.email)
+                user_identifier = user.email if hasattr(user, 'email') else user.nombre
+                estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user_identifier)
+            elif current_user.rol != "admin":
+                # Para otros roles, solo mostrar carpetas públicas
+                rutas_visibles = set(folders_por_ruta.keys())
+                user_identifier = user.email if hasattr(user, 'email') else user.nombre
+                estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user_identifier)
             
             estructuras_usuarios[user.id] = estructura
 
