@@ -33,8 +33,10 @@ def obtener_estructura_dropbox(path="", dbx=None):
         dbx = dropbox.Dropbox(api_key)
     
     try:
-        # Primero obtener solo el contenido del directorio actual (no recursivo)
+        # Obtener contenido del directorio actual (no recursivo)
+        print(f"Obteniendo estructura para path: '{path}'")
         res = dbx.files_list_folder(path, recursive=False)
+        print(f"Encontrados {len(res.entries)} elementos en '{path}'")
     except dropbox.exceptions.ApiError as e:
         print(f"Error accediendo a Dropbox path '{path}': {e}")
         # Retornar estructura vacía si el path no existe
@@ -44,12 +46,64 @@ def obtener_estructura_dropbox(path="", dbx=None):
 
     for entry in res.entries:
         if isinstance(entry, dropbox.files.FolderMetadata):
-            # Es una carpeta
-            estructura["_subcarpetas"][entry.name] = {"_subcarpetas": {}, "_archivos": []}
+            # Es una carpeta - explorar recursivamente
+            print(f"  Carpeta encontrada: {entry.name}")
+            sub_path = f"{path}/{entry.name}" if path else f"/{entry.name}"
+            sub_estructura = obtener_estructura_dropbox(path=sub_path, dbx=dbx)
+            estructura["_subcarpetas"][entry.name] = sub_estructura
         elif isinstance(entry, dropbox.files.FileMetadata):
             # Es un archivo
+            print(f"  Archivo encontrado: {entry.name}")
             estructura["_archivos"].append(entry.name)
 
+    print(f"Estructura final para '{path}': {len(estructura['_subcarpetas'])} carpetas, {len(estructura['_archivos'])} archivos")
+    return estructura
+
+def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, current_depth=0):
+    """
+    Versión optimizada que obtiene la estructura de forma recursiva pero con límite de profundidad
+    para evitar problemas de rendimiento con estructuras muy profundas
+    """
+    if dbx is None:
+        api_key = current_app.config.get("DROPBOX_API_KEY")
+        if not api_key:
+            print("Warning: DROPBOX_API_KEY no configurado, retornando estructura vacía")
+            return {"_subcarpetas": {}, "_archivos": []}
+        dbx = dropbox.Dropbox(api_key)
+    
+    # Limitar la profundidad para evitar recursión infinita
+    if current_depth >= max_depth:
+        print(f"Alcanzada profundidad máxima ({max_depth}) para path: '{path}'")
+        return {"_subcarpetas": {}, "_archivos": []}
+    
+    try:
+        print(f"Obteniendo estructura para path: '{path}' (profundidad: {current_depth})")
+        res = dbx.files_list_folder(path, recursive=False)
+        print(f"Encontrados {len(res.entries)} elementos en '{path}'")
+    except dropbox.exceptions.ApiError as e:
+        print(f"Error accediendo a Dropbox path '{path}': {e}")
+        return {"_subcarpetas": {}, "_archivos": []}
+    
+    estructura = {"_subcarpetas": {}, "_archivos": []}
+
+    for entry in res.entries:
+        if isinstance(entry, dropbox.files.FolderMetadata):
+            # Es una carpeta - explorar recursivamente
+            print(f"  Carpeta encontrada: {entry.name}")
+            sub_path = f"{path}/{entry.name}" if path else f"/{entry.name}"
+            sub_estructura = obtener_estructura_dropbox_optimizada(
+                path=sub_path, 
+                dbx=dbx, 
+                max_depth=max_depth, 
+                current_depth=current_depth + 1
+            )
+            estructura["_subcarpetas"][entry.name] = sub_estructura
+        elif isinstance(entry, dropbox.files.FileMetadata):
+            # Es un archivo
+            print(f"  Archivo encontrado: {entry.name}")
+            estructura["_archivos"].append(entry.name)
+
+    print(f"Estructura final para '{path}': {len(estructura['_subcarpetas'])} carpetas, {len(estructura['_archivos'])} archivos")
     return estructura
 
 def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
@@ -146,7 +200,8 @@ def carpetas_dropbox():
 
             path = user.dropbox_folder_path
             try:
-                estructura = obtener_estructura_dropbox(path=path)
+                # Usar la función optimizada con recursión limitada para mejor rendimiento
+                estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
             except Exception as e:
                 user_identifier = user.email if hasattr(user, 'email') else user.nombre
                 print(f"Error obteniendo estructura para usuario {user_identifier}: {e}")
@@ -214,6 +269,7 @@ def obtener_info_carpeta(ruta):
 @login_required
 def obtener_contenido_carpeta(ruta):
     """Endpoint para obtener el contenido de una carpeta específica"""
+    print(f"API: Obteniendo contenido de carpeta: {ruta}")
     try:
         # Verificar permisos
         if current_user.rol == "cliente":
@@ -225,11 +281,14 @@ def obtener_contenido_carpeta(ruta):
             # Verificar que la carpeta pertenece al cliente o sus beneficiarios
             carpeta = Folder.query.filter_by(dropbox_path=f"/{ruta}").first()
             if carpeta and carpeta.user_id not in user_ids:
+                print(f"API: Permiso denegado para carpeta {ruta}")
                 return jsonify({"success": False, "error": "No tienes permisos para acceder a esta carpeta"}), 403
         
         # Obtener estructura de la carpeta
+        print(f"API: Creando cliente Dropbox para ruta: {ruta}")
         dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
-        estructura = obtener_estructura_dropbox(path=f"/{ruta}", dbx=dbx)
+        print(f"API: Llamando a obtener_estructura_dropbox_optimizada con path: /{ruta}")
+        estructura = obtener_estructura_dropbox_optimizada(path=f"/{ruta}", dbx=dbx, max_depth=3)
         
         # Determinar el usuario_id basado en la ruta
         usuario_id = None
@@ -237,6 +296,7 @@ def obtener_contenido_carpeta(ruta):
             # Para clientes, el usuario_id será el del cliente actual
             usuario_id = current_user.id
         
+        print(f"API: Retornando estructura para {ruta}: {len(estructura.get('_subcarpetas', {}))} carpetas, {len(estructura.get('_archivos', []))} archivos")
         return jsonify({
             "success": True,
             "estructura": estructura,

@@ -447,11 +447,21 @@ block content %}
     }
 
     if (div.classList.contains("hidden")) {
+      // Expandir la carpeta
       div.classList.remove("hidden");
       if (icon) {
         icon.style.transform = "rotate(90deg)";
       }
+
+      // Verificar si el contenido ya está cargado
+      const contenido = div.querySelector(".ml-6");
+      if (!contenido || contenido.children.length === 0) {
+        // Si no hay contenido, cargarlo dinámicamente
+        console.log("Cargando contenido dinámico para:", folderId);
+        cargarContenidoCarpeta(folderId, div);
+      }
     } else {
+      // Contraer la carpeta
       div.classList.add("hidden");
       if (icon) {
         icon.style.transform = "rotate(0deg)";
@@ -464,14 +474,23 @@ block content %}
     console.log("DOM cargado, inicializando funciones...");
 
     window.cargarContenidoCarpeta = function (folderId, container) {
+      console.log("cargarContenidoCarpeta llamado con:", folderId);
+      
       // Mostrar indicador de carga
       container.innerHTML =
         '<div class="text-center py-4"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div><p class="text-sm text-gray-500 mt-2">Cargando...</p></div>';
 
       // Hacer petición AJAX para obtener el contenido de la carpeta
-      fetch(`/api/carpeta_contenido/${encodeURIComponent(folderId)}`)
-        .then((response) => response.json())
+      const url = `/api/carpeta_contenido/${encodeURIComponent(folderId)}`;
+      console.log("Haciendo petición a:", url);
+      
+      fetch(url)
+        .then((response) => {
+          console.log("Respuesta recibida:", response.status);
+          return response.json();
+        })
         .then((data) => {
+          console.log("Datos recibidos:", data);
           if (data.success) {
             // Renderizar el contenido de la carpeta
             container.innerHTML = renderTreeContent(
@@ -480,6 +499,7 @@ block content %}
               data.usuario_id
             );
           } else {
+            console.error("Error en respuesta:", data.error);
             container.innerHTML =
               '<div class="text-center py-4 text-red-500">Error al cargar la carpeta</div>';
           }
@@ -492,10 +512,12 @@ block content %}
     };
 
     window.renderTreeContent = function (estructura, parent, usuarioId) {
+      console.log("renderTreeContent llamado con:", {estructura, parent, usuarioId});
       let html = '<div class="ml-6 space-y-2">';
 
       // Renderizar archivos
       if (estructura._archivos && estructura._archivos.length > 0) {
+        console.log(`Renderizando ${estructura._archivos.length} archivos:`, estructura._archivos);
         estructura._archivos.forEach((archivo) => {
           html += `
           <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
@@ -770,11 +792,23 @@ block content %}
       }
 
       if (div.classList.contains("hidden")) {
+        // Expandir la carpeta
         div.classList.remove("hidden");
         if (icon) {
           icon.style.transform = "rotate(90deg)";
         }
+        
+        // Verificar si el contenido ya está cargado
+        const contenido = div.querySelector('.ml-6');
+        if (!contenido || contenido.children.length === 0) {
+          // Si no hay contenido, cargarlo dinámicamente
+          console.log("Cargando contenido dinámico para:", folderId);
+          if (typeof window.cargarContenidoCarpeta !== "undefined") {
+            cargarContenidoCarpeta(folderId, div);
+          }
+        }
       } else {
+        // Contraer la carpeta
         div.classList.add("hidden");
         if (icon) {
           icon.style.transform = "rotate(0deg)";
