@@ -28,8 +28,8 @@ folders_por_ruta={}) %}
       <span class="text-gray-700 font-medium">{{ archivo }}</span>
     </div>
 
-    {# Solo mostrar menú de tres puntos si es admin #} {% if usuario_actual and
-    usuario_actual.rol == 'admin' %}
+    {# Solo mostrar menú de tres puntos si es admin o cliente #} {% if usuario_actual and
+    (usuario_actual.rol == 'admin' or usuario_actual.rol == 'cliente') %}
     <div class="relative">
       <button
         onclick="toggleFileMenu('file-menu-{{ loop.index }}', event)"
@@ -158,8 +158,8 @@ folders_por_ruta={}) %}
           </div>
         </div>
 
-        {# Solo mostrar menú de tres puntos si es admin #} {% if usuario_actual
-        and usuario_actual.rol == 'admin' %}
+        {# Solo mostrar menú de tres puntos si es admin o cliente #} {% if usuario_actual
+        and (usuario_actual.rol == 'admin' or usuario_actual.rol == 'cliente') %}
         <div class="relative">
           <button
             onclick="toggleFolderMenu('folder-menu-{{ loop.index }}', event)"
