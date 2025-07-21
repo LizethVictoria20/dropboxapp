@@ -125,3 +125,17 @@ class ClienteRegistrationForm(FlaskForm):
         user_with_email = User.query.filter_by(email=field.data).first()
         if user_with_email:
             raise ValidationError('Este correo electrónico ya está registrado.')
+
+class GeneralForm(FlaskForm):
+    pass
+
+class BeneficiarioForm(FlaskForm):
+    nombre = StringField('Nombre', validators=[DataRequired(), Length(max=120)])
+    email = StringField('Correo electrónico', validators=[DataRequired(), Email()])
+    fecha_nacimiento = DateField('Fecha de nacimiento', validators=[Optional()])
+    
+    def validate_email(self, field):
+        from app.models import Beneficiario
+        beneficiario_existente = Beneficiario.query.filter_by(email=field.data).first()
+        if beneficiario_existente:
+            raise ValidationError('Este correo electrónico ya está registrado para otro beneficiario.')

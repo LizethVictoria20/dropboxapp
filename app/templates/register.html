@@ -40,62 +40,47 @@
     </script>
   </head>
   <body class="font-sans bg-surface">
-    {% if success %}
-    <div
-      class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center"
-    >
-      <div
-        class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center"
-      >
-        <div class="flex justify-center mb-4">
-          <div
-            class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center"
-          >
-            <svg
-              class="w-10 h-10 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"
-              ></path>
-            </svg>
-          </div>
-        </div>
-        <h2 class="text-2xl font-bold text-green-700 mb-3">
-          ¡Registro Exitoso!
-        </h2>
-        <p class="text-gray-600 mb-4">
-          Tu cuenta ha sido creada correctamente.
-        </p>
-        <p class="text-gray-600 text-sm">
-          Serás redirigido a la página de inicio de sesión en 4 segundos.
-        </p>
-        <script>
-          setTimeout(function () {
-            window.location.href = "{{ url_for('auth.login') }}";
-          }, 4000);
-        </script>
-      </div>
-    </div>
-    {% endif %} 
-    
     {% if errors and errors.general %}
     <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
       <p class="text-red-600 text-sm">{{ errors.general }}</p>
     </div>
     {% endif %}
-    
+
+    <!-- Modal de confirmación para agregar beneficiarios -->
+    {% if show_beneficiary_modal %}
+    <div id="beneficiaryModal" class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center">
+        <div class="flex justify-center mb-4">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+        </div>
+        <h2 class="text-2xl font-bold text-green-700 mb-3">¡Registro Exitoso!</h2>
+        <p class="text-gray-600 mb-6">Tu cuenta ha sido creada correctamente.</p>
+        <div class="space-y-3">
+          <button
+            onclick="window.location.href='{{ url_for('auth.add_beneficiary', user_id=user_id) }}'"
+            class="w-full bg-primary hover:bg-primary-dark py-3 px-6 rounded-xl text-white font-medium transition-all duration-300 hover:shadow-lg"
+          >
+            <i class="fas fa-user-plus mr-2"></i>
+            Agregar Beneficiarios
+          </button>
+          <button
+            onclick="completeRegistration()"
+            class="w-full bg-gray-200 hover:bg-gray-300 py-3 px-6 rounded-xl text-gray-700 font-medium transition-all duration-300"
+          >
+            Continuar sin Beneficiarios
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="h-screen flex flex-col lg:flex-row overflow-hidden">
       <!-- Panel lateral izquierdo -->
-      <div
-        class="lg:w-3/5 order-2 lg:order-1 relative h-full hidden lg:block overflow-hidden"
-      >
+      <div class="lg:w-2/5 order-2 lg:order-1 relative h-full hidden lg:block overflow-hidden">
         <div class="absolute inset-0 overflow-hidden">
           <img
             src="{{ url_for('static', filename='image/new_york.jpg') }}"
@@ -103,24 +88,12 @@
             class="w-full h-full object-cover filter"
           />
         </div>
-
-        <div
-          class="absolute inset-0 bg-gradient-to-br from-primary-light/75 via-primary/80 to-primary-dark/85"
-        ></div>
-
-        <!-- Decoración sutil (oculto en móvil) -->
-        <div
-          class="absolute top-0 right-0 w-72 h-72 bg-accent-light/10 rounded-full -translate-y-1/3 translate-x-1/3 blur-3xl hidden sm:block"
-        ></div>
-        <div
-          class="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full translate-y-1/3 -translate-x-1/3 blur-3xl hidden sm:block"
-        ></div>
-
+        <div class="absolute inset-0 bg-gradient-to-br from-primary-light/75 via-primary/80 to-primary-dark/85"></div>
+        <div class="absolute top-0 right-0 w-72 h-72 bg-accent-light/10 rounded-full -translate-y-1/3 translate-x-1/3 blur-3xl hidden sm:block"></div>
+        <div class="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full translate-y-1/3 -translate-x-1/3 blur-3xl hidden sm:block"></div>
         <div class="relative z-10 h-full flex flex-col p-6 sm:p-8 lg:p-12">
           <div class="flex-1 flex flex-col justify-center py-4 sm:py-6">
-            <div
-              class="rounded-lg sm:p-4 mb-6 bg-primary-dark/30 backdrop-blur-sm inline-block"
-            >
+            <div class="rounded-lg sm:p-4 mb-6 bg-primary-dark/30 backdrop-blur-sm inline-block">
               <img
                 src="{{ url_for('static', filename='image/Logo.png') }}"
                 alt="Inmigración OK Abogados"
@@ -128,53 +101,27 @@
                 style="height: auto"
               />
             </div>
-
-            <div
-              class="max-w-2xl backdrop-blur-sm bg-primary-dark/40 p-6 rounded-2xl"
-            >
-              <h1
-                class="text-2xl sm:text-3xl font-bold text-white mb-4 sm:mb-6 leading-tight"
-              >
-                Bienvenido al sistema de recepción de evidencias y documentos de
-                Inmigración Ok abogados.
+            <div class="max-w-2xl backdrop-blur-sm bg-primary-dark/40 p-6 rounded-2xl">
+              <h1 class="text-2xl sm:text-3xl font-bold text-white mb-4 sm:mb-6 leading-tight">
+                Bienvenido al sistema de recepción de evidencias y documentos de Inmigración Ok abogados.
               </h1>
               <p class="text-white/90 mb-8 sm:mb-10 text-base leading-relaxed">
-                Comparta sus documentos y archivos con nuestro equipo por medio
-                de esta plataforma.
+                Comparta sus documentos y archivos con nuestro equipo por medio de esta plataforma.
               </p>
             </div>
           </div>
-
-          <div
-            class="mt-8 lg:mt-10 flex justify-center sm:justify-start backdrop-blur-sm bg-primary-dark/30 p-4 rounded-full inline-flex w-[12rem]"
-          >
+          <div class="mt-8 lg:mt-10 flex justify-center sm:justify-start backdrop-blur-sm bg-primary-dark/30 p-4 rounded-full inline-flex w-[12rem]">
             <div class="flex space-x-8 sm:space-x-6">
-              <a
-                href="https://www.youtube.com/@inmigracionok"
-                class="text-white/90 hover:text-white transition-colors hover:-translate-y-1 transform duration-300"
-                target="_blank"
-              >
+              <a href="https://www.youtube.com/@inmigracionok" class="text-white/90 hover:text-white transition-colors hover:-translate-y-1 transform duration-300" target="_blank">
                 <i class="fab fa-youtube text-xl"></i>
               </a>
-              <a
-                href="https://www.facebook.com/inmigracionOK?mibextid=wwXIfr&rdid=PmwOIuNtYXfBByRR&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F18mjq4r3Uj%2F%3Fmibextid%3DwwXIfr"
-                class="text-white/90 hover:text-white transition-colors hover:-translate-y-1 transform duration-300"
-                target="_blank"
-              >
+              <a href="https://www.facebook.com/inmigracionOK" class="text-white/90 hover:text-white transition-colors hover:-translate-y-1 transform duration-300" target="_blank">
                 <i class="fab fa-facebook text-xl"></i>
               </a>
-              <a
-                href="https://www.instagram.com/inmigracionok/?igsh=MTFnM3VvdHVkYms5YQ%3D%3D"
-                class="text-white/90 hover:text-white transition-colors hover:-translate-y-1 transform duration-300"
-                target="_blank"
-              >
+              <a href="https://www.instagram.com/inmigracionok/" class="text-white/90 hover:text-white transition-colors hover:-translate-y-1 transform duration-300" target="_blank">
                 <i class="fab fa-instagram text-xl"></i>
               </a>
-              <a
-                href="https://www.tiktok.com/@inmigracionokabogados?_t=ZS-8tq6k7AsXOk&_r=1"
-                class="text-white/90 hover:text-white transition-colors hover:-translate-y-1 transform duration-300"
-                target="_blank"
-              >
+              <a href="https://www.tiktok.com/@inmigracionokabogados" class="text-white/90 hover:text-white transition-colors hover:-translate-y-1 transform duration-300" target="_blank">
                 <i class="fab fa-tiktok text-xl"></i>
               </a>
             </div>
@@ -183,9 +130,7 @@
       </div>
 
       <!-- Panel registro derecho -->
-      <div
-        class="lg:w-3/5 order-2 h-screen flex items-center justify-center p-4 pt-16 lg:pt-0 lg:p-8 overflow-auto bg-surface-light"
-      >
+      <div class="lg:w-3/5 order-2 h-screen flex items-center justify-center p-4 pt-16 lg:pt-0 lg:p-8 overflow-auto bg-surface-light">
         <div class="w-full max-w-2xl mt-[23rem]">
           <div class="mb-6">
             <h2 class="text-2xl font-bold text-primary-dark mb-2">
@@ -195,14 +140,9 @@
               Crea tu cuenta para acceder a nuestros servicios
             </p>
           </div>
-
-          <div
-            class="bg-white rounded-2xl shadow-lg p-8 border border-surface-dark/10"
-          >
-            <form method="POST">
+          <div class="bg-white rounded-2xl shadow-lg p-8 border border-surface-dark/10">
+            <form method="POST" action="{{ url_for('auth.register') }}">
               {{ form.hidden_tag() }}
-              
-              <!-- Mostrar errores de validación -->
               {% if errors %}
                 <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
                   {% for field, error in errors.items() %}
@@ -212,266 +152,94 @@
                   {% endfor %}
                 </div>
               {% endif %}
-              
               <div class="grid grid-cols-12 gap-4 mb-4">
                 <div class="col-span-12 md:col-span-6">
-                  <label
-                    for="name"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Nombres</label
-                  >
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value="{{ form.name.data or '' }}"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.name.errors %}border-red-300{% endif %}"
-                    placeholder="Nombres"
-                  />
+                  <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nombres</label>
+                  <input type="text" id="name" name="name" value="{{ form.name.data or '' }}" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.name.errors %}border-red-300{% endif %}" placeholder="Nombres" />
                 </div>
                 <div class="col-span-12 md:col-span-6">
-                  <label
-                    for="lastname"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Apellidos</label
-                  >
-                  <input
-                    type="text"
-                    id="lastname"
-                    name="lastname"
-                    value="{{ form.lastname.data or '' }}"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.lastname.errors %}border-red-300{% endif %}"
-                    placeholder="Apellidos"
-                  />
+                  <label for="lastname" class="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
+                  <input type="text" id="lastname" name="lastname" value="{{ form.lastname.data or '' }}" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.lastname.errors %}border-red-300{% endif %}" placeholder="Apellidos" />
                 </div>
                 <div class="col-span-12">
-                  <label
-                    for="email"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Correo electrónico</label
-                  >
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value="{{ form.email.data or '' }}"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.email.errors %}border-red-300{% endif %}"
-                    placeholder="ejemplo@correo.com"
-                  />
+                  <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
+                  <input type="email" id="email" name="email" value="{{ form.email.data or '' }}" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.email.errors %}border-red-300{% endif %}" placeholder="ejemplo@correo.com" />
                 </div>
                 <div class="col-span-12 md:col-span-6">
-                  <label
-                    for="telephone"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Teléfono</label
-                  >
-                  <input
-                    type="tel"
-                    id="telephone"
-                    name="telephone"
-                    value="{{ form.telephone.data or '' }}"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.telephone.errors %}border-red-300{% endif %}"
-                    placeholder="+57 300 1234567"
-                  />
-                </div>
-
-                <div class="col-span-12 md:col-span-6">
-                  <label
-                    for="zip_code"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Código Postal</label
-                  >
-                  <input
-                    type="text"
-                    id="zip_code"
-                    name="zip_code"
-                    value="{{ form.zip_code.data or '' }}"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.zip_code.errors %}border-red-300{% endif %}"
-                  />
+                  <label for="telephone" class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                  <input type="tel" id="telephone" name="telephone" value="{{ form.telephone.data or '' }}" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.telephone.errors %}border-red-300{% endif %}" placeholder="+57 300 1234567" />
                 </div>
                 <div class="col-span-12 md:col-span-6">
-                  <label
-                    for="city"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Ciudad</label
-                  >
-                  <input
-                    type="text"
-                    id="city"
-                    name="city"
-                    value="{{ form.city.data or '' }}"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.city.errors %}border-red-300{% endif %}"
-                  />
+                  <label for="zip_code" class="block text-sm font-medium text-gray-700 mb-1">Código Postal</label>
+                  <input type="text" id="zip_code" name="zip_code" value="{{ form.zip_code.data or '' }}" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.zip_code.errors %}border-red-300{% endif %}" />
                 </div>
                 <div class="col-span-12 md:col-span-6">
-                  <label
-                    for="state"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Estado</label
-                  >
-                  <input
-                    type="text"
-                    id="state"
-                    name="state"
-                    value="{{ form.state.data or '' }}"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.state.errors %}border-red-300{% endif %}"
-                  />
+                  <label for="city" class="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                  <input type="text" id="city" name="city" value="{{ form.city.data or '' }}" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.city.errors %}border-red-300{% endif %}" />
+                </div>
+                <div class="col-span-12 md:col-span-6">
+                  <label for="state" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                  <input type="text" id="state" name="state" value="{{ form.state.data or '' }}" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.state.errors %}border-red-300{% endif %}" />
                 </div>
                 <div class="col-span-12">
-                  <label
-                    for="address"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Dirección</label
-                  >
-                  <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    value="{{ form.address.data or '' }}"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.address.errors %}border-red-300{% endif %}"
-                  />
+                  <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                  <input type="text" id="address" name="address" value="{{ form.address.data or '' }}" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.address.errors %}border-red-300{% endif %}" />
                 </div>
                 <div class="col-span-12 md:col-span-7">
-                  <label
-                    for="nationality"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Nacionalidad</label
-                  >
-                  <select
-                    id="nationality"
-                    name="nationality"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.nationality.errors %}border-red-300{% endif %}"
-                  >
+                  <label for="nationality" class="block text-sm font-medium text-gray-700 mb-1">Nacionalidad</label>
+                  <select id="nationality" name="nationality" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.nationality.errors %}border-red-300{% endif %}">
                     <option value="">Selecciona tu nacionalidad</option>
                     {% for value, label in form.nationality.choices %}
                       <option value="{{ value }}" {% if form.nationality.data == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                   </select>
                 </div>
-
                 <div class="col-span-12 md:col-span-5">
-                  <label
-                    for="date_of_birth"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Fecha de nacimiento</label
-                  >
-                  <input
-                    type="date"
-                    id="date_of_birth"
-                    name="date_of_birth"
-                    value="{{ form.date_of_birth.data or '' }}"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.date_of_birth.errors %}border-red-300{% endif %}"
-                  />
+                  <label for="date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Fecha de nacimiento</label>
+                  <input type="date" id="date_of_birth" name="date_of_birth" value="{{ form.date_of_birth.data or '' }}" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.date_of_birth.errors %}border-red-300{% endif %}" />
                 </div>
                 <div class="col-span-12">
-                  <label
-                    for="password"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Contraseña</label
-                  >
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.password.errors %}border-red-300{% endif %}"
-                    placeholder="Crea una contraseña segura"
-                  />
+                  <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                  <input type="password" id="password" name="password" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.password.errors %}border-red-300{% endif %}" placeholder="Crea una contraseña segura" />
                 </div>
                 <div class="col-span-12">
-                  <label
-                    for="confirm_password"
-                    class="block text-sm font-medium text-gray-700 mb-1"
-                    >Confirmar Contraseña</label
-                  >
-                  <input
-                    type="password"
-                    id="confirm_password"
-                    name="confirm_password"
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.confirm_password.errors %}border-red-300{% endif %}"
-                    placeholder="Confirma tu contraseña"
-                  />
+                  <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-1">Confirmar Contraseña</label>
+                  <input type="password" id="confirm_password" name="confirm_password" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.confirm_password.errors %}border-red-300{% endif %}" placeholder="Confirma tu contraseña" />
                 </div>
               </div>
-
               <div class="flex items-start mb-4 space-x-2">
-                <input
-                  type="checkbox"
-                  name="communications"
-                  id="communications"
-                  required
-                  class="mt-1 w-4 h-4 text-accent border-gray-300 rounded focus:ring-accent"
-                />
+                <input type="checkbox" name="communications" id="communications" required class="mt-1 w-4 h-4 text-accent border-gray-300 rounded focus:ring-accent" />
                 <label for="communications" class="text-sm text-gray-600">
-                  Acepto recibir correos electrónicos, SMS y llamadas con
-                  información sobre mi proceso y servicios.
-                  <a
-                    href="https://www.inmigracionokabogados.com/politica-tratamiento-datos"
-                    target="_blank"
-                    class="text-primary hover:text-primary-dark underline ml-1"
-                  >
-                    Ver Política de Tratamiento de Datos
-                  </a>
+                  Acepto recibir correos electrónicos, SMS y llamadas con información sobre mi proceso y servicios.
+                  <a href="https://www.inmigracionokabogados.com/politica-tratamiento-datos" target="_blank" class="text-primary hover:text-primary-dark underline ml-1">Ver Política de Tratamiento de Datos</a>
                 </label>
               </div>
-
-              <button
-                type="submit"
-                class="w-full bg-primary hover:bg-primary-dark py-2.5 px-6 rounded-xl text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 flex items-center justify-center"
-              >
+              <button type="submit" class="w-full bg-primary hover:bg-primary-dark py-2.5 px-6 rounded-xl text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 flex items-center justify-center">
                 <span>Crear Cuenta</span>
                 <i class="fas fa-arrow-right ml-2"></i>
               </button>
             </form>
-
             <div class="text-center mt-4">
               <p class="text-gray-600 text-sm">
                 ¿Ya tienes una cuenta?
-                <a
-                  href="{{ url_for('auth.login') }}"
-                  class="text-primary font-semibold hover:text-primary-dark"
-                >
-                  Iniciar sesión
-                </a>
+                <a href="{{ url_for('auth.login') }}" class="text-primary font-semibold hover:text-primary-dark">Iniciar sesión</a>
               </p>
             </div>
           </div>
-
           <div class="flex justify-center mt-4">
             <div class="flex space-x-8 text-xs text-gray-500">
-              <a
-                href="https://www.inmigracionokabogados.com/politica-tratamiento-datos"
-                target="_blank"
-                class="hover:text-primary transition-colors"
-                >Términos</a
-              >
-              <a
-                href="https://api.whatsapp.com/send?phone=19087583931&text=Hola%2C%20estoy%20en%20el%%2020sistema%20de%20carga%20de%20documentos%20de%20Inmigración%20OK%2%200Abogados%20y%20necesito%20ayuda"
-                target="_blank"
-                class="hover:text-primary transition-colors"
-                >Privacidad</a
-              >
-              <a
-                href="https://www.inmigracionokabogados.com/politica-tratamiento-datos"
-                target="_blank"
-                class="hover:text-primary transition-colors"
-                >Ayuda</a
-              >
+              <a href="https://www.inmigracionokabogados.com/politica-tratamiento-datos" target="_blank" class="hover:text-primary transition-colors">Términos</a>
+              <a href="https://api.whatsapp.com/send?phone=19087583931&text=Hola%2C%20estoy%20en%20el%%2020sistema%20de%20carga%20de%20documentos%20de%20Inmigración%20OK%2%200Abogados%20y%20necesito%20ayuda" target="_blank" class="hover:text-primary transition-colors">Privacidad</a>
+              <a href="https://www.inmigracionokabogados.com/politica-tratamiento-datos" target="_blank" class="hover:text-primary transition-colors">Ayuda</a>
             </div>
           </div>
         </div>
       </div>
     </div>
+    <script>
+      function completeRegistration() {
+        window.location.href = "{{ url_for('auth.complete_registration') }}";
+      }
+    </script>
   </body>
 </html>

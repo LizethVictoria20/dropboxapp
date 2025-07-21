@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Agregar Beneficiarios - Inmigración OK</title>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                light: "#0095c7",
+                DEFAULT: "#0076a8",
+                dark: "#005685",
+              },
+              accent: {
+                light: "#00a8d4",
+                DEFAULT: "#0088b0",
+                dark: "#00678e",
+              },
+              surface: {
+                light: "#FFFFFF",
+                DEFAULT: "#F0F7FC",
+                dark: "#D9E9F2",
+              },
+            },
+            fontFamily: {
+              sans: ["Montserrat", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="font-sans bg-surface">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="fixed top-4 right-4 z-50 space-y-2">
+          {% for category, message in messages %}
+            <div class="p-4 rounded-xl shadow-lg {% if category == 'error' %}bg-red-100 border border-red-400 text-red-700{% else %}bg-green-100 border border-green-400 text-green-700{% endif %}">
+              <div class="flex items-center">
+                <i class="fas {% if category == 'error' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %} mr-2"></i>
+                {{ message }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="min-h-screen bg-surface-light py-8">
+      <div class="max-w-4xl mx-auto px-4">
+        <div class="mb-8">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-3xl font-bold text-primary-dark mb-2">
+                Agregar Beneficiarios
+              </h1>
+              <p class="text-gray-600">
+                Agrega los beneficiarios para {{ user.nombre_completo }}
+              </p>
+            </div>
+            <div class="flex items-center space-x-4">
+              <a
+                href="{{ url_for('auth.login') }}"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium text-primary bg-surface-dark border border-primary/20 rounded-xl hover:bg-surface transition-colors"
+              >
+                <i class="fas fa-sign-in-alt mr-2"></i>
+                Ir al Login
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white rounded-2xl shadow-lg p-8 border border-surface-dark/10">
+            <h2 class="text-xl font-bold text-primary-dark mb-6">
+              <i class="fas fa-user-plus mr-2"></i>
+              Nuevo Beneficiario
+            </h2>
+            <form method="POST" class="space-y-6">
+              {{ form.hidden_tag() }}
+              <div class="space-y-2">
+                <label for="nombre" class="block text-sm font-medium text-gray-700">
+                  Nombre completo <span class="text-primary">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="nombre"
+                  name="nombre"
+                  value="{{ form.nombre.data or '' }}"
+                  required
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.nombre.errors %}border-red-300{% endif %}"
+                  placeholder="Nombre y apellidos"
+                />
+                {% if form.nombre.errors %}
+                  <p class="text-red-600 text-sm">{{ form.nombre.errors[0] }}</p>
+                {% endif %}
+              </div>
+              <div class="space-y-2">
+                <label for="email" class="block text-sm font-medium text-gray-700">
+                  Correo electrónico <span class="text-primary">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value="{{ form.email.data or '' }}"
+                  required
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.email.errors %}border-red-300{% endif %}"
+                  placeholder="ejemplo@correo.com"
+                />
+                {% if form.email.errors %}
+                  <p class="text-red-600 text-sm">{{ form.email.errors[0] }}</p>
+                {% endif %}
+              </div>
+              <div class="space-y-2">
+                <label for="fecha_nacimiento" class="block text-sm font-medium text-gray-700">
+                  Fecha de nacimiento
+                </label>
+                <input
+                  type="date"
+                  id="fecha_nacimiento"
+                  name="fecha_nacimiento"
+                  value="{{ form.fecha_nacimiento.data or '' }}"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-surface/50 focus:border-accent focus:ring-2 focus:ring-accent/20 {% if form.fecha_nacimiento.errors %}border-red-300{% endif %}"
+                />
+                {% if form.fecha_nacimiento.errors %}
+                  <p class="text-red-600 text-sm">{{ form.fecha_nacimiento.errors[0] }}</p>
+                {% endif %}
+              </div>
+              <button
+                type="submit"
+                class="w-full bg-primary hover:bg-primary-dark py-3 px-6 rounded-xl text-white font-medium transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 flex items-center justify-center"
+              >
+                <i class="fas fa-plus mr-2"></i>
+                Agregar Beneficiario
+              </button>
+            </form>
+          </div>
+          <div class="bg-white rounded-2xl shadow-lg p-8 border border-surface-dark/10">
+            <h2 class="text-xl font-bold text-primary-dark mb-6">
+              <i class="fas fa-users mr-2"></i>
+              Beneficiarios Registrados
+            </h2>
+            {% if beneficiarios %}
+              <div class="space-y-4">
+                {% for beneficiario in beneficiarios %}
+                  <div class="bg-surface/50 rounded-xl p-4 border border-surface-dark/20">
+                    <div class="flex items-center justify-between">
+                      <div class="flex-1">
+                        <h3 class="font-semibold text-gray-900">{{ beneficiario.nombre }}</h3>
+                        <p class="text-sm text-gray-600">{{ beneficiario.email }}</p>
+                        {% if beneficiario.fecha_nacimiento %}
+                          <p class="text-xs text-gray-500">
+                            Nacimiento: {{ beneficiario.fecha_nacimiento.strftime('%d/%m/%Y') }}
+                          </p>
+                        {% endif %}
+                      </div>
+                      <div class="flex items-center space-x-2">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <i class="fas fa-check mr-1"></i>
+                          Registrado
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-center py-8">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i class="fas fa-users text-gray-400 text-xl"></i>
+                </div>
+                <p class="text-gray-500">No hay beneficiarios registrados aún</p>
+                <p class="text-sm text-gray-400">Agrega el primer beneficiario usando el formulario</p>
+              </div>
+            {% endif %}
+            <div class="mt-8 pt-6 border-t border-surface-dark/20">
+              <form method="POST" action="{{ url_for('auth.complete_with_beneficiaries', user_id=user.id) }}" class="space-y-4">
+                <button
+                  type="submit"
+                  class="w-full bg-green-600 hover:bg-green-700 py-3 px-6 rounded-xl text-white font-medium transition-all duration-300 hover:shadow-lg flex items-center justify-center"
+                >
+                  <i class="fas fa-check-circle mr-2"></i>
+                  Completar Registro
+                </button>
+                <p class="text-xs text-gray-500 text-center">
+                  Al completar el registro serás redirigido al login para iniciar sesión
+                </p>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

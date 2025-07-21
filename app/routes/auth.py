@@ -4,8 +4,8 @@ from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from app import db
-from app.models import User, UserActivityLog
-from forms import LoginForm
+from app.models import Beneficiario, User, UserActivityLog
+from forms import LoginForm, BeneficiarioForm
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -151,7 +151,12 @@ def register():
                 # Registrar actividad
                 user.registrar_actividad('user_registered', f'Cliente registrado desde {request.remote_addr}')
                 
-                return render_template('register.html', success=True)
+                # Mostrar modal de confirmación para agregar beneficiarios
+                return render_template('register.html', 
+                                    form=form, 
+                                    errors=errors, 
+                                    show_beneficiary_modal=True,
+                                    user_id=user.id)
                 
             except Exception as e:
                 db.session.rollback()
@@ -165,6 +170,65 @@ def register():
                 errors[field] = f"{field_name}: {', '.join(field_errors)}"
     
     return render_template('register.html', form=form, errors=errors)
+
+@bp.route('/register/add_beneficiary/<int:user_id>', methods=['GET', 'POST'])
+def add_beneficiary(user_id):
+    """Agregar beneficiarios al usuario registrado"""
+    user = User.query.get_or_404(user_id)
+    form = BeneficiarioForm()
+    if request.method == 'POST':
+        nombre = request.form.get('nombre')
+        email = request.form.get('email')
+        fecha_nacimiento = request.form.get('fecha_nacimiento')
+        
+        if nombre and email:
+            try:
+                beneficiario = Beneficiario(
+                    nombre=nombre,
+                    email=email,
+                    fecha_nacimiento=datetime.strptime(fecha_nacimiento, '%Y-%m-%d').date() if fecha_nacimiento else None,
+                    titular_id=user.id
+                )
+                
+                # Crear carpeta en Dropbox para el beneficiario
+                try:
+                    from app.dropbox_utils import create_dropbox_folder
+                    path_ben = f"{user.dropbox_folder_path}/{nombre}_{beneficiario.id}"
+                    create_dropbox_folder(path_ben)
+                    beneficiario.dropbox_folder_path = path_ben
+                except Exception as e:
+                    print(f"Error creando carpeta Dropbox para beneficiario: {e}")
+                
+                db.session.add(beneficiario)
+                db.session.commit()
+                
+                flash(f'Beneficiario {nombre} agregado exitosamente.', 'success')
+                
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error al agregar beneficiario: {str(e)}', 'error')
+    
+    # Obtener beneficiarios existentes
+    beneficiarios = Beneficiario.query.filter_by(titular_id=user.id).all()
+    
+    return render_template('add_beneficiaries.html', 
+                        user=user, 
+                        beneficiarios=beneficiarios,
+                        form=form)
+
+@bp.route('/register/complete_with_beneficiaries/<int:user_id>', methods=['POST'])
+def complete_with_beneficiaries(user_id):
+    """Completar registro con beneficiarios y redirigir a login"""
+    user = User.query.get_or_404(user_id)
+    user.registrar_actividad('registration_completed', 'Registro completado con beneficiarios')
+    flash('Registro completado exitosamente. Ya puedes iniciar sesión.', 'success')
+    return redirect(url_for('auth.login'))
+
+@bp.route('/register/complete', methods=['POST'])
+def complete_registration():
+    """Completar registro - redirigir a login"""
+    flash('Usuario creado exitosamente. Ya puedes iniciar sesión.', 'success')
+    return redirect(url_for('auth.login'))
 
 @bp.route('/change-password', methods=['GET', 'POST'])
 @login_required
