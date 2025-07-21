@@ -1069,22 +1069,43 @@
         const rightContent = document.createElement("div");
         rightContent.className = "flex items-center space-x-2";
 
+        // Para lectores, mostrar información sobre permisos adicionales
         if (role.slug === "lector") {
-          const dropdownButton = document.createElement("button");
-          dropdownButton.type = "button";
-          dropdownButton.className = `
-            p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-200 
-            transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20
-          `
-            .replace(/\s+/g, " ")
-            .trim();
-          dropdownButton.innerHTML = `
-            <svg class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
-          `;
+          const hasExtraPermissions =
+            usuario.lector_extra_permissions &&
+            (usuario.lector_extra_permissions.includes("edit_delete_move") ||
+              usuario.lector_extra_permissions.includes("add_beneficiaries"));
 
-          rightContent.appendChild(dropdownButton);
+          if (hasExtraPermissions) {
+            // Mostrar botón de permisos si tiene permisos adicionales
+            const dropdownButton = document.createElement("button");
+            dropdownButton.type = "button";
+            dropdownButton.className = `
+              p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-200
+              transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20
+            `
+              .replace(/\s+/g, " ")
+              .trim();
+            dropdownButton.innerHTML = `
+              <svg class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            `;
+
+            rightContent.appendChild(dropdownButton);
+          } else {
+            // Mostrar mensaje informativo si no tiene permisos adicionales
+            const infoIcon = document.createElement("div");
+            infoIcon.className = "flex items-center text-gray-400";
+            infoIcon.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            `;
+            infoIcon.title =
+              "Este usuario lector no tiene permisos adicionales configurados";
+            rightContent.appendChild(infoIcon);
+          }
         }
 
         const checkIcon = document.createElement("div");
@@ -1108,187 +1129,197 @@
         const collapsibleContainer = document.createElement("div");
         collapsibleContainer.className = "w-full";
 
+        // Solo crear permisos adicionales si es lector Y tiene permisos activados
         if (role.slug === "lector") {
-          const permissionDropdown = document.createElement("div");
-          permissionDropdown.className =
-            "hidden mt-3 p-4 bg-white rounded-lg border border-gray-200 shadow-sm";
-          permissionDropdown.id = "lector-permissions-dropdown";
-
-          const permissionHeader = document.createElement("div");
-          permissionHeader.className =
-            "flex items-center mb-3 pb-2 border-b border-gray-100";
-
-          const permissionIcon = document.createElement("div");
-          permissionIcon.className =
-            "flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-2";
-          permissionIcon.innerHTML =
-            '<i class="fas fa-shield-alt text-indigo-600 text-xs"></i>';
-
-          const permissionTitle = document.createElement("span");
-          permissionTitle.className = "text-sm font-semibold text-gray-800";
-          permissionTitle.textContent = "Configurar Permisos Adicionales";
-
-          permissionHeader.appendChild(permissionIcon);
-          permissionHeader.appendChild(permissionTitle);
-
-          const permissionContent = document.createElement("div");
-          permissionContent.className = "flex items-start space-x-3";
-
-          const checkboxWrapper = document.createElement("div");
-          checkboxWrapper.className = "flex-shrink-0 mt-0.5";
-
-          const extraPermInput = document.createElement("input");
-          extraPermInput.type = "checkbox";
-          extraPermInput.name = "lector_extra_permissions";
-          extraPermInput.id = "lector-extra-perm";
-          extraPermInput.className =
-            "h-4 w-4 text-indigo-600 focus:ring-indigo-500 focus:ring-2 rounded border-gray-300 transition-colors";
-          extraPermInput.value = "edit_delete_move";
-
-          if (
+          const hasEditDeleteMove =
             usuario.lector_extra_permissions &&
-            usuario.lector_extra_permissions.includes("edit_delete_move")
-          ) {
-            extraPermInput.checked = true;
-          }
-
-          checkboxWrapper.appendChild(extraPermInput);
-
-          // Contenido principal
-          const contentWrapper = document.createElement("div");
-          contentWrapper.className = "flex-1 min-w-0";
-
-          const extraPermLabel = document.createElement("label");
-          extraPermLabel.htmlFor = "lector-extra-perm";
-          extraPermLabel.className =
-            "block text-sm font-medium text-gray-900 cursor-pointer mb-1";
-          extraPermLabel.textContent =
-            "Permitir renombrar, mover y eliminar archivos";
-
-          const extraPermDescription = document.createElement("p");
-          extraPermDescription.className = "text-xs text-gray-600 mb-3";
-          extraPermDescription.textContent =
-            "El usuario podrá modificar archivos además de visualizarlos.";
-
-          const featureList = document.createElement("div");
-          featureList.className = "flex flex-wrap gap-1";
-
-          const features = [
-            { icon: "fa-edit", text: "Renombrar" },
-            { icon: "fa-arrows-alt", text: "Mover" },
-            { icon: "fa-trash-alt", text: "Eliminar" },
-          ];
-
-          features.forEach((feature) => {
-            const featureBadge = document.createElement("span");
-            featureBadge.className =
-              "inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700";
-            featureBadge.innerHTML = `<i class="fas ${feature.icon} mr-1"></i>${feature.text}`;
-            featureList.appendChild(featureBadge);
-          });
-
-          contentWrapper.appendChild(extraPermLabel);
-          contentWrapper.appendChild(extraPermDescription);
-          contentWrapper.appendChild(featureList);
-
-          permissionContent.appendChild(checkboxWrapper);
-          permissionContent.appendChild(contentWrapper);
-
-          permissionDropdown.appendChild(permissionHeader);
-          permissionDropdown.appendChild(permissionContent);
-
-          // Agregar permiso para agregar beneficiarios
-          const beneficiaryPermContent = document.createElement("div");
-          beneficiaryPermContent.className =
-            "flex items-start space-x-3 mt-4 pt-4 border-t border-gray-200";
-
-          const beneficiaryCheckboxWrapper = document.createElement("div");
-          beneficiaryCheckboxWrapper.className = "flex-shrink-0 mt-0.5";
-
-          const beneficiaryPermInput = document.createElement("input");
-          beneficiaryPermInput.type = "checkbox";
-          beneficiaryPermInput.name = "lector_extra_permissions";
-          beneficiaryPermInput.id = "lector-beneficiary-perm";
-          beneficiaryPermInput.className =
-            "h-4 w-4 text-indigo-600 focus:ring-indigo-500 focus:ring-2 rounded border-gray-300 transition-colors";
-          beneficiaryPermInput.value = "add_beneficiaries";
-
-          if (
+            usuario.lector_extra_permissions.includes("edit_delete_move");
+          const hasAddBeneficiaries =
             usuario.lector_extra_permissions &&
-            usuario.lector_extra_permissions.includes("add_beneficiaries")
-          ) {
-            beneficiaryPermInput.checked = true;
-          }
+            usuario.lector_extra_permissions.includes("add_beneficiaries");
 
-          beneficiaryCheckboxWrapper.appendChild(beneficiaryPermInput);
+          // Solo crear el dropdown si tiene al menos un permiso adicional
+          if (hasEditDeleteMove || hasAddBeneficiaries) {
+            const permissionDropdown = document.createElement("div");
+            permissionDropdown.className =
+              "hidden mt-3 p-4 bg-white rounded-lg border border-gray-200 shadow-sm";
+            permissionDropdown.id = "lector-permissions-dropdown";
 
-          // Contenido principal para el permiso de beneficiarios
-          const beneficiaryContentWrapper = document.createElement("div");
-          beneficiaryContentWrapper.className = "flex-1 min-w-0";
+            const permissionHeader = document.createElement("div");
+            permissionHeader.className =
+              "flex items-center mb-3 pb-2 border-b border-gray-100";
 
-          const beneficiaryPermLabel = document.createElement("label");
-          beneficiaryPermLabel.htmlFor = "lector-beneficiary-perm";
-          beneficiaryPermLabel.className =
-            "block text-sm font-medium text-gray-900 cursor-pointer mb-1";
-          beneficiaryPermLabel.textContent = "Permitir agregar beneficiarios";
+            const permissionIcon = document.createElement("div");
+            permissionIcon.className =
+              "flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-2";
+            permissionIcon.innerHTML =
+              '<i class="fas fa-shield-alt text-indigo-600 text-xs"></i>';
 
-          const beneficiaryPermDescription = document.createElement("p");
-          beneficiaryPermDescription.className = "text-xs text-gray-600 mb-3";
-          beneficiaryPermDescription.textContent =
-            "El usuario podrá agregar nuevos beneficiarios a los clientes.";
+            const permissionTitle = document.createElement("span");
+            permissionTitle.className = "text-sm font-semibold text-gray-800";
+            permissionTitle.textContent = "Configurar Permisos Adicionales";
 
-          const beneficiaryFeatureList = document.createElement("div");
-          beneficiaryFeatureList.className = "flex flex-wrap gap-1";
+            permissionHeader.appendChild(permissionIcon);
+            permissionHeader.appendChild(permissionTitle);
 
-          const beneficiaryFeature = document.createElement("span");
-          beneficiaryFeature.className =
-            "inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700";
-          beneficiaryFeature.innerHTML = `<i class="fas fa-user-plus mr-1"></i>Agregar beneficiarios`;
-          beneficiaryFeatureList.appendChild(beneficiaryFeature);
+            // Solo mostrar el permiso de editar/eliminar/mover si está activado
+            if (hasEditDeleteMove) {
+              const permissionContent = document.createElement("div");
+              permissionContent.className = "flex items-start space-x-3";
 
-          beneficiaryContentWrapper.appendChild(beneficiaryPermLabel);
-          beneficiaryContentWrapper.appendChild(beneficiaryPermDescription);
-          beneficiaryContentWrapper.appendChild(beneficiaryFeatureList);
+              const checkboxWrapper = document.createElement("div");
+              checkboxWrapper.className = "flex-shrink-0 mt-0.5";
 
-          beneficiaryPermContent.appendChild(beneficiaryCheckboxWrapper);
-          beneficiaryPermContent.appendChild(beneficiaryContentWrapper);
+              const extraPermInput = document.createElement("input");
+              extraPermInput.type = "checkbox";
+              extraPermInput.name = "lector_extra_permissions";
+              extraPermInput.id = "lector-extra-perm";
+              extraPermInput.className =
+                "h-4 w-4 text-indigo-600 focus:ring-indigo-500 focus:ring-2 rounded border-gray-300 transition-colors";
+              extraPermInput.value = "edit_delete_move";
+              extraPermInput.checked = true; // Siempre marcado porque solo se muestra si está activo
 
-          permissionDropdown.appendChild(beneficiaryPermContent);
+              checkboxWrapper.appendChild(extraPermInput);
 
-          collapsibleContainer.appendChild(permissionDropdown);
+              // Contenido principal
+              const contentWrapper = document.createElement("div");
+              contentWrapper.className = "flex-1 min-w-0";
 
-          const dropdownButton = rightContent.querySelector("button");
-          if (dropdownButton) {
-            dropdownButton.addEventListener("click", function (e) {
-              e.stopPropagation();
-              const dropdown = permissionDropdown;
-              const arrow = this.querySelector("svg");
+              const extraPermLabel = document.createElement("label");
+              extraPermLabel.htmlFor = "lector-extra-perm";
+              extraPermLabel.className =
+                "block text-sm font-medium text-gray-900 cursor-pointer mb-1";
+              extraPermLabel.textContent =
+                "Permitir renombrar, mover y eliminar archivos";
 
-              if (dropdown.classList.contains("hidden")) {
-                dropdown.classList.remove("hidden");
-                arrow.style.transform = "rotate(180deg)";
-                this.classList.add("text-primary", "bg-primary/10");
-                this.classList.remove("text-gray-400", "hover:bg-gray-200");
-              } else {
-                dropdown.classList.add("hidden");
-                arrow.style.transform = "rotate(0deg)";
-                this.classList.remove("text-primary", "bg-primary/10");
-                this.classList.add("text-gray-400");
-              }
-            });
-          }
+              const extraPermDescription = document.createElement("p");
+              extraPermDescription.className = "text-xs text-gray-600 mb-3";
+              extraPermDescription.textContent =
+                "El usuario podrá modificar archivos además de visualizarlos.";
 
-          permissionContent.addEventListener("click", function (e) {
-            if (e.target !== extraPermInput) {
-              extraPermInput.click();
+              const featureList = document.createElement("div");
+              featureList.className = "flex flex-wrap gap-1";
+
+              const features = [
+                { icon: "fa-edit", text: "Renombrar" },
+                { icon: "fa-arrows-alt", text: "Mover" },
+                { icon: "fa-trash-alt", text: "Eliminar" },
+              ];
+
+              features.forEach((feature) => {
+                const featureBadge = document.createElement("span");
+                featureBadge.className =
+                  "inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700";
+                featureBadge.innerHTML = `<i class="fas ${feature.icon} mr-1"></i>${feature.text}`;
+                featureList.appendChild(featureBadge);
+              });
+
+              contentWrapper.appendChild(extraPermLabel);
+              contentWrapper.appendChild(extraPermDescription);
+              contentWrapper.appendChild(featureList);
+
+              permissionContent.appendChild(checkboxWrapper);
+              permissionContent.appendChild(contentWrapper);
+
+              permissionDropdown.appendChild(permissionHeader);
+              permissionDropdown.appendChild(permissionContent);
+
+              // Event listener para el permiso de editar/eliminar/mover
+              permissionContent.addEventListener("click", function (e) {
+                if (e.target !== extraPermInput) {
+                  extraPermInput.click();
+                }
+              });
+            } // Cierre del if (hasEditDeleteMove)
+
+            // Solo mostrar el permiso de beneficiarios si está activado
+            if (hasAddBeneficiaries) {
+              const beneficiaryPermContent = document.createElement("div");
+              beneficiaryPermContent.className =
+                "flex items-start space-x-3 mt-4 pt-4 border-t border-gray-200";
+
+              const beneficiaryCheckboxWrapper = document.createElement("div");
+              beneficiaryCheckboxWrapper.className = "flex-shrink-0 mt-0.5";
+
+              const beneficiaryPermInput = document.createElement("input");
+              beneficiaryPermInput.type = "checkbox";
+              beneficiaryPermInput.name = "lector_extra_permissions";
+              beneficiaryPermInput.id = "lector-beneficiary-perm";
+              beneficiaryPermInput.className =
+                "h-4 w-4 text-indigo-600 focus:ring-indigo-500 focus:ring-2 rounded border-gray-300 transition-colors";
+              beneficiaryPermInput.value = "add_beneficiaries";
+              beneficiaryPermInput.checked = true; // Siempre marcado porque solo se muestra si está activo
+
+              beneficiaryCheckboxWrapper.appendChild(beneficiaryPermInput);
+
+              // Contenido principal para el permiso de beneficiarios
+              const beneficiaryContentWrapper = document.createElement("div");
+              beneficiaryContentWrapper.className = "flex-1 min-w-0";
+
+              const beneficiaryPermLabel = document.createElement("label");
+              beneficiaryPermLabel.htmlFor = "lector-beneficiary-perm";
+              beneficiaryPermLabel.className =
+                "block text-sm font-medium text-gray-900 cursor-pointer mb-1";
+              beneficiaryPermLabel.textContent =
+                "Permitir agregar beneficiarios";
+
+              const beneficiaryPermDescription = document.createElement("p");
+              beneficiaryPermDescription.className =
+                "text-xs text-gray-600 mb-3";
+              beneficiaryPermDescription.textContent =
+                "El usuario podrá agregar nuevos beneficiarios a los clientes.";
+
+              const beneficiaryFeatureList = document.createElement("div");
+              beneficiaryFeatureList.className = "flex flex-wrap gap-1";
+
+              const beneficiaryFeature = document.createElement("span");
+              beneficiaryFeature.className =
+                "inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700";
+              beneficiaryFeature.innerHTML = `<i class="fas fa-user-plus mr-1"></i>Agregar beneficiarios`;
+              beneficiaryFeatureList.appendChild(beneficiaryFeature);
+
+              beneficiaryContentWrapper.appendChild(beneficiaryPermLabel);
+              beneficiaryContentWrapper.appendChild(beneficiaryPermDescription);
+              beneficiaryContentWrapper.appendChild(beneficiaryFeatureList);
+
+              beneficiaryPermContent.appendChild(beneficiaryCheckboxWrapper);
+              beneficiaryPermContent.appendChild(beneficiaryContentWrapper);
+
+              permissionDropdown.appendChild(beneficiaryPermContent);
+
+              // Event listener para el permiso de beneficiarios
+              beneficiaryPermContent.addEventListener("click", function (e) {
+                if (e.target !== beneficiaryPermInput) {
+                  beneficiaryPermInput.click();
+                }
+              });
+            } // Cierre del if (hasAddBeneficiaries)
+
+            collapsibleContainer.appendChild(permissionDropdown);
+
+            const dropdownButton = rightContent.querySelector("button");
+            if (dropdownButton) {
+              dropdownButton.addEventListener("click", function (e) {
+                e.stopPropagation();
+                const dropdown = permissionDropdown;
+                const arrow = this.querySelector("svg");
+
+                if (dropdown.classList.contains("hidden")) {
+                  dropdown.classList.remove("hidden");
+                  arrow.style.transform = "rotate(180deg)";
+                  this.classList.add("text-primary", "bg-primary/10");
+                  this.classList.remove("text-gray-400", "hover:bg-gray-200");
+                } else {
+                  dropdown.classList.add("hidden");
+                  arrow.style.transform = "rotate(0deg)";
+                  this.classList.remove("text-primary", "bg-primary/10");
+                  this.classList.add("text-gray-400");
+                }
+              });
             }
-          });
 
-          beneficiaryPermContent.addEventListener("click", function (e) {
-            if (e.target !== beneficiaryPermInput) {
-              beneficiaryPermInput.click();
-            }
-          });
+            // Los event listeners se manejan dentro de cada bloque if correspondiente
+          } // Cierre del if (hasEditDeleteMove || hasAddBeneficiaries)
         }
 
         const fullRoleContainer = document.createElement("div");
