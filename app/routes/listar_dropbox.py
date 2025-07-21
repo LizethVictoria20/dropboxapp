@@ -33,7 +33,8 @@ def obtener_estructura_dropbox(path="", dbx=None):
         dbx = dropbox.Dropbox(api_key)
     
     try:
-        res = dbx.files_list_folder(path, recursive=True)
+        # Primero obtener solo el contenido del directorio actual (no recursivo)
+        res = dbx.files_list_folder(path, recursive=False)
     except dropbox.exceptions.ApiError as e:
         print(f"Error accediendo a Dropbox path '{path}': {e}")
         # Retornar estructura vacía si el path no existe
@@ -42,20 +43,12 @@ def obtener_estructura_dropbox(path="", dbx=None):
     estructura = {"_subcarpetas": {}, "_archivos": []}
 
     for entry in res.entries:
-        parts = entry.path_display.strip("/").split("/")
-        node = estructura
-
-        for i, part in enumerate(parts):
-            is_last = i == len(parts) - 1
-            # Si es carpeta
-            if is_last and isinstance(entry, dropbox.files.FolderMetadata):
-                node["_subcarpetas"].setdefault(part, {"_subcarpetas": {}, "_archivos": []})
-            # Si es archivo
-            elif is_last and isinstance(entry, dropbox.files.FileMetadata):
-                node["_archivos"].append(part)
-            # Si es subcarpeta intermedia
-            else:
-                node = node["_subcarpetas"].setdefault(part, {"_subcarpetas": {}, "_archivos": []})
+        if isinstance(entry, dropbox.files.FolderMetadata):
+            # Es una carpeta
+            estructura["_subcarpetas"][entry.name] = {"_subcarpetas": {}, "_archivos": []}
+        elif isinstance(entry, dropbox.files.FileMetadata):
+            # Es un archivo
+            estructura["_archivos"].append(entry.name)
 
     return estructura
 
@@ -163,10 +156,9 @@ def carpetas_dropbox():
             
             # Filtrar la estructura según los permisos del usuario
             if current_user.rol == "cliente":
-                # Para clientes, mostrar carpetas de ellos mismos y sus beneficiarios
-                rutas_visibles = set(folders_por_ruta.keys())
-                user_identifier = user.email if hasattr(user, 'email') else user.nombre
-                estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user_identifier)
+                # Para clientes, mostrar todo (ya están filtrados por usuario)
+                # No necesitamos filtrar más porque solo cargamos sus carpetas
+                pass
             elif current_user.rol != "admin":
                 # Para otros roles, solo mostrar carpetas públicas
                 rutas_visibles = set(folders_por_ruta.keys())
@@ -219,6 +211,43 @@ def obtener_info_carpeta(ruta):
             'nombre': ruta.split('/')[-1] if '/' in ruta else ruta,
             'usuario_id': None
         })
+
+@bp.route("/api/carpeta_contenido/<path:ruta>")
+@login_required
+def obtener_contenido_carpeta(ruta):
+    """Endpoint para obtener el contenido de una carpeta específica"""
+    try:
+        # Verificar permisos
+        if current_user.rol == "cliente":
+            # Cliente solo puede ver sus propias carpetas y las de sus beneficiarios
+            user_ids = [current_user.id]
+            beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).all()
+            user_ids.extend([b.id for b in beneficiarios])
+            
+            # Verificar que la carpeta pertenece al cliente o sus beneficiarios
+            carpeta = Folder.query.filter_by(dropbox_path=f"/{ruta}").first()
+            if carpeta and carpeta.user_id not in user_ids:
+                return jsonify({"success": False, "error": "No tienes permisos para acceder a esta carpeta"}), 403
+        
+        # Obtener estructura de la carpeta
+        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        estructura = obtener_estructura_dropbox(path=f"/{ruta}", dbx=dbx)
+        
+        # Determinar el usuario_id basado en la ruta
+        usuario_id = None
+        if current_user.rol == "cliente":
+            # Para clientes, el usuario_id será el del cliente actual
+            usuario_id = current_user.id
+        
+        return jsonify({
+            "success": True,
+            "estructura": estructura,
+            "usuario_id": usuario_id
+        })
+        
+    except Exception as e:
+        print(f"Error obteniendo contenido de carpeta {ruta}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @bp.route("/crear_carpeta", methods=["POST"])

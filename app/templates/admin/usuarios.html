@@ -194,6 +194,13 @@
                    class="text-blue-600 hover:text-blue-800" title="Ver Carpetas">
                   <i class="fas fa-folder-open"></i>
                 </a>
+                {% if usuario.rol == 'cliente' %}
+                  <!-- Enlace para ver beneficiarios del cliente -->
+                  <a href="{{ url_for('listar_dropbox.carpetas_dropbox') }}?cliente_id={{ usuario.id }}" 
+                     class="text-green-600 hover:text-green-800" title="Ver Beneficiarios">
+                    <i class="fas fa-users"></i>
+                  </a>
+                {% endif %}
                 <button class="text-green-600 hover:text-green-800" title="Editar Usuario">
                   <i class="fas fa-edit"></i>
                 </button>
