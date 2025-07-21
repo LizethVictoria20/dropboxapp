@@ -24,6 +24,7 @@ class User(UserMixin, db.Model):
     rol = db.Column(db.String(20), nullable=False, default='cliente')
     nacionality = db.Column(db.String(100), nullable=True)
     country = db.Column(db.String(100), nullable=True)
+    lector_extra_permissions = db.Column(db.Text, nullable=True)  # Permisos adicionales para lectores
     
     # Relaciones
     beneficiarios = db.relationship('User', backref=db.backref('titular', remote_side=[id]), lazy=True)

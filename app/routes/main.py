@@ -674,6 +674,84 @@ def api_usuario_datos(usuario_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@bp.route('/api/test')
+def api_test():
+    """API de prueba para verificar que el servidor funciona"""
+    return jsonify({
+        'success': True,
+        'message': 'API funcionando correctamente',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
+@bp.route('/api/usuarios/<int:usuario_id>/datos_completos')
+@login_required
+@role_required('admin')
+def api_usuario_datos_completos(usuario_id):
+    """API para obtener los datos completos de un usuario con roles y permisos"""
+    try:
+        usuario = User.query.get_or_404(usuario_id)
+        
+        # Verificar que el usuario sea administrativo
+        if usuario.rol not in ['admin', 'lector', 'superadmin']:
+            return jsonify({'error': 'Acceso denegado'}), 403
+        
+        # Definir roles disponibles
+        all_roles = [
+            {
+                'slug': 'admin',
+                'name': 'Administrador',
+                'description': 'Acceso completo al sistema con gestión de usuarios y archivos'
+            },
+            {
+                'slug': 'lector',
+                'name': 'Lector',
+                'description': 'Acceso de solo lectura con permisos adicionales configurables'
+            },
+            {
+                'slug': 'superadmin',
+                'name': 'Super Administrador',
+                'description': 'Acceso total al sistema incluyendo configuración del sistema'
+            }
+        ]
+        
+        # Obtener permisos adicionales del lector si existen
+        lector_extra_permissions = []
+        if hasattr(usuario, 'lector_extra_permissions') and usuario.lector_extra_permissions:
+            if isinstance(usuario.lector_extra_permissions, str):
+                lector_extra_permissions = [perm.strip() for perm in usuario.lector_extra_permissions.split(',') if perm.strip()]
+            else:
+                lector_extra_permissions = usuario.lector_extra_permissions
+        
+        # Preparar datos del usuario de forma segura
+        usuario_data = {
+            'id': usuario.id,
+            'nombre': usuario.nombre or '',
+            'apellido': usuario.apellido or '',
+            'email': usuario.email or '',
+            'rol': usuario.rol or 'admin',
+            'activo': usuario.activo if hasattr(usuario, 'activo') else True,
+            'fecha_registro': usuario.fecha_registro.isoformat() if usuario.fecha_registro else None,
+            'ultimo_acceso': usuario.ultimo_acceso.isoformat() if usuario.ultimo_acceso else None,
+            'telefono': usuario.telefono if hasattr(usuario, 'telefono') else None,
+            'direccion': usuario.direccion if hasattr(usuario, 'direccion') else None,
+            'ciudad': usuario.ciudad if hasattr(usuario, 'ciudad') else None,
+            'estado': usuario.estado if hasattr(usuario, 'estado') else None,
+            'codigo_postal': usuario.codigo_postal if hasattr(usuario, 'codigo_postal') else None,
+            'fecha_nacimiento': usuario.fecha_nacimiento.isoformat() if hasattr(usuario, 'fecha_nacimiento') and usuario.fecha_nacimiento else None,
+            'nacionalidad': usuario.nacionality if hasattr(usuario, 'nacionality') else None,
+            'lector_extra_permissions': lector_extra_permissions
+        }
+        
+        return jsonify({
+            'success': True,
+            'usuario': usuario_data,
+            'all_roles': all_roles
+        })
+        
+    except Exception as e:
+        print(f"Error en api_usuario_datos_completos: {str(e)}")  # Debug
+        return jsonify({'error': str(e)}), 500
+
 @bp.route('/api/usuarios/<int:usuario_id>/actualizar', methods=['POST'])
 @login_required
 @role_required('admin')
@@ -686,12 +764,27 @@ def api_usuario_actualizar(usuario_id):
         if usuario.rol not in ['admin', 'lector', 'superadmin']:
             return jsonify({'error': 'Acceso denegado'}), 403
         
-        # Obtener datos del formulario
-        nombre = request.form.get('nombre', '').strip()
-        apellido = request.form.get('apellido', '').strip()
+        # Información básica
+        nombre = request.form.get('name', '').strip()
+        apellido = request.form.get('lastname', '').strip()
         email = request.form.get('email', '').strip()
+        fecha_nacimiento = request.form.get('date_of_birth')
+        nacionalidad = request.form.get('nationality', '').strip()
+        
+        # Información de contacto
+        telefono = request.form.get('telephone', '').strip()
+        direccion = request.form.get('address', '').strip()
+        ciudad = request.form.get('city', '').strip()
+        estado = request.form.get('state', '').strip()
+        codigo_postal = request.form.get('zip_code', '').strip()
+        
+        # Roles y estado
         rol = request.form.get('rol', 'admin')
         activo = request.form.get('activo') == 'on'
+        
+        # Contraseña (opcional)
+        password = request.form.get('password', '').strip()
+        password_confirm = request.form.get('password_confirm', '').strip()
         
         # Validaciones básicas
         if not email:
@@ -699,6 +792,9 @@ def api_usuario_actualizar(usuario_id):
         
         if not rol in ['admin', 'lector', 'superadmin']:
             return jsonify({'error': 'Rol no válido'}), 400
+        
+        if password and password != password_confirm:
+            return jsonify({'error': 'Las contraseñas no coinciden'}), 400
         
         # Verificar si el email ya existe (excluyendo el usuario actual)
         email_existente = User.query.filter(
@@ -709,12 +805,50 @@ def api_usuario_actualizar(usuario_id):
         if email_existente:
             return jsonify({'error': 'El email ya está en uso'}), 400
         
-        # Actualizar datos del usuario
+        # Actualizar datos básicos del usuario
         usuario.nombre = nombre
         usuario.apellido = apellido
         usuario.email = email
         usuario.rol = rol
         usuario.activo = activo
+        
+        # Actualizar campos adicionales si existen en el modelo
+        if hasattr(usuario, 'fecha_nacimiento'):
+            usuario.fecha_nacimiento = fecha_nacimiento if fecha_nacimiento else None
+        if hasattr(usuario, 'nacionalidad'):
+            usuario.nacionalidad = nacionalidad
+        if hasattr(usuario, 'telefono'):
+            usuario.telefono = telefono
+        if hasattr(usuario, 'direccion'):
+            usuario.direccion = direccion
+        if hasattr(usuario, 'ciudad'):
+            usuario.ciudad = ciudad
+        if hasattr(usuario, 'estado'):
+            usuario.estado = estado
+        if hasattr(usuario, 'codigo_postal'):
+            usuario.codigo_postal = codigo_postal
+        
+        # Actualizar permisos adicionales del lector
+        lector_extra_permissions = request.form.getlist('lector_extra_permissions')
+        permissions_changed = False
+        
+        if hasattr(usuario, 'lector_extra_permissions'):
+            current_permissions = []
+            if usuario.lector_extra_permissions:
+                current_permissions = usuario.lector_extra_permissions.split(',') if isinstance(usuario.lector_extra_permissions, str) else usuario.lector_extra_permissions
+            
+            # Verificar si los permisos cambiaron
+            if set(current_permissions) != set(lector_extra_permissions):
+                permissions_changed = True
+            
+            if lector_extra_permissions:
+                usuario.lector_extra_permissions = ','.join(lector_extra_permissions)
+            else:
+                usuario.lector_extra_permissions = None
+        
+        # Actualizar contraseña si se proporcionó
+        if password:
+            usuario.set_password(password)
         
         # Registrar la actividad
         current_user.registrar_actividad(
@@ -726,7 +860,8 @@ def api_usuario_actualizar(usuario_id):
         
         return jsonify({
             'success': True,
-            'message': 'Usuario actualizado correctamente'
+            'message': 'Usuario actualizado correctamente',
+            'permissions_changed': permissions_changed
         })
         
     except Exception as e:

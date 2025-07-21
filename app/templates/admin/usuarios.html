@@ -56,7 +56,6 @@
           <th class="py-3 px-6 text-left">NOMBRE</th>
           <th class="py-3 px-2 text-left">EMAIL</th>
           <th class="py-3 px-2 text-left">ROL</th>
-          <th class="py-3 px-2 text-left">ESTADO</th>
           <th class="py-3 px-2 text-right">ACCIONES</th>
         </tr>
       </thead>
@@ -87,17 +86,6 @@
               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.rol == 'superadmin' %}bg-red-100 text-red-800{% elif usuario.rol == 'admin' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}"
             >
               {{ usuario.rol|title }}
-            </span>
-          </td>
-          <td class="px-2">
-            <span
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}"
-            >
-              {% if usuario.activo %}
-                <i class="fas fa-check-circle mr-1"></i>Activo
-              {% else %}
-                <i class="fas fa-times-circle mr-1"></i>Inactivo
-              {% endif %}
             </span>
           </td>
           <td class="px-2 text-right">
@@ -192,10 +180,8 @@
                     class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}"
                   >
                     {% if usuario.activo %}
-                      <i class="fas fa-check-circle mr-1"></i>Activo
-                    {% else %}
-                      <i class="fas fa-times-circle mr-1"></i>Inactivo
-                    {% endif %}
+                    <i class="fas fa-check-circle mr-1"></i>Activo {% else %}
+                    <i class="fas fa-times-circle mr-1"></i>Inactivo {% endif %}
                   </span>
                 </p>
               </div>
@@ -233,7 +219,9 @@
       class="flex items-center justify-between px-6 py-4 border-t bg-gray-50"
     >
       <div class="text-sm text-gray-500">
-        Mostrando {{ ((usuarios.page - 1) * usuarios.per_page) + 1 }} a {{ ((usuarios.page - 1) * usuarios.per_page) + usuarios.items|length }} de {{ usuarios.total }} usuarios
+        Mostrando {{ ((usuarios.page - 1) * usuarios.per_page) + 1 }} a {{
+        ((usuarios.page - 1) * usuarios.per_page) + usuarios.items|length }} de
+        {{ usuarios.total }} usuarios
       </div>
       <div class="flex items-center gap-2">
         <label class="text-sm text-gray-500 mr-2">Mostrar:</label>
@@ -251,8 +239,8 @@
           >
           {% else %}
           <span class="px-3 py-2 bg-gray-100 text-gray-400 border-r">&lt;</span>
-          {% endif %} {% for p in usuarios.iter_pages(left_edge=1,
-          right_edge=1, left_current=1, right_current=1) %} {% if p %}
+          {% endif %} {% for p in usuarios.iter_pages(left_edge=1, right_edge=1,
+          left_current=1, right_current=1) %} {% if p %}
           <a
             href="{{ url_for('main.listar_usuarios_admin', q=busqueda, page=p) }}"
             class="px-3 py-2 border-r {{ 'bg-blue-100 text-primary-dark font-bold' if usuarios.page == p else 'bg-white hover:bg-gray-100' }}"
@@ -283,14 +271,13 @@
     No se encontraron usuarios administrativos
   </h3>
   <p class="text-gray-500 mb-6">
-    {% if busqueda %}
-      Intenta ajustar los términos de búsqueda.
-    {% else %}
-      No hay usuarios administrativos registrados en el sistema.
-    {% endif %}
+    {% if busqueda %} Intenta ajustar los términos de búsqueda. {% else %} No
+    hay usuarios administrativos registrados en el sistema. {% endif %}
   </p>
   {% if not busqueda %}
-  <button class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+  <button
+    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+  >
     <i class="fas fa-user-plus mr-2"></i>
     Crear Primer Usuario Administrativo
   </button>
@@ -299,20 +286,28 @@
 {% endif %}
 
 <!-- Modal de confirmación para eliminar usuario -->
-<div id="modalEliminar" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+<div
+  id="modalEliminar"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50"
+>
   <div class="flex items-center justify-center min-h-screen p-4">
     <div class="bg-white rounded-lg max-w-md w-full p-6">
       <div class="flex items-center mb-4">
-        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+        <div
+          class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4"
+        >
           <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
         </div>
         <div>
-          <h3 class="text-lg font-semibold text-gray-900">Confirmar Eliminación</h3>
+          <h3 class="text-lg font-semibold text-gray-900">
+            Confirmar Eliminación
+          </h3>
           <p class="text-sm text-gray-600">Esta acción no se puede deshacer</p>
         </div>
       </div>
       <p class="text-gray-700 mb-6">
-        ¿Estás seguro de que quieres eliminar al usuario <span id="nombreUsuarioEliminar" class="font-semibold"></span>?
+        ¿Estás seguro de que quieres eliminar al usuario
+        <span id="nombreUsuarioEliminar" class="font-semibold"></span>?
       </p>
       <div class="flex justify-end space-x-3">
         <button
@@ -333,9 +328,14 @@
 </div>
 
 <!-- Modal de Historial -->
-<div id="modalHistorial" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+<div
+  id="modalHistorial"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50"
+>
   <div class="flex items-center justify-center min-h-screen p-4">
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
+    <div
+      class="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden"
+    >
       <div class="flex items-center justify-between p-6 border-b">
         <h3 class="text-lg font-semibold text-gray-900">
           Historial de Actividad - <span id="nombreUsuarioHistorial"></span>
@@ -357,197 +357,1250 @@
 </div>
 
 <!-- Modal de Editar Usuario -->
-<div id="modalEditar" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-  <div class="flex items-center justify-center min-h-screen p-4">
-    <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between p-6 border-b">
-        <h3 class="text-lg font-semibold text-gray-900" id="editarUsuarioInfo">
-          Editar Usuario
+<div
+  id="editUserModal"
+  tabindex="-1"
+  aria-hidden="true"
+  class="fixed inset-0 z-50 items-center justify-center hidden overflow-y-auto bg-black bg-opacity-75"
+>
+  <div class="relative w-full max-w-4xl p-4 max-h-full m-auto">
+    <div
+      id="modalContent"
+      class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all"
+    >
+      <!-- Encabezado del Modal -->
+      <div
+        class="px-6 py-4 border-b border-gray-100 flex items-center justify-between"
+      >
+        <h3
+          class="text-xl font-bold font-montserrat text-text flex items-center"
+          id="modal-title"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 text-primary mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
+          </svg>
+          Editar Usuario <span id="editing-user-name"></span>
         </h3>
         <button
+          type="button"
+          class="text-gray-400 hover:text-gray-500 focus:outline-none"
           onclick="cerrarModalEditar()"
-          class="text-gray-400 hover:text-gray-600"
         >
-          <i class="fas fa-times text-xl"></i>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
         </button>
       </div>
-      <form id="formEditar" class="p-6 space-y-4">
-        <input type="hidden" id="editarUsuarioId" name="usuario_id">
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-            <input type="text" id="nombre" name="nombre" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div>
-            <label for="apellido" class="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
-            <input type="text" id="apellido" name="apellido" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-        </div>
-        
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input type="email" id="email" name="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="rol" class="block text-sm font-medium text-gray-700 mb-1">Rol</label>
-            <select id="rol" name="rol" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="admin">Admin</option>
-              <option value="lector">Lector</option>
-              <option value="superadmin">Super Admin</option>
-            </select>
-          </div>
-          <div>
-            <label for="activo" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-            <div class="flex items-center mt-2">
-              <input type="checkbox" id="activo" name="activo" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-              <label for="activo" class="ml-2 text-sm text-gray-700">Usuario Activo</label>
+
+      <!-- Contenido del Modal -->
+      <div class="max-h-[70vh] overflow-auto">
+        <form id="editUserForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input type="hidden" id="edit-user-id" name="id" />
+
+          <div class="px-6 py-5 bg-gray-50">
+            <div id="messageBox" class="message-box hidden" role="alert"></div>
+
+            <div
+              class="border-b border-gray-200 mb-6 sticky top-0 bg-gray-50 z-10"
+            >
+              <nav class="-mb-px flex space-x-8">
+                <button
+                  type="button"
+                  class="whitespace-nowrap tab-button active border-primary text-primary font-medium border-b-2 py-3 px-1"
+                  data-tab="info-basica-tab"
+                >
+                  Información Básica
+                </button>
+                <button
+                  type="button"
+                  class="whitespace-nowrap tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent font-medium border-b-2 py-3 px-1"
+                  data-tab="info-contacto-tab"
+                >
+                  Información de Contacto
+                </button>
+                <button
+                  type="button"
+                  class="whitespace-nowrap tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent font-medium border-b-2 py-3 px-1"
+                  data-tab="contrasena-tab"
+                >
+                  Cambiar Contraseña
+                </button>
+                <button
+                  type="button"
+                  class="whitespace-nowrap tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent font-medium border-b-2 py-3 px-1"
+                  data-tab="roles-tab"
+                >
+                  Roles de Usuario
+                </button>
+              </nav>
+            </div>
+
+            <div class="tab-content">
+              <div id="info-basica-tab" class="tab-pane">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label
+                      for="edit-email"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      id="edit-email"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                      placeholder="ejemplo@correo.com"
+                      required
+                    />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="edit-name"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Nombre
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      id="edit-name"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                      placeholder="Tu nombre"
+                    />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="edit-lastname"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Apellido
+                    </label>
+                    <input
+                      type="text"
+                      name="lastname"
+                      id="edit-lastname"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                      placeholder="Tu apellido"
+                    />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="edit-date_of_birth"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Fecha de Nacimiento
+                    </label>
+                    <input
+                      type="date"
+                      name="date_of_birth"
+                      id="edit-date_of_birth"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                    />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="edit-nationality"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Nacionalidad
+                    </label>
+                    <input
+                      type="text"
+                      name="nationality"
+                      id="edit-nationality"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                      placeholder="Tu nacionalidad"
+                    />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium text-text">
+                      Estado del Usuario
+                    </label>
+                    <div class="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="activo"
+                        id="edit-activo"
+                        class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                      />
+                      <label for="edit-activo" class="ml-2 text-sm text-text">
+                        Usuario Activo
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 2: Información de Contacto -->
+              <div id="info-contacto-tab" class="tab-pane hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label
+                      for="edit-telephone"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Teléfono
+                    </label>
+                    <input
+                      type="text"
+                      name="telephone"
+                      id="edit-telephone"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                      placeholder="Número de teléfono"
+                    />
+                  </div>
+
+                  <div class="space-y-2 md:col-span-2">
+                    <label
+                      for="edit-address"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Dirección
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      id="edit-address"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                      placeholder="Tu dirección completa"
+                    />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="edit-city"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Ciudad
+                    </label>
+                    <input
+                      type="text"
+                      name="city"
+                      id="edit-city"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                      placeholder="Tu ciudad"
+                    />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="edit-state"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Estado/Provincia
+                    </label>
+                    <input
+                      type="text"
+                      name="state"
+                      id="edit-state"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                      placeholder="Tu estado/provincia"
+                    />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="edit-zip_code"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Código Postal
+                    </label>
+                    <input
+                      type="text"
+                      name="zip_code"
+                      id="edit-zip_code"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                      placeholder="Tu código postal"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 3: Cambiar Contraseña -->
+              <div id="contrasena-tab" class="tab-pane hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="space-y-2 md:col-span-2">
+                    <div class="bg-yellow-50 p-4 rounded-lg mb-6">
+                      <div class="flex">
+                        <div class="flex-shrink-0">
+                          <svg
+                            class="h-5 w-5 text-yellow-400"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                        <div class="ml-3">
+                          <h3 class="text-sm font-medium text-yellow-800">
+                            Información importante
+                          </h3>
+                          <div class="mt-2 text-sm text-yellow-700">
+                            <p>
+                              Dejar campos vacíos para mantener la contraseña
+                              actual.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="edit-password"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Nueva Contraseña
+                    </label>
+                    <div class="relative">
+                      <input
+                        type="password"
+                        name="password"
+                        id="edit-password"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        class="absolute inset-y-0 right-0 flex items-center pr-3 password-toggle"
+                        tabindex="-1"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-5 w-5 text-gray-400"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="edit-password-confirm"
+                      class="block text-sm font-medium text-text"
+                    >
+                      Confirmar Contraseña
+                    </label>
+                    <div class="relative">
+                      <input
+                        type="password"
+                        name="password_confirm"
+                        id="edit-password-confirm"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        class="absolute inset-y-0 right-0 flex items-center pr-3 password-toggle"
+                        tabindex="-1"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-5 w-5 text-gray-400"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 4: Roles de Usuario -->
+              <div id="roles-tab" class="tab-pane hidden">
+                <div class="space-y-4">
+                  <div
+                    id="edit-user-roles-container"
+                    class="space-y-2 p-4 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <p class="text-sm text-text-secondary font-opensans">
+                      Cargando roles...
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        
-        <div class="flex justify-end space-x-3 pt-4 border-t">
-          <button
-            type="button"
-            onclick="cerrarModalEditar()"
-            class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+
+          <!-- Botones de Acción -->
+          <div
+            class="px-6 py-4 bg-white border-t border-gray-100 flex flex-col-reverse sm:flex-row sm:justify-end space-y-reverse space-y-3 sm:space-y-0 sm:space-x-3"
           >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Guardar Cambios
-          </button>
-        </div>
-      </form>
+            <button
+              type="button"
+              class="sm:order-1 inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-text bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              onclick="cerrarModalEditar()"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="sm:order-2 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 mr-1.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Guardar Cambios
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-// Funciones para los modales
-function confirmarEliminarUsuario(usuarioId, nombreUsuario) {
-  document.getElementById('nombreUsuarioEliminar').textContent = nombreUsuario;
-  document.getElementById('modalEliminar').classList.remove('hidden');
-  
-  document.getElementById('confirmarEliminarBtn').onclick = function() {
-    // Lógica para eliminar el usuario
-    fetch(`/api/usuarios/${usuarioId}/eliminar`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        alert('Usuario eliminado correctamente');
-        cerrarModalEliminar();
-        location.reload(); // Recargar la página para mostrar los cambios
-      } else {
-        alert('Error al eliminar el usuario: ' + data.error);
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Error al eliminar el usuario');
-    });
-  };
-}
+  // Funciones para los modales
+  function confirmarEliminarUsuario(usuarioId, nombreUsuario) {
+    document.getElementById("nombreUsuarioEliminar").textContent =
+      nombreUsuario;
+    document.getElementById("modalEliminar").classList.remove("hidden");
 
-function cerrarModalEliminar() {
-  document.getElementById('modalEliminar').classList.add('hidden');
-}
+    document.getElementById("confirmarEliminarBtn").onclick = function () {
+      // Lógica para eliminar el usuario
+      fetch(`/api/usuarios/${usuarioId}/eliminar`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            alert("Usuario eliminado correctamente");
+            cerrarModalEliminar();
+            location.reload(); // Recargar la página para mostrar los cambios
+          } else {
+            alert("Error al eliminar el usuario: " + data.error);
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          alert("Error al eliminar el usuario");
+        });
+    };
+  }
 
-function abrirModalHistorial(usuarioId, nombreUsuario) {
-  document.getElementById('nombreUsuarioHistorial').textContent = nombreUsuario;
-  document.getElementById('modalHistorial').classList.remove('hidden');
-  
-  // Cargar historial del usuario
-  fetch(`/api/usuarios/${usuarioId}/historial`)
-    .then(response => response.json())
-    .then(data => {
-      const contenido = document.getElementById('contenidoHistorial');
-      if (data.actividades && data.actividades.length > 0) {
-        contenido.innerHTML = data.actividades.map(actividad => `
+  function cerrarModalEliminar() {
+    document.getElementById("modalEliminar").classList.add("hidden");
+  }
+
+  function abrirModalHistorial(usuarioId, nombreUsuario) {
+    document.getElementById("nombreUsuarioHistorial").textContent =
+      nombreUsuario;
+    document.getElementById("modalHistorial").classList.remove("hidden");
+
+    // Cargar historial del usuario
+    fetch(`/api/usuarios/${usuarioId}/historial`)
+      .then((response) => response.json())
+      .then((data) => {
+        const contenido = document.getElementById("contenidoHistorial");
+        if (data.actividades && data.actividades.length > 0) {
+          contenido.innerHTML = data.actividades
+            .map(
+              (actividad) => `
           <div class="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
             <div class="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
             <div class="flex-1">
-              <p class="text-sm font-medium text-gray-900">${actividad.accion}</p>
-              <p class="text-sm text-gray-600">${actividad.descripcion || ''}</p>
-              <p class="text-xs text-gray-500">${new Date(actividad.fecha).toLocaleString()}</p>
+              <p class="text-sm font-medium text-gray-900">${
+                actividad.accion
+              }</p>
+              <p class="text-sm text-gray-600">${
+                actividad.descripcion || ""
+              }</p>
+              <p class="text-xs text-gray-500">${new Date(
+                actividad.fecha
+              ).toLocaleString()}</p>
             </div>
           </div>
-        `).join('');
-      } else {
-        contenido.innerHTML = '<p class="text-gray-500 text-center py-8">No hay actividades registradas para este usuario.</p>';
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      document.getElementById('contenidoHistorial').innerHTML = '<p class="text-red-500 text-center py-8">Error al cargar el historial.</p>';
-    });
-}
+        `
+            )
+            .join("");
+        } else {
+          contenido.innerHTML =
+            '<p class="text-gray-500 text-center py-8">No hay actividades registradas para este usuario.</p>';
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        document.getElementById("contenidoHistorial").innerHTML =
+          '<p class="text-red-500 text-center py-8">Error al cargar el historial.</p>';
+      });
+  }
 
-function cerrarModalHistorial() {
-  document.getElementById('modalHistorial').classList.add('hidden');
-}
+  function cerrarModalHistorial() {
+    document.getElementById("modalHistorial").classList.add("hidden");
+  }
 
-function abrirModalEditar(usuarioId, nombreUsuario) {
-  document.getElementById('editarUsuarioInfo').textContent = `Editando información de ${nombreUsuario}`;
-  document.getElementById('editarUsuarioId').value = usuarioId;
-  document.getElementById('modalEditar').classList.remove('hidden');
+  function abrirModalEditar(usuarioId, nombreUsuario) {
+    console.log("abrirModalEditar llamado con:", { usuarioId, nombreUsuario });
+    document.getElementById("editing-user-name").textContent = nombreUsuario;
+    document.getElementById("edit-user-id").value = usuarioId;
+    document.getElementById("editUserModal").classList.remove("hidden");
 
-  // Cargar datos del usuario
-  fetch(`/api/usuarios/${usuarioId}/datos`)
-    .then(response => response.json())
-    .then(data => {
-      document.getElementById('nombre').value = data.nombre || '';
-      document.getElementById('apellido').value = data.apellido || '';
-      document.getElementById('email').value = data.email || '';
-      document.getElementById('rol').value = data.rol || 'admin';
-      document.getElementById('activo').checked = data.activo || false;
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Error al cargar los datos del usuario');
-    });
-}
-
-function cerrarModalEditar() {
-  document.getElementById('modalEditar').classList.add('hidden');
-  document.getElementById('formEditar').reset();
-}
-
-// Manejo del formulario de edición
-document.getElementById('formEditar').addEventListener('submit', function(e) {
-  e.preventDefault();
-  
-  const formData = new FormData(this);
-  const usuarioId = document.getElementById('editarUsuarioId').value;
-  
-  fetch(`/api/usuarios/${usuarioId}/actualizar`, {
-    method: 'POST',
-    body: formData
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      alert('Usuario actualizado correctamente');
-      cerrarModalEditar();
-      location.reload(); // Recargar la página para mostrar los cambios
-    } else {
-      alert('Error al actualizar el usuario: ' + data.error);
+    // Limpiar formulario y mensajes
+    document.getElementById("editUserForm").reset();
+    const passwordInput = document.getElementById("edit-password");
+    if (passwordInput) {
+      passwordInput.value = "";
     }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Error al actualizar el usuario');
+
+    if (messageBox) {
+      messageBox.textContent = "";
+      messageBox.classList.add("hidden");
+      messageBox.classList.remove(
+        "bg-red-100",
+        "text-red-800",
+        "bg-green-100",
+        "text-green-800"
+      );
+    }
+
+    // Cargar datos del usuario con roles
+    fetch(`/api/usuarios/${usuarioId}/datos_completos`)
+      .then((response) => {
+        console.log("Response status:", response.status);
+        if (!response.ok) {
+          return response.json().then((errorData) => {
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("API Response:", data);
+        if (data.success) {
+          const usuario = data.usuario;
+          const allRoles = data.all_roles;
+
+          // Llenar campos básicos de forma segura
+          const editEmail = document.getElementById("edit-email");
+          const editName = document.getElementById("edit-name");
+          const editLastname = document.getElementById("edit-lastname");
+          const editActivo = document.getElementById("edit-activo");
+
+          if (editEmail) editEmail.value = usuario.email || "";
+          if (editName) editName.value = usuario.nombre || "";
+          if (editLastname) editLastname.value = usuario.apellido || "";
+          if (editActivo) editActivo.checked = usuario.activo || false;
+
+          // Llenar campos de contacto de forma segura
+          const editTelephone = document.getElementById("edit-telephone");
+          const editAddress = document.getElementById("edit-address");
+          const editCity = document.getElementById("edit-city");
+          const editState = document.getElementById("edit-state");
+          const editZipCode = document.getElementById("edit-zip_code");
+          const editDateOfBirth = document.getElementById("edit-date_of_birth");
+          const editNationality = document.getElementById("edit-nationality");
+
+          if (editTelephone && usuario.telefono)
+            editTelephone.value = usuario.telefono;
+          if (editAddress && usuario.direccion)
+            editAddress.value = usuario.direccion;
+          if (editCity && usuario.ciudad) editCity.value = usuario.ciudad;
+          if (editState && usuario.estado) editState.value = usuario.estado;
+          if (editZipCode && usuario.codigo_postal)
+            editZipCode.value = usuario.codigo_postal;
+          if (editDateOfBirth && usuario.fecha_nacimiento)
+            editDateOfBirth.value = usuario.fecha_nacimiento;
+          if (editNationality && usuario.nacionalidad)
+            editNationality.value = usuario.nacionalidad;
+
+          // Cargar roles del usuario
+          cargarRolesUsuario(usuario, allRoles);
+        } else {
+          throw new Error(data.error || "Error desconocido en la respuesta");
+        }
+      })
+      .catch((error) => {
+        console.error("Error al cargar datos del usuario:", error);
+        showMessage(
+          "Error al cargar los datos del usuario: " + error.message,
+          "error"
+        );
+      });
+  }
+
+  function cargarRolesUsuario(usuario, allRoles) {
+    console.log("cargarRolesUsuario llamado con:", { usuario, allRoles });
+    const rolesContainer = document.getElementById("edit-user-roles-container");
+
+    if (!rolesContainer) {
+      console.error("No se encontró el contenedor de roles");
+      return;
+    }
+
+    rolesContainer.innerHTML = ""; // Limpiar roles existentes
+
+    if (allRoles && allRoles.length > 0) {
+      const rolesList = document.createElement("div");
+      rolesList.className = "space-y-3";
+
+      allRoles.forEach((role) => {
+        const isChecked = usuario.rol === role.slug;
+
+        const roleItem = document.createElement("div");
+        roleItem.className = `
+          flex items-center justify-between p-4 rounded-lg border cursor-pointer role-option transition-all duration-200
+          ${
+            isChecked
+              ? "bg-primary/5 border-primary shadow-sm"
+              : "bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
+          }
+        `
+          .replace(/\s+/g, " ")
+          .trim();
+        roleItem.setAttribute("data-role", role.slug);
+
+        const roleMainContent = document.createElement("div");
+        roleMainContent.className = "flex items-center flex-1";
+
+        const roleInput = document.createElement("input");
+        roleInput.type = "radio";
+        roleInput.name = "rol";
+        roleInput.value = role.slug;
+        roleInput.id = `role-${role.slug}`;
+        roleInput.className =
+          "h-4 w-4 text-primary focus:ring-primary focus:ring-2 rounded border-gray-300 transition-all";
+        if (isChecked) {
+          roleInput.checked = true;
+        }
+
+        const roleInfo = document.createElement("div");
+        roleInfo.className = "ml-3 flex-1";
+
+        const roleLabel = document.createElement("label");
+        roleLabel.htmlFor = `role-${role.slug}`;
+        roleLabel.className = `
+          block text-sm font-semibold cursor-pointer transition-colors
+          ${isChecked ? "text-primary" : "text-gray-900"}
+        `
+          .replace(/\s+/g, " ")
+          .trim();
+        roleLabel.textContent = role.name;
+
+        roleInfo.appendChild(roleLabel);
+
+        if (role.description) {
+          const roleDesc = document.createElement("span");
+          roleDesc.className = "block text-xs text-gray-600 mt-0.5";
+          roleDesc.textContent = role.description;
+          roleInfo.appendChild(roleDesc);
+        }
+
+        roleMainContent.appendChild(roleInput);
+        roleMainContent.appendChild(roleInfo);
+
+        const rightContent = document.createElement("div");
+        rightContent.className = "flex items-center space-x-2";
+
+        if (role.slug === "lector") {
+          const dropdownButton = document.createElement("button");
+          dropdownButton.type = "button";
+          dropdownButton.className = `
+            p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-200 
+            transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20
+          `
+            .replace(/\s+/g, " ")
+            .trim();
+          dropdownButton.innerHTML = `
+            <svg class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          `;
+
+          rightContent.appendChild(dropdownButton);
+        }
+
+        const checkIcon = document.createElement("div");
+        checkIcon.className = `
+          transition-all duration-200
+          ${isChecked ? "text-primary" : "text-transparent"}
+        `
+          .replace(/\s+/g, " ")
+          .trim();
+        checkIcon.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        `;
+
+        rightContent.appendChild(checkIcon);
+
+        roleItem.appendChild(roleMainContent);
+        roleItem.appendChild(rightContent);
+
+        const collapsibleContainer = document.createElement("div");
+        collapsibleContainer.className = "w-full";
+
+        if (role.slug === "lector") {
+          const permissionDropdown = document.createElement("div");
+          permissionDropdown.className =
+            "hidden mt-3 p-4 bg-white rounded-lg border border-gray-200 shadow-sm";
+          permissionDropdown.id = "lector-permissions-dropdown";
+
+          const permissionHeader = document.createElement("div");
+          permissionHeader.className =
+            "flex items-center mb-3 pb-2 border-b border-gray-100";
+
+          const permissionIcon = document.createElement("div");
+          permissionIcon.className =
+            "flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-2";
+          permissionIcon.innerHTML =
+            '<i class="fas fa-shield-alt text-indigo-600 text-xs"></i>';
+
+          const permissionTitle = document.createElement("span");
+          permissionTitle.className = "text-sm font-semibold text-gray-800";
+          permissionTitle.textContent = "Configurar Permisos Adicionales";
+
+          permissionHeader.appendChild(permissionIcon);
+          permissionHeader.appendChild(permissionTitle);
+
+          const permissionContent = document.createElement("div");
+          permissionContent.className = "flex items-start space-x-3";
+
+          const checkboxWrapper = document.createElement("div");
+          checkboxWrapper.className = "flex-shrink-0 mt-0.5";
+
+          const extraPermInput = document.createElement("input");
+          extraPermInput.type = "checkbox";
+          extraPermInput.name = "lector_extra_permissions";
+          extraPermInput.id = "lector-extra-perm";
+          extraPermInput.className =
+            "h-4 w-4 text-indigo-600 focus:ring-indigo-500 focus:ring-2 rounded border-gray-300 transition-colors";
+          extraPermInput.value = "edit_delete_move";
+
+          if (
+            usuario.lector_extra_permissions &&
+            usuario.lector_extra_permissions.includes("edit_delete_move")
+          ) {
+            extraPermInput.checked = true;
+          }
+
+          checkboxWrapper.appendChild(extraPermInput);
+
+          // Contenido principal
+          const contentWrapper = document.createElement("div");
+          contentWrapper.className = "flex-1 min-w-0";
+
+          const extraPermLabel = document.createElement("label");
+          extraPermLabel.htmlFor = "lector-extra-perm";
+          extraPermLabel.className =
+            "block text-sm font-medium text-gray-900 cursor-pointer mb-1";
+          extraPermLabel.textContent =
+            "Permitir renombrar, mover y eliminar archivos";
+
+          const extraPermDescription = document.createElement("p");
+          extraPermDescription.className = "text-xs text-gray-600 mb-3";
+          extraPermDescription.textContent =
+            "El usuario podrá modificar archivos además de visualizarlos.";
+
+          const featureList = document.createElement("div");
+          featureList.className = "flex flex-wrap gap-1";
+
+          const features = [
+            { icon: "fa-edit", text: "Renombrar" },
+            { icon: "fa-arrows-alt", text: "Mover" },
+            { icon: "fa-trash-alt", text: "Eliminar" },
+          ];
+
+          features.forEach((feature) => {
+            const featureBadge = document.createElement("span");
+            featureBadge.className =
+              "inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700";
+            featureBadge.innerHTML = `<i class="fas ${feature.icon} mr-1"></i>${feature.text}`;
+            featureList.appendChild(featureBadge);
+          });
+
+          contentWrapper.appendChild(extraPermLabel);
+          contentWrapper.appendChild(extraPermDescription);
+          contentWrapper.appendChild(featureList);
+
+          permissionContent.appendChild(checkboxWrapper);
+          permissionContent.appendChild(contentWrapper);
+
+          permissionDropdown.appendChild(permissionHeader);
+          permissionDropdown.appendChild(permissionContent);
+
+          // Agregar permiso para agregar beneficiarios
+          const beneficiaryPermContent = document.createElement("div");
+          beneficiaryPermContent.className =
+            "flex items-start space-x-3 mt-4 pt-4 border-t border-gray-200";
+
+          const beneficiaryCheckboxWrapper = document.createElement("div");
+          beneficiaryCheckboxWrapper.className = "flex-shrink-0 mt-0.5";
+
+          const beneficiaryPermInput = document.createElement("input");
+          beneficiaryPermInput.type = "checkbox";
+          beneficiaryPermInput.name = "lector_extra_permissions";
+          beneficiaryPermInput.id = "lector-beneficiary-perm";
+          beneficiaryPermInput.className =
+            "h-4 w-4 text-indigo-600 focus:ring-indigo-500 focus:ring-2 rounded border-gray-300 transition-colors";
+          beneficiaryPermInput.value = "add_beneficiaries";
+
+          if (
+            usuario.lector_extra_permissions &&
+            usuario.lector_extra_permissions.includes("add_beneficiaries")
+          ) {
+            beneficiaryPermInput.checked = true;
+          }
+
+          beneficiaryCheckboxWrapper.appendChild(beneficiaryPermInput);
+
+          // Contenido principal para el permiso de beneficiarios
+          const beneficiaryContentWrapper = document.createElement("div");
+          beneficiaryContentWrapper.className = "flex-1 min-w-0";
+
+          const beneficiaryPermLabel = document.createElement("label");
+          beneficiaryPermLabel.htmlFor = "lector-beneficiary-perm";
+          beneficiaryPermLabel.className =
+            "block text-sm font-medium text-gray-900 cursor-pointer mb-1";
+          beneficiaryPermLabel.textContent = "Permitir agregar beneficiarios";
+
+          const beneficiaryPermDescription = document.createElement("p");
+          beneficiaryPermDescription.className = "text-xs text-gray-600 mb-3";
+          beneficiaryPermDescription.textContent =
+            "El usuario podrá agregar nuevos beneficiarios a los clientes.";
+
+          const beneficiaryFeatureList = document.createElement("div");
+          beneficiaryFeatureList.className = "flex flex-wrap gap-1";
+
+          const beneficiaryFeature = document.createElement("span");
+          beneficiaryFeature.className =
+            "inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700";
+          beneficiaryFeature.innerHTML = `<i class="fas fa-user-plus mr-1"></i>Agregar beneficiarios`;
+          beneficiaryFeatureList.appendChild(beneficiaryFeature);
+
+          beneficiaryContentWrapper.appendChild(beneficiaryPermLabel);
+          beneficiaryContentWrapper.appendChild(beneficiaryPermDescription);
+          beneficiaryContentWrapper.appendChild(beneficiaryFeatureList);
+
+          beneficiaryPermContent.appendChild(beneficiaryCheckboxWrapper);
+          beneficiaryPermContent.appendChild(beneficiaryContentWrapper);
+
+          permissionDropdown.appendChild(beneficiaryPermContent);
+
+          collapsibleContainer.appendChild(permissionDropdown);
+
+          const dropdownButton = rightContent.querySelector("button");
+          if (dropdownButton) {
+            dropdownButton.addEventListener("click", function (e) {
+              e.stopPropagation();
+              const dropdown = permissionDropdown;
+              const arrow = this.querySelector("svg");
+
+              if (dropdown.classList.contains("hidden")) {
+                dropdown.classList.remove("hidden");
+                arrow.style.transform = "rotate(180deg)";
+                this.classList.add("text-primary", "bg-primary/10");
+                this.classList.remove("text-gray-400", "hover:bg-gray-200");
+              } else {
+                dropdown.classList.add("hidden");
+                arrow.style.transform = "rotate(0deg)";
+                this.classList.remove("text-primary", "bg-primary/10");
+                this.classList.add("text-gray-400");
+              }
+            });
+          }
+
+          permissionContent.addEventListener("click", function (e) {
+            if (e.target !== extraPermInput) {
+              extraPermInput.click();
+            }
+          });
+
+          beneficiaryPermContent.addEventListener("click", function (e) {
+            if (e.target !== beneficiaryPermInput) {
+              beneficiaryPermInput.click();
+            }
+          });
+        }
+
+        const fullRoleContainer = document.createElement("div");
+        fullRoleContainer.className = "w-full";
+        fullRoleContainer.appendChild(roleItem);
+        fullRoleContainer.appendChild(collapsibleContainer);
+
+        rolesList.appendChild(fullRoleContainer);
+
+        roleItem.addEventListener("click", function (e) {
+          if (e.target.closest("button") || e.target.id === "lector-extra-perm")
+            return;
+
+          const radioInput = this.querySelector(
+            'input[type="radio"][name="rol"]'
+          );
+          radioInput.checked = true;
+
+          // Actualizar todos los items de rol
+          document.querySelectorAll(".role-option").forEach((item) => {
+            const radio = item.querySelector('input[type="radio"][name="rol"]');
+            const itemCheckIcon = item
+              .closest(".w-full")
+              .querySelector(".text-transparent, .text-primary");
+            const itemRoleLabel = item.querySelector("label");
+
+            if (radio.checked) {
+              item.classList.remove(
+                "bg-gray-50",
+                "border-gray-200",
+                "hover:bg-gray-100"
+              );
+              item.classList.add("bg-primary/5", "border-primary", "shadow-sm");
+
+              itemCheckIcon.classList.remove("text-transparent");
+              itemCheckIcon.classList.add("text-primary");
+
+              if (itemRoleLabel) {
+                itemRoleLabel.classList.remove("text-gray-900");
+                itemRoleLabel.classList.add("text-primary");
+              }
+            } else {
+              item.classList.remove(
+                "bg-primary/5",
+                "border-primary",
+                "shadow-sm"
+              );
+              item.classList.add(
+                "bg-gray-50",
+                "border-gray-200",
+                "hover:bg-gray-100"
+              );
+
+              itemCheckIcon.classList.remove("text-primary");
+              itemCheckIcon.classList.add("text-transparent");
+
+              if (itemRoleLabel) {
+                itemRoleLabel.classList.remove("text-primary");
+                itemRoleLabel.classList.add("text-gray-900");
+              }
+            }
+          });
+        });
+      });
+
+      rolesContainer.appendChild(rolesList);
+      console.log("Roles cargados exitosamente");
+    } else {
+      console.log("No hay roles disponibles");
+      rolesContainer.innerHTML = `
+        <div class="text-center py-8">
+          <div class="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+            <i class="fas fa-users-slash text-gray-400 text-lg"></i>
+          </div>
+          <p class="text-gray-500 font-medium">No se encontraron roles disponibles</p>
+          <p class="text-gray-400 text-sm mt-1">Contacta al administrador del sistema</p>
+        </div>
+      `;
+    }
+    console.log("cargarRolesUsuario completado");
+  }
+
+  function cerrarModalEditar() {
+    document.getElementById("editUserModal").classList.add("hidden");
+    document.getElementById("editUserForm").reset();
+    hideMessage();
+  }
+
+  // Función para mostrar mensajes
+  function showMessage(message, type = "info") {
+    const messageBox = document.getElementById("messageBox");
+    messageBox.textContent = message;
+    messageBox.className = `message-box p-4 rounded-lg mb-4 ${
+      type === "error"
+        ? "bg-red-100 text-red-700"
+        : "bg-green-100 text-green-700"
+    }`;
+    messageBox.classList.remove("hidden");
+  }
+
+  function hideMessage() {
+    const messageBox = document.getElementById("messageBox");
+    messageBox.classList.add("hidden");
+  }
+
+  // Manejo del formulario de edición
+  document
+    .getElementById("editUserForm")
+    .addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const userId = document.getElementById("edit-user-id").value;
+      const formData = new FormData(this);
+      const submitButton = this.querySelector('button[type="submit"]');
+
+      // Deshabilitar el botón de envío para evitar envíos múltiples
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.innerHTML =
+          '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
+      }
+
+      try {
+        const response = await fetch(`/api/usuarios/${userId}/actualizar`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Mostrar mensaje de éxito
+          const messageBox = document.getElementById("messageBox");
+          messageBox.textContent =
+            result.message || "Usuario actualizado exitosamente";
+          messageBox.classList.remove("hidden", "bg-red-100", "text-red-800");
+          messageBox.classList.add("bg-green-100", "text-green-800");
+
+          // Si se cambiaron los permisos de un usuario lector, mostrar aviso especial
+          if (result.permissions_changed) {
+            Swal.fire({
+              title: "¡Permisos actualizados!",
+              text: "Los permisos del usuario lector han sido modificados. El usuario deberá cerrar sesión y volver a iniciarla para que los cambios surtan efecto.",
+              icon: "info",
+              confirmButtonText: "Entendido",
+              confirmButtonColor: "#0076a8",
+              timer: 8000, // 8 segundos de duración
+              timerProgressBar: true, // Muestra una barra de progreso
+              showConfirmButton: true, // Mantener el botón de confirmación
+              willClose: () => {
+                console.log("Mensaje de permisos cerrado después de la pausa");
+              },
+            });
+          }
+
+          // Cerrar el modal después de un breve retraso
+          setTimeout(() => {
+            document.getElementById("editUserModal").classList.add("hidden");
+            // Recargar la página para mostrar los cambios actualizados
+            window.location.reload();
+          }, 1500);
+        } else {
+          // Mostrar mensaje de error
+          const messageBox = document.getElementById("messageBox");
+          messageBox.textContent =
+            result.message || "Error al actualizar el usuario";
+          messageBox.classList.remove(
+            "hidden",
+            "bg-green-100",
+            "text-green-800"
+          );
+          messageBox.classList.add("bg-red-100", "text-red-800");
+
+          // Reactivar el botón de envío
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerHTML =
+              '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> Guardar Cambios';
+          }
+        }
+      } catch (error) {
+        console.error("Error al actualizar usuario:", error);
+        const messageBox = document.getElementById("messageBox");
+        messageBox.textContent =
+          "Error al actualizar el usuario: " + error.message;
+        messageBox.classList.remove("hidden", "bg-green-100", "text-green-800");
+        messageBox.classList.add("bg-red-100", "text-red-800");
+
+        // Reactivar el botón de envío
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.innerHTML =
+            '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> Guardar Cambios';
+        }
+      }
+    });
+
+  // Funcionalidad de pestañas
+  document.addEventListener("DOMContentLoaded", function () {
+    // Manejo de pestañas
+    const tabButtons = document.querySelectorAll(".tab-button");
+    const tabPanes = document.querySelectorAll(".tab-pane");
+
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const targetTab = this.getAttribute("data-tab");
+
+        // Remover clases activas
+        tabButtons.forEach((btn) => {
+          btn.classList.remove("active", "border-primary", "text-primary");
+          btn.classList.add("text-gray-500", "border-transparent");
+        });
+
+        tabPanes.forEach((pane) => {
+          pane.classList.add("hidden");
+        });
+
+        // Activar pestaña seleccionada
+        this.classList.add("active", "border-primary", "text-primary");
+        this.classList.remove("text-gray-500", "border-transparent");
+
+        // Mostrar contenido de la pestaña
+        document.getElementById(targetTab).classList.remove("hidden");
+      });
+    });
+
+    // Funcionalidad de mostrar/ocultar contraseña
+    const passwordToggles = document.querySelectorAll(".password-toggle");
+    passwordToggles.forEach((toggle) => {
+      toggle.addEventListener("click", function () {
+        const input = this.previousElementSibling;
+        const icon = this.querySelector("svg");
+
+        if (input.type === "password") {
+          input.type = "text";
+          icon.innerHTML = `
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+        `;
+        } else {
+          input.type = "password";
+          icon.innerHTML = `
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        `;
+        }
+      });
+    });
   });
-});
 </script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+  /* Estilos para las pestañas */
+  .tab-button.active {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+
+  .tab-button:not(.active) {
+    border-color: transparent;
+    color: #6b7280;
+  }
+
+  .tab-button:not(.active):hover {
+    border-color: #d1d5db;
+    color: #374151;
+  }
+
+  /* Estilos para los colores primarios */
+  .text-primary {
+    color: #3b82f6;
+  }
+
+  .bg-primary {
+    background-color: #3b82f6;
+  }
+
+  .hover\:bg-primary-light:hover {
+    background-color: #2563eb;
+  }
+
+  .focus\:ring-primary:focus {
+    --tw-ring-color: #3b82f6;
+  }
+
+  .border-primary {
+    border-color: #3b82f6;
+  }
+
+  /* Estilos para el texto */
+  .text-text {
+    color: #1f2937;
+  }
+
+  .text-text-secondary {
+    color: #6b7280;
+  }
+
+  /* Estilos para los mensajes */
+  .message-box {
+    transition: all 0.3s ease;
+  }
+
+  /* Estilos para las fuentes */
+  .font-montserrat {
+    font-family: "Montserrat", sans-serif;
+  }
+
+  .font-opensans {
+    font-family: "Open Sans", sans-serif;
+  }
+</style>
 {% endblock %}
