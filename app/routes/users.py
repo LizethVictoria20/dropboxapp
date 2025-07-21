@@ -253,6 +253,23 @@ def update_user():
         user.rol = request.form.get('rol')
         user.activo = request.form.get('activo') == 'true'
         
+        # Procesar permisos adicionales para lectores
+        if user.rol == 'lector':
+            permisos_adicionales = []
+            if request.form.get('puede_renombrar'):
+                permisos_adicionales.append('renombrar')
+            if request.form.get('puede_mover'):
+                permisos_adicionales.append('mover')
+            if request.form.get('puede_eliminar'):
+                permisos_adicionales.append('eliminar')
+            if request.form.get('puede_agregar_beneficiarios'):
+                permisos_adicionales.append('agregar_beneficiarios')
+            
+            user.lector_extra_permissions = json.dumps(permisos_adicionales) if permisos_adicionales else None
+        else:
+            # Limpiar permisos si no es lector
+            user.lector_extra_permissions = None
+        
         # Procesar fecha de nacimiento
         fecha_nacimiento_str = request.form.get('fecha_nacimiento')
         if fecha_nacimiento_str:
