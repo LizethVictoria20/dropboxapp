@@ -385,20 +385,18 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 <!-- Modal para mover archivo -->
 <div
   id="moveModal"
-  class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
+  class="hidden fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
 >
   <div
-    class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
+    class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden"
   >
-    <div class="mt-3">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Mover archivo</h3>
-        <button
-          onclick="closeModal('moveModal')"
-          class="text-gray-400 hover:text-gray-600"
+    <div class="flex items-center justify-between p-6 border-b border-gray-200">
+      <div class="flex items-center space-x-3">
+        <div
+          class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center"
         >
           <svg
-            class="w-6 h-6"
+            class="w-5 h-5 text-amber-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -407,58 +405,321 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
+              d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+            />
           </svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Mover archivo</h3>
+          <p class="text-sm text-gray-500">
+            Archivo: <span id="moveFileName" class="font-medium"></span>
+          </p>
+        </div>
+      </div>
+      <button
+        onclick="closeMoveModal()"
+        class="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+      >
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <form
+      id="moveForm"
+      method="post"
+      action="{{ url_for('listar_dropbox.mover_archivo_modal') }}"
+      class="flex flex-col h-full"
+    >
+      <input type="hidden" name="archivo_nombre" id="moveArchivoNombre" />
+      <input type="hidden" name="carpeta_actual" id="moveCarpetaActual" />
+      <input type="hidden" name="usuario_id" value="{{ usuario.id }}" />
+
+      <div class="flex-1 p-6 overflow-y-auto">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-3"
+            >Selecciona carpeta destino</label
+          >
+          <div
+            id="destinoTree"
+            class="border border-gray-300 rounded-lg bg-gray-50 p-4 max-h-64 overflow-y-auto"
+          >
+            <!-- Aquí se renderiza el árbol de carpetas destino vía JS -->
+          </div>
+          <input
+            type="hidden"
+            name="nueva_carpeta"
+            id="nuevaCarpetaSeleccionada"
+            required
+          />
+          <div
+            id="selectedFolder"
+            class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg hidden"
+          >
+            <div class="flex items-center">
+              <svg
+                class="w-4 h-4 text-green-600 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span class="text-green-800 text-sm font-medium"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="flex justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50"
+      >
+        <button
+          type="button"
+          onclick="closeMoveModal()"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+        >
+          Mover archivo
         </button>
       </div>
-      <form
-        id="moveForm"
-        action="{{ url_for('listar_dropbox.mover_archivo_modal') }}"
-        method="post"
-      >
-        <input type="hidden" id="moveFileName" name="archivo_nombre" value="" />
-        <input
-          type="hidden"
-          id="moveCurrentPath"
-          name="carpeta_actual"
-          value=""
-        />
-        <div class="mb-4">
-          <label
-            for="moveDestination"
-            class="block text-sm font-medium text-gray-700 mb-2"
-            >Carpeta destino</label
-          >
-          <select
-            id="moveDestination"
-            name="nueva_carpeta"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            <option value="">Seleccionar carpeta...</option>
-            <!-- Se llenará dinámicamente con JavaScript -->
-          </select>
-        </div>
-        <div class="flex justify-end space-x-3">
-          <button
-            type="button"
-            onclick="closeModal('moveModal')"
-            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            class="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors"
-          >
-            Mover archivo
-          </button>
-        </div>
-      </form>
-    </div>
+    </form>
   </div>
 </div>
+
+<!-- Elemento oculto para almacenar emails de usuarios -->
+<script id="usuarios-emails-data" type="application/json">
+  {
+    "{{ usuario.id }}": "{{ usuario.email }}"
+  }
+</script>
+
+<!-- Script para definir las funciones necesarias ANTES de openMoveModal -->
+<script>
+  // Definir renderDestinoTreeExpandible primero
+  window.renderDestinoTreeExpandible = function (tree, path) {
+    console.log("=== renderDestinoTreeExpandible ===");
+    console.log("Parámetros:", { tree, path });
+    console.log("¿tree existe?:", !!tree);
+    console.log("¿tree._subcarpetas existe?:", !!(tree && tree._subcarpetas));
+
+    if (!tree || !tree._subcarpetas) {
+      console.log("❌ No hay subcarpetas en el árbol");
+      return '<div class="text-center py-4 text-gray-500">No hay carpetas disponibles.</div>';
+    }
+
+    const subcarpetas = Object.keys(tree._subcarpetas);
+    console.log("✅ Subcarpetas encontradas:", subcarpetas);
+    console.log("Número de subcarpetas:", subcarpetas.length);
+
+    if (subcarpetas.length === 0) {
+      console.log("❌ No hay subcarpetas para renderizar");
+      return '<div class="text-center py-4 text-gray-500">No hay carpetas disponibles.</div>';
+    }
+
+    let html = '<div class="space-y-2">';
+    console.log("Iniciando bucle de renderizado...");
+    for (const [carpeta, data] of Object.entries(tree._subcarpetas)) {
+      console.log("🔄 Renderizando carpeta:", carpeta);
+      console.log("   Datos de la carpeta:", data);
+
+      // Construir el path completo para el usuario específico
+      let fullPath;
+      if (path === "") {
+        // Si estamos en la raíz, solo agregar el email del usuario y la carpeta
+        fullPath = "/{{ usuario.email }}/" + carpeta;
+      } else {
+        // Si ya tenemos un path, agregar la carpeta al final
+        fullPath = path + "/" + carpeta;
+      }
+
+      const hasSub =
+        data._subcarpetas && Object.keys(data._subcarpetas).length > 0;
+      const nodeId = "node-" + btoa(fullPath).replace(/=/g, "");
+
+      html += `
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <div class="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
+            <div class="flex items-center space-x-3">
+              <div class="w-6 h-6 bg-indigo-100 rounded flex items-center justify-center">
+                <svg class="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                </svg>
+              </div>
+              <span class="text-indigo-700 font-medium cursor-pointer hover:underline" onclick="selectDestino('${fullPath}')">${carpeta}</span>
+            </div>
+            ${
+              hasSub
+                ? `<button class="text-gray-400 hover:text-gray-600 transition-colors duration-200" onclick="toggleDestinoSubcarpetas('${nodeId}', this)">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>`
+                : ""
+            }
+          </div>
+          ${
+            hasSub
+              ? `<div id="${nodeId}" class="subcarpetas hidden p-2 bg-white border-t border-gray-200">
+            ${window.renderDestinoTreeExpandible(data, fullPath)}
+          </div>`
+              : ""
+          }
+        </div>
+      `;
+    }
+    html += "</div>";
+    console.log("✅ HTML generado exitosamente");
+    console.log("Longitud del HTML:", html.length);
+    return html;
+  };
+
+  // Definir toggleDestinoSubcarpetas
+  window.toggleDestinoSubcarpetas = function (nodeId, el) {
+    const sub = document.getElementById(nodeId);
+    const svg = el.querySelector("svg");
+    if (sub.classList.contains("hidden")) {
+      sub.classList.remove("hidden");
+      svg.style.transform = "rotate(180deg)";
+    } else {
+      sub.classList.add("hidden");
+      svg.style.transform = "rotate(0deg)";
+    }
+  };
+
+  console.log(
+    "Funciones renderDestinoTreeExpandible y toggleDestinoSubcarpetas definidas"
+  );
+</script>
+
+<!-- Script que se ejecuta inmediatamente para sobrescribir openMoveModal -->
+<script>
+  // Sobrescribir openMoveModal inmediatamente para evitar conflictos
+  window.openMoveModal = function(fileName, currentPath, usuarioId) {
+    console.log("openMoveModal (sobrescrita inmediatamente) llamado con:", {
+      fileName,
+      currentPath,
+      usuarioId
+    });
+
+    document.getElementById("moveModal").classList.remove("hidden");
+    document.getElementById("moveArchivoNombre").value = fileName;
+    document.getElementById("moveCarpetaActual").value = currentPath;
+    document.getElementById("moveFileName").innerText = fileName;
+    document.getElementById("nuevaCarpetaSeleccionada").value = "";
+    document.getElementById("selectedFolder").classList.add("hidden");
+
+    // IGNORAR el usuarioId que viene del macro y usar siempre el usuario de la vista actual
+    const usuarioIdLocal = "{{ usuario.id }}";
+    const usuarioEmail = "{{ usuario.email }}";
+
+    console.log("Usuario de la vista actual (ignorando parámetro):", {
+      id: usuarioIdLocal,
+      email: usuarioEmail
+    });
+
+    // Almacenar el usuarioId en el modal
+    document.getElementById("moveModal").dataset.usuarioId = usuarioIdLocal;
+    document.getElementById("moveModal").dataset.usuarioEmail = usuarioEmail;
+
+    // Renderizar el árbol de carpetas destino
+    const destinoTree = document.getElementById("destinoTree");
+    console.log("¿destinoTree existe?:", destinoTree);
+
+    if (destinoTree) {
+      try {
+        // Usar solo la estructura del usuario específico
+        const estructurasUsuarios = {
+          "{{ usuario.id }}": {{ estructura|tojson|safe }}
+        };
+        const estructuraUsuario = estructurasUsuarios["{{ usuario.id }}"];
+
+        console.log("=== DEBUG MODAL MOVE (USUARIO ESPECÍFICO) ===");
+        console.log("Usuario ID:", "{{ usuario.id }}");
+        console.log("Usuario Email:", "{{ usuario.email }}");
+        console.log("Estructura completa:", estructurasUsuarios);
+        console.log("Estructura del usuario:", estructuraUsuario);
+        console.log("¿EstructuraUsuario es null/undefined?:", estructuraUsuario == null);
+        console.log("¿Tiene _subcarpetas?:", estructuraUsuario && estructuraUsuario._subcarpetas);
+        console.log("¿Cuántas subcarpetas?:", estructuraUsuario && estructuraUsuario._subcarpetas ? Object.keys(estructuraUsuario._subcarpetas).length : 0);
+        console.log("¿renderDestinoTreeExpandible existe?:", typeof window.renderDestinoTreeExpandible);
+
+        // Verificar si la estructura tiene datos reales
+        const tieneCarpetas = estructuraUsuario &&
+                             estructuraUsuario._subcarpetas &&
+                             Object.keys(estructuraUsuario._subcarpetas).length > 0;
+
+        console.log("¿Tiene carpetas reales?:", tieneCarpetas);
+
+                // Usar la función renderDestinoTreeExpandible si está disponible
+        if (typeof window.renderDestinoTreeExpandible === 'function') {
+          if (tieneCarpetas) {
+            console.log("✅ Renderizando árbol de carpetas del usuario...");
+            destinoTree.innerHTML = window.renderDestinoTreeExpandible(estructuraUsuario, "");
+            console.log("Árbol renderizado exitosamente");
+          } else {
+            console.log("❌ No hay carpetas disponibles para mostrar");
+            destinoTree.innerHTML = `
+              <div class="text-center py-4 text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                </svg>
+                <p class="text-sm">No hay carpetas disponibles para mover archivos</p>
+                <p class="text-xs text-gray-400 mt-1">en las carpetas de {{ usuario.email }}</p>
+                <p class="text-xs text-gray-400 mt-1">Carpetas encontradas: ${Object.keys(estructuraUsuario._subcarpetas || {}).length}</p>
+              </div>`;
+          }
+        } else {
+          console.error("renderDestinoTreeExpandible no está disponible aún");
+          destinoTree.innerHTML = `
+            <div class="text-center py-4 text-red-500">
+              <svg class="w-12 h-12 mx-auto mb-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+              </svg>
+              <p class="text-sm">Error: Función de renderizado no disponible</p>
+            </div>`;
+        }
+      } catch (e) {
+        console.error("Error renderizando árbol de carpetas:", e);
+        destinoTree.innerHTML = `
+          <div class="text-center py-4 text-red-500">
+            <svg class="w-12 h-12 mx-auto mb-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+            </svg>
+            <p class="text-sm">Error cargando carpetas</p>
+            <p class="text-xs text-red-400 mt-1">${e.message}</p>
+          </div>`;
+      }
+    } else {
+      console.error("destinoTree no encontrado");
+    }
+
+    document.querySelector('#moveForm button[type="submit"]').disabled = true;
+  };
+
+  console.log("openMoveModal sobrescrita inmediatamente");
+</script>
 
 <script>
   function toggleFolder(folderId) {
@@ -505,28 +766,67 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
     openModal("renameModal");
   }
 
-  function openMoveModal(fileName, currentPath) {
-    document.getElementById("moveFileName").value = fileName;
-    document.getElementById("moveCurrentPath").value = currentPath;
+  function closeMoveModal() {
+    document.getElementById("moveModal").classList.add("hidden");
+  }
 
-    // Aquí podrías cargar dinámicamente las carpetas disponibles
-    // Por ahora, usaremos una lista estática
-    const select = document.getElementById("moveDestination");
-    select.innerHTML = '<option value="">Seleccionar carpeta...</option>';
+  function selectDestino(path) {
+    console.log("selectDestino llamado con path:", path);
 
-    // Agregar opciones de carpetas (esto se puede mejorar con una llamada AJAX)
-    const folders = ["/carpeta1", "/carpeta2", "/carpeta3"]; // Ejemplo
-    folders.forEach((folder) => {
-      if (folder !== currentPath) {
-        const option = document.createElement("option");
-        option.value = folder;
-        option.textContent = folder;
-        select.appendChild(option);
-      }
+    // Construir la ruta completa con el email del usuario específico
+    let rutaCompleta = path;
+
+    // Si el path no empieza con /, agregarlo
+    if (!rutaCompleta.startsWith("/")) {
+      rutaCompleta = "/" + rutaCompleta;
+    }
+
+    // Agregar el email del usuario específico si no está ya incluido
+    let usuarioEmail = "{{ usuario.email }}";
+    if (usuarioEmail && !rutaCompleta.startsWith("/" + usuarioEmail)) {
+      rutaCompleta = "/" + usuarioEmail + rutaCompleta;
+    }
+
+    console.log("Ruta final seleccionada:", {
+      pathOriginal: path,
+      usuarioEmail: usuarioEmail,
+      rutaCompleta: rutaCompleta,
     });
 
-    openModal("moveModal");
+    document.getElementById("nuevaCarpetaSeleccionada").value = rutaCompleta;
+    const selectedDiv = document.getElementById("selectedFolder");
+    selectedDiv.classList.remove("hidden");
+    selectedDiv.querySelector(
+      "span"
+    ).innerText = `Destino seleccionado: ${rutaCompleta}`;
+    document.querySelector('#moveForm button[type="submit"]').disabled = false;
   }
+
+  // Validación del formulario de mover archivo
+  document.getElementById("moveForm").onsubmit = function (e) {
+    const dest = document.getElementById("nuevaCarpetaSeleccionada").value;
+    const archivo = document.getElementById("moveArchivoNombre").value;
+    const carpetaActual = document.getElementById("moveCarpetaActual").value;
+    const usuarioId = document.querySelector('input[name="usuario_id"]').value;
+
+    console.log("Enviando formulario de mover archivo:", {
+      archivo: archivo,
+      carpetaActual: carpetaActual,
+      nuevaCarpeta: dest,
+      usuarioId: usuarioId,
+    });
+
+    if (!dest || dest.trim() === "") {
+      document.getElementById("selectedFolder").classList.remove("hidden");
+      document
+        .getElementById("selectedFolder")
+        .querySelector("span").innerText =
+        "⚠️ Selecciona una carpeta de destino.";
+      e.preventDefault();
+      return false;
+    }
+    return true;
+  };
 
   // Cerrar modales al hacer clic fuera de ellos
   window.onclick = function (event) {
@@ -548,15 +848,15 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   function toggleFileMenu(menuId, event) {
     const menu = document.getElementById(menuId);
     if (menu) {
-      if (menu.classList.contains('hidden')) {
+      if (menu.classList.contains("hidden")) {
         // Posicionar el menú cerca del botón
         const button = event.currentTarget;
         const rect = button.getBoundingClientRect();
-        menu.style.top = (rect.bottom + 5) + 'px';
-        menu.style.left = (rect.right - menu.offsetWidth) + 'px';
-        menu.classList.remove('hidden');
+        menu.style.top = rect.bottom + 5 + "px";
+        menu.style.left = rect.right - menu.offsetWidth + "px";
+        menu.classList.remove("hidden");
       } else {
-        menu.classList.add('hidden');
+        menu.classList.add("hidden");
       }
     }
   }
@@ -564,35 +864,77 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   function toggleFolderMenu(menuId, event) {
     const menu = document.getElementById(menuId);
     if (menu) {
-      if (menu.classList.contains('hidden')) {
+      if (menu.classList.contains("hidden")) {
         // Posicionar el menú cerca del botón
         const button = event.currentTarget;
         const rect = button.getBoundingClientRect();
-        menu.style.top = (rect.bottom + 5) + 'px';
-        menu.style.left = (rect.right - menu.offsetWidth) + 'px';
-        menu.classList.remove('hidden');
+        menu.style.top = rect.bottom + 5 + "px";
+        menu.style.left = rect.right - menu.offsetWidth + "px";
+        menu.classList.remove("hidden");
       } else {
-        menu.classList.add('hidden');
+        menu.classList.add("hidden");
       }
     }
   }
 
   // Cerrar todos los menús al hacer clic fuera de ellos
-  document.addEventListener('click', function(event) {
-    const menus = document.querySelectorAll('[id^="file-menu-"], [id^="folder-menu-"]');
-    menus.forEach(menu => {
-      if (!menu.contains(event.target) && !event.target.closest('button')) {
-        menu.classList.add('hidden');
+  document.addEventListener("click", function (event) {
+    const menus = document.querySelectorAll(
+      '[id^="file-menu-"], [id^="folder-menu-"]'
+    );
+    menus.forEach((menu) => {
+      if (!menu.contains(event.target) && !event.target.closest("button")) {
+        menu.classList.add("hidden");
       }
     });
   });
 
   // Cerrar menús al hacer scroll
-  window.addEventListener('scroll', function() {
-    const menus = document.querySelectorAll('[id^="file-menu-"], [id^="folder-menu-"]');
-    menus.forEach(menu => {
-      if (!menu.classList.contains('hidden')) {
-        menu.classList.add('hidden');
+  window.addEventListener("scroll", function () {
+    const menus = document.querySelectorAll(
+      '[id^="file-menu-"], [id^="folder-menu-"]'
+    );
+    menus.forEach((menu) => {
+      if (!menu.classList.contains("hidden")) {
+        menu.classList.add("hidden");
+      }
+    });
+  });
+
+  // Script para modificar los botones del macro después de que se cargue la página
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("DOM cargado, modificando botones de mover archivo...");
+
+    // Buscar todos los botones de "Mover archivo" y cambiar su onclick
+    const moveButtons = document.querySelectorAll(
+      'button[onclick*="openMoveModal"]'
+    );
+    console.log("Botones de mover archivo encontrados:", moveButtons.length);
+
+    moveButtons.forEach((button) => {
+      const onclick = button.getAttribute("onclick");
+      console.log("onclick original:", onclick);
+
+      // Extraer los parámetros del onclick original
+      const match = onclick.match(
+        /openMoveModal\('([^']+)',\s*'([^']+)',\s*'([^']+)'\)/
+      );
+      if (match) {
+        const fileName = match[1];
+        const currentPath = match[2];
+        const usuarioId = match[3];
+
+        console.log("Parámetros extraídos:", {
+          fileName,
+          currentPath,
+          usuarioId,
+        });
+
+        // Crear nuevo onclick que use nuestra función
+        const newOnclick = `openMoveModal('${fileName}', '${currentPath}', '{{ usuario.id }}')`;
+        button.setAttribute("onclick", newOnclick);
+
+        console.log("Nuevo onclick:", newOnclick);
       }
     });
   });

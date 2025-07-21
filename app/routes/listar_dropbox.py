@@ -1696,19 +1696,32 @@ def ver_usuario_carpetas(usuario_id):
 
     # Obtener solo las carpetas y archivos de este usuario
     path = usuario.dropbox_folder_path or f"/{usuario.email}"
+    print(f"DEBUG | Obteniendo estructura para usuario {usuario.email} en path: {path}")
     estructura = obtener_estructura_dropbox(path=path)
+    print(f"DEBUG | Estructura obtenida: {estructura}")
+    print(f"DEBUG | Subcarpetas: {estructura.get('_subcarpetas', {})}")
+    print(f"DEBUG | Archivos: {estructura.get('_archivos', [])}")
 
-    # Si el usuario NO es admin, solo muestra públicas
+    # Control de permisos para ver carpetas
     if current_user.rol != "admin" and current_user.id != usuario.id:
         # Si otro cliente intenta ver, no permitirlo
         flash("No tienes permiso para ver estas carpetas.", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
-    elif current_user.rol == "cliente":
-        # Solo mostrar públicas propias (opcional)
+    elif current_user.rol == "cliente" and current_user.id == usuario.id:
+        # Cliente viendo sus propias carpetas - mostrar todas
+        pass  # No filtrar, mostrar todas las carpetas del usuario
+    elif current_user.rol == "cliente" and current_user.id != usuario.id:
+        # Cliente viendo carpetas de otro - solo mostrar públicas
         folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
         rutas_visibles = set(f.dropbox_path for f in folders)
         estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, usuario.email)
 
+    # Debug después del filtrado
+    print(f"DEBUG | Estructura final después de filtrado: {estructura}")
+    print(f"DEBUG | Subcarpetas finales: {estructura.get('_subcarpetas', {})}")
+    
+    # No obtener estructura completa - solo usar las carpetas del usuario específico
+    
     # Carpetas de este usuario
     folders = Folder.query.filter_by(user_id=usuario.id).all()
     folders_por_ruta = {f.dropbox_path: f for f in folders}
