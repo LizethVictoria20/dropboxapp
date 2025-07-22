@@ -262,6 +262,55 @@ def dashboard_lector():
                          carpetas_recientes=carpetas_recientes,
                          notificaciones=notificaciones)
 
+@bp.route('/dashboard/admin/profile')
+@login_required
+@role_required('admin')
+def dashboard_admin_profile():
+    """Perfil específico para administradores - usa la misma vista que /profile"""
+    
+    current_user.registrar_actividad('profile_view', 'Visualización del perfil de administrador')
+    
+    # Contar archivos y carpetas del usuario
+    total_archivos = Archivo.query.filter_by(usuario_id=current_user.id).count()
+    total_carpetas = Folder.query.filter_by(user_id=current_user.id).count()
+    
+    # Actividad reciente del usuario
+    actividades_recientes = UserActivityLog.query.filter_by(user_id=current_user.id)\
+                                                .order_by(desc(UserActivityLog.fecha))\
+                                                .limit(5).all()
+    
+    # Obtener beneficiarios del usuario (si es cliente)
+    beneficiarios = []
+    if current_user.es_cliente():
+        beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).all()
+    
+    # Obtener último acceso en zona horaria de Colombia
+    last_login_colombia = None
+    if current_user.ultimo_acceso:
+        from datetime import timedelta
+        colombia_offset = timedelta(hours=5)
+        last_login_colombia = current_user.ultimo_acceso - colombia_offset
+    
+    # Paginación para historial de actividad
+    page_activity = request.args.get('page_activity', 1, type=int)
+    per_page_activity = request.args.get('per_page_activity', 10, type=int)
+    
+    activity_logs_pagination = UserActivityLog.query.filter_by(user_id=current_user.id)\
+        .order_by(desc(UserActivityLog.fecha))\
+        .paginate(page=page_activity, per_page=per_page_activity, error_out=False)
+    
+    form = ProfileForm()
+    
+    return render_template('profile/view.html',
+                         user=current_user,
+                         form=form,
+                         total_archivos=total_archivos,
+                         total_carpetas=total_carpetas,
+                         actividades_recientes=actividades_recientes,
+                         beneficiarios=beneficiarios,
+                         last_login_colombia=last_login_colombia,
+                         activity_logs_pagination=activity_logs_pagination)
+
 @bp.route('/api/activity_logs')
 @login_required
 def api_activity_logs():
