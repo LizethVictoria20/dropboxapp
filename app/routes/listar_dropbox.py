@@ -173,9 +173,13 @@ def carpetas_dropbox():
         dbx = dropbox.Dropbox(api_key)
 
         # Determina qué usuarios cargar
-        if current_user.rol == "admin":
+        if current_user.rol == "admin" or current_user.rol == "superadmin":
             usuarios = User.query.all()
             # Admin ve todas las carpetas
+            folders = Folder.query.all()
+        elif current_user.rol == "lector":
+            # Lector puede ver todas las carpetas de todos los usuarios
+            usuarios = User.query.all()
             folders = Folder.query.all()
         elif current_user.rol == "cliente":
             # Cliente ve solo sus propias carpetas (no beneficiarios en la vista principal)
@@ -186,7 +190,7 @@ def carpetas_dropbox():
             user_ids = [current_user.id] + [b.id for b in beneficiarios]
             folders = Folder.query.filter(Folder.user_id.in_(user_ids)).all()
         else:
-            # Otros roles (lector, etc.)
+            # Otros roles
             usuarios = [current_user]
             folders = Folder.query.filter_by(user_id=current_user.id, es_publica=True).all()
 
@@ -222,7 +226,10 @@ def carpetas_dropbox():
                 # Para clientes, mostrar todo (ya están filtrados por usuario)
                 # No necesitamos filtrar más porque solo cargamos sus carpetas
                 pass
-            elif current_user.rol != "admin":
+            elif current_user.rol == "lector":
+                # Para lectores, mostrar todas las carpetas sin filtrar
+                pass
+            elif current_user.rol != "admin" and current_user.rol != "superadmin":
                 # Para otros roles, solo mostrar carpetas públicas
                 rutas_visibles = set(folders_por_ruta.keys())
                 user_identifier = user.email if hasattr(user, 'email') else user.nombre
@@ -304,6 +311,12 @@ def obtener_contenido_carpeta(ruta):
             if carpeta and carpeta.user_id not in user_ids:
                 print(f"API: Permiso denegado para carpeta {ruta}")
                 return jsonify({"success": False, "error": "No tienes permisos para acceder a esta carpeta"}), 403
+        elif current_user.rol == "lector":
+            # Lector puede ver todas las carpetas
+            pass
+        elif current_user.rol == "admin" or current_user.rol == "superadmin":
+            # Admin puede ver todas las carpetas
+            pass
         
         # Obtener estructura de la carpeta
         print(f"API: Creando cliente Dropbox para ruta: {ruta}")
@@ -1716,46 +1729,78 @@ def subir_archivo_rapido():
 @login_required
 def ver_usuario_carpetas(usuario_id):
     usuario = User.query.get_or_404(usuario_id)
-    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
-
-    # Obtener solo las carpetas y archivos de este usuario
-    path = usuario.dropbox_folder_path or f"/{usuario.email}"
-    print(f"DEBUG | Obteniendo estructura para usuario {usuario.email} en path: {path}")
-    estructura = obtener_estructura_dropbox(path=path)
-    print(f"DEBUG | Estructura obtenida: {estructura}")
-    print(f"DEBUG | Subcarpetas: {estructura.get('_subcarpetas', {})}")
-    print(f"DEBUG | Archivos: {estructura.get('_archivos', [])}")
-
-    # Control de permisos para ver carpetas
-    if current_user.rol != "admin" and current_user.id != usuario.id:
-        # Si otro cliente intenta ver, no permitirlo
-        flash("No tienes permiso para ver estas carpetas.", "error")
-        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
-    elif current_user.rol == "cliente" and current_user.id == usuario.id:
-        # Cliente viendo sus propias carpetas - mostrar todas
-        pass  # No filtrar, mostrar todas las carpetas del usuario
-    elif current_user.rol == "cliente" and current_user.id != usuario.id:
-        # Cliente viendo carpetas de otro - solo mostrar públicas
-        folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
-        rutas_visibles = set(f.dropbox_path for f in folders)
-        estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, usuario.email)
-
-    # Debug después del filtrado
-    print(f"DEBUG | Estructura final después de filtrado: {estructura}")
-    print(f"DEBUG | Subcarpetas finales: {estructura.get('_subcarpetas', {})}")
     
-    # No obtener estructura completa - solo usar las carpetas del usuario específico
-    
-    # Carpetas de este usuario
-    folders = Folder.query.filter_by(user_id=usuario.id).all()
-    folders_por_ruta = {f.dropbox_path: f for f in folders}
+    # Usar la misma lógica que carpetas_dropbox
+    try:
+        # Verificar configuración de Dropbox
+        api_key = current_app.config.get("DROPBOX_API_KEY")
+        if not api_key:
+            flash("Error: Configuración de Dropbox no disponible.", "error")
+            return render_template("usuario_carpetas.html", 
+                                 usuario=usuario,
+                                 usuario_id=usuario.id,
+                                 estructura={"_subcarpetas": {}, "_archivos": []},
+                                 folders_por_ruta={},
+                                 usuario_actual=current_user)
+        
+        dbx = dropbox.Dropbox(api_key)
 
-    return render_template(
-        "usuario_carpetas.html",
-        usuario=usuario,
-        estructura=estructura,
-        folders_por_ruta=folders_por_ruta,
-        usuario_actual=current_user
-    )
+        # Crear carpeta raíz si no existe
+        if not usuario.dropbox_folder_path:
+            usuario.dropbox_folder_path = f"/{usuario.email}"
+            try:
+                dbx.files_create_folder_v2(usuario.dropbox_folder_path)
+            except dropbox.exceptions.ApiError as e:
+                if "conflict" not in str(e):
+                    raise e
+            db.session.commit()
+
+        path = usuario.dropbox_folder_path
+        
+        # Obtener estructura usando la función que ya funciona
+        estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
+        
+        # Control de permisos para ver carpetas
+        if current_user.rol == "cliente" and current_user.id != usuario.id:
+            # Si un cliente intenta ver carpetas de otro cliente, no permitirlo
+            flash("No tienes permiso para ver estas carpetas.", "error")
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        elif current_user.rol == "cliente" and current_user.id == usuario.id:
+            # Cliente viendo sus propias carpetas - mostrar todas
+            pass
+        elif current_user.rol == "cliente" and current_user.id != usuario.id:
+            # Cliente viendo carpetas de otro - solo mostrar públicas
+            folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
+            rutas_visibles = set(f.dropbox_path for f in folders)
+            estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, usuario.email)
+        elif current_user.rol == "lector":
+            # Lector puede ver todas las carpetas de todos los usuarios
+            pass
+        elif current_user.rol == "admin" or current_user.rol == "superadmin":
+            # Admin puede ver todas las carpetas
+            pass
+        
+        # Carpetas de este usuario
+        folders = Folder.query.filter_by(user_id=usuario.id).all()
+        folders_por_ruta = {f.dropbox_path: f for f in folders}
+
+        return render_template(
+            "usuario_carpetas.html",
+            usuario=usuario,
+            usuario_id=usuario.id,
+            estructura=estructura,
+            folders_por_ruta=folders_por_ruta,
+            usuario_actual=current_user
+        )
+        
+    except Exception as e:
+        print(f"Error general en ver_usuario_carpetas: {e}")
+        flash(f"Error al cargar carpetas: {str(e)}", "error")
+        return render_template("usuario_carpetas.html", 
+                             usuario=usuario,
+                             usuario_id=usuario.id,
+                             estructura={"_subcarpetas": {}, "_archivos": []},
+                             folders_por_ruta={},
+                             usuario_actual=current_user)
 
 

@@ -79,8 +79,7 @@ block content %}
       {% endfor %}
     </div>
     {% endif %} {% endwith %} {# Create Root Folder Form #}
-    <div class="mb-8">
-    </div>
+    <div class="mb-8"></div>
 
     {# User Folders Section #}
     <div class="space-y-8">
@@ -217,6 +216,7 @@ block content %}
       action="{{ url_for('listar_dropbox.mover_archivo_modal') }}"
       class="flex flex-col h-full"
     >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <input type="hidden" name="archivo_nombre" id="moveArchivoNombre" />
       <input type="hidden" name="carpeta_actual" id="moveCarpetaActual" />
 
@@ -317,6 +317,7 @@ block content %}
         action="{{ url_for('listar_dropbox.crear_carpeta') }}"
         method="post"
       >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input type="hidden" id="createFolderParent" name="padre" value="" />
         <input type="hidden" name="usuario_id" value="" />
         <div class="mb-4">
@@ -404,6 +405,7 @@ block content %}
         method="post"
         enctype="multipart/form-data"
       >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input
           type="hidden"
           id="uploadFileFolder"
@@ -498,6 +500,7 @@ block content %}
       action="{{ url_for('listar_dropbox.renombrar_archivo') }}"
       class="p-6"
     >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <input
         type="hidden"
         name="archivo_nombre_actual"

@@ -61,9 +61,38 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
           {% if beneficiario %}Beneficiario{% else %}{{ usuario.rol|capitalize
           }}{% endif %}
         </span>
+        {% if usuario_actual.rol == 'lector' and usuario_actual.id != usuario.id
+        %}
+        <span
+          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 ml-2"
+        >
+          <i class="fas fa-eye mr-1"></i>
+          Vista de Lector
+        </span>
+        {% endif %}
       </div>
     </div>
   </div>
+
+  <!-- Nota informativa para lectores -->
+  {% if usuario_actual.rol == 'lector' and usuario_actual.id != usuario.id %}
+  <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+    <div class="flex items-center space-x-3">
+      <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+      <div>
+        <h3 class="text-sm font-medium text-blue-900">
+          Modo Lector - Acceso de Solo Lectura
+        </h3>
+        <p class="text-sm text-blue-800 mt-1">
+          Estás viendo las carpetas de
+          <strong>{{ usuario.nombre or usuario.email }}</strong> en modo de solo
+          lectura. Puedes explorar todas las carpetas y archivos, pero no puedes
+          realizar modificaciones.
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Contenedor de carpetas -->
   <div class="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -173,6 +202,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         action="{{ url_for('listar_dropbox.crear_carpeta') }}"
         method="post"
       >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input type="hidden" id="createFolderParent" name="padre" value="" />
         <input type="hidden" name="usuario_id" value="{{ usuario_id }}" />
         <div class="mb-4">
@@ -260,6 +290,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         method="post"
         enctype="multipart/form-data"
       >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input
           type="hidden"
           id="uploadFileFolder"
@@ -340,6 +371,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         action="{{ url_for('listar_dropbox.renombrar_archivo') }}"
         method="post"
       >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input
           type="hidden"
           id="renameOldName"
@@ -442,6 +474,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       action="{{ url_for('listar_dropbox.mover_archivo_modal') }}"
       class="flex flex-col h-full"
     >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <input type="hidden" name="archivo_nombre" id="moveArchivoNombre" />
       <input type="hidden" name="carpeta_actual" id="moveCarpetaActual" />
       <input type="hidden" name="usuario_id" value="{{ usuario.id }}" />

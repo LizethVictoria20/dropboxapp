@@ -161,7 +161,7 @@ def crear_usuario():
             db.session.commit()
             
             # Registrar la actividad de creación de usuario
-            from .utils.activity_logger import log_user_activity
+            from app.utils.activity_logger import log_user_activity
             log_user_activity(
                 user_id=user.id,
                 accion='create_user',
@@ -235,6 +235,10 @@ def update_user():
         user_id = request.form.get('user_id')
         user = User.query.get(user_id)
         
+        # Debug: Imprimir datos recibidos
+        print(f"DEBUG: Actualizando usuario ID: {user_id}")
+        print(f"DEBUG: Datos del formulario: {dict(request.form)}")
+        
         if not user:
             flash('Usuario no encontrado', 'error')
             return redirect(url_for('users.listar_usuarios'))
@@ -288,13 +292,13 @@ def update_user():
         db.session.commit()
         
         # Registrar la actividad de actualización
-        from .utils.activity_logger import log_profile_update
+        from app.utils.activity_logger import log_profile_update
         log_profile_update(
             user_id=user.id,
             fields_updated=['email', 'nombre', 'apellido', 'telefono', 'ciudad', 'estado', 'direccion', 'codigo_postal', 'nacionality', 'country', 'rol', 'activo', 'fecha_nacimiento']
         )
         
-        flash(f'Usuario {user.nombre_completo} actualizado exitosamente', 'success')
+        flash(f'Usuario {user.nombre or user.email} actualizado exitosamente', 'success')
         
     except Exception as e:
         db.session.rollback()

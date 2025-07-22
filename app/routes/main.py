@@ -30,7 +30,7 @@ def dashboard():
     current_user.registrar_actividad('dashboard_access', 'Acceso al dashboard principal')
     
     if current_user.es_cliente():
-        return redirect(url_for('main.dashboard_cliente'))
+        return redirect(url_for('listar_dropbox.subir_archivo'))
     elif current_user.puede_administrar():
         return redirect(url_for('main.dashboard_admin'))
     else:
@@ -467,9 +467,10 @@ def editar_beneficiario():
 @bp.route('/listar_carpetas')
 @login_required
 def listar_carpetas():
-    """Listar carpetas de usuarios - para administradores"""
+    """Listar carpetas de usuarios - para administradores y lectores"""
     
-    if not current_user.puede_administrar():
+    # Permitir acceso a administradores y lectores
+    if not (current_user.puede_administrar() or current_user.es_lector()):
         flash('No tienes permisos para acceder a esta página.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -480,6 +481,12 @@ def listar_carpetas():
     carpetas_por_usuario = {}
     for usuario in usuarios:
         carpetas_por_usuario[usuario.id] = Folder.query.filter_by(user_id=usuario.id).count()
+    
+    # Si es lector, usar template específico
+    if current_user.es_lector():
+        return render_template('admin/listar_carpetas_lector.html',
+                             usuarios=usuarios,
+                             carpetas_por_usuario=carpetas_por_usuario)
     
     return render_template('admin/listar_carpetas.html',
                          usuarios=usuarios,

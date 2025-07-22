@@ -103,20 +103,20 @@ block content %}
     <h2 class="text-xl font-semibold mb-4">Acciones Disponibles</h2>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <a
+        href="{{ url_for('main.listar_carpetas') }}"
+        class="bg-white bg-opacity-20 rounded-lg p-4 hover:bg-opacity-30 transition-all"
+      >
+        <i class="fas fa-users text-2xl mb-2"></i>
+        <p class="font-medium">Ver Clientes</p>
+        <p class="text-sm opacity-75">Lista de clientes del sistema</p>
+      </a>
+      <a
         href="{{ url_for('main.profile') }}"
         class="bg-white bg-opacity-20 rounded-lg p-4 hover:bg-opacity-30 transition-all"
       >
         <i class="fas fa-user-cog text-2xl mb-2"></i>
         <p class="font-medium">Mi Perfil</p>
         <p class="text-sm opacity-75">Ver y editar tu información</p>
-      </a>
-      <a
-        href="{{ url_for('main.listar_carpetas') }}"
-        class="bg-white bg-opacity-20 rounded-lg p-4 hover:bg-opacity-30 transition-all"
-      >
-        <i class="fas fa-users text-2xl mb-2"></i>
-        <p class="font-medium">Ver Clientes</p>
-        <p class="text-sm opacity-75">Lista general de usuarios</p>
       </a>
       <div
         class="bg-white bg-opacity-10 rounded-lg p-4 opacity-50 cursor-not-allowed"

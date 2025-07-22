@@ -1,0 +1,270 @@
+{% extends "base.html" %} {% block title %}Clientes - Vista de Lector{% endblock
+%} {% block content %}
+<div class="max-w-7xl mx-auto px-6 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Lista de Clientes</h1>
+        <p class="text-gray-600 mt-2">
+          Vista de clientes del sistema - Acceso de solo lectura.
+        </p>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span
+          class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+        >
+          <i class="fas fa-eye mr-2"></i>
+          Modo Lector
+        </span>
+        <a
+          href="{{ url_for('main.dashboard_lector') }}"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <i class="fas fa-arrow-left mr-2"></i>
+          Volver al Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estadísticas Rápidas -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600">Total Clientes</p>
+          <p class="text-2xl font-bold text-blue-600">{{ usuarios|length }}</p>
+        </div>
+        <div
+          class="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center"
+        >
+          <i class="fas fa-users text-blue-600"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600">Total Carpetas</p>
+          <p class="text-2xl font-bold text-green-600">
+            {{ carpetas_por_usuario.values() | sum }}
+          </p>
+        </div>
+        <div
+          class="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center"
+        >
+          <i class="fas fa-folder text-green-600"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600">Clientes Activos</p>
+          <p class="text-2xl font-bold text-purple-600">
+            {{ usuarios | selectattr('activo', 'equalto', true) | list | length
+            }}
+          </p>
+        </div>
+        <div
+          class="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center"
+        >
+          <i class="fas fa-user-check text-purple-600"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Información del Rol -->
+  <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+    <div class="flex items-center space-x-3 mb-3">
+      <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+      <h3 class="text-lg font-medium text-blue-900">Modo Lector</h3>
+    </div>
+    <p class="text-blue-800 mb-4">
+      Como usuario con rol de lector, puedes ver la información de los clientes
+      pero no puedes realizar modificaciones. Esta es una vista de solo lectura
+      para consulta y seguimiento.
+    </p>
+    <div class="flex flex-wrap gap-3">
+      <span
+        class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+      >
+        <i class="fas fa-eye mr-2"></i>
+        Solo Lectura
+      </span>
+      <span
+        class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800"
+      >
+        <i class="fas fa-users mr-2"></i>
+        Ver Clientes
+      </span>
+      <span
+        class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800"
+      >
+        <i class="fas fa-folder mr-2"></i>
+        Ver Carpetas
+      </span>
+    </div>
+  </div>
+
+  <!-- Lista de Clientes -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+    <div class="p-6 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-900">Clientes del Sistema</h2>
+      <p class="text-sm text-gray-600 mt-1">
+        Lista de todos los clientes registrados con información de sus carpetas.
+      </p>
+    </div>
+
+    {% if usuarios %}
+    <div class="divide-y divide-gray-200">
+      {% for usuario in usuarios %}
+      <div class="p-6 hover:bg-gray-50 transition-colors">
+        <div class="flex items-center justify-between">
+          <!-- Información del Usuario -->
+          <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-3">
+              <div
+                class="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100"
+              >
+                <span class="text-blue-600 font-bold text-lg">
+                  {{ (usuario.nombre or usuario.email)[0]|upper }}
+                </span>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">
+                  {{ usuario.nombre or usuario.email.split('@')[0] }}
+                </h3>
+                <p class="text-sm text-gray-600">{{ usuario.email }}</p>
+                <div class="flex items-center space-x-2 mt-1">
+                  <span
+                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}"
+                  >
+                    <i class="fas fa-circle text-xs mr-1"></i>
+                    {% if usuario.activo %}Activo{% else %}Inactivo{% endif %}
+                  </span>
+                  <span
+                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                  >
+                    <i class="fas fa-calendar mr-1"></i>
+                    Registro: {{ usuario.fecha_registro.strftime('%d/%m/%Y') if
+                    usuario.fecha_registro else 'N/A' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estadísticas y Acciones -->
+          <div class="flex items-center space-x-4">
+            <div class="text-center">
+              <p class="text-2xl font-bold text-green-600">
+                {{ carpetas_por_usuario[usuario.id] }}
+              </p>
+              <p class="text-xs text-gray-500">Carpetas</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <a
+                href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=usuario.id) }}"
+                class="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                title="Ver carpetas del cliente"
+              >
+                <i class="fas fa-folder-open mr-2"></i>
+                Ver Carpetas
+              </a>
+              <span
+                class="inline-flex items-center px-3 py-2 border border-gray-300 text-gray-500 text-sm rounded-lg bg-gray-50 cursor-not-allowed"
+              >
+                <i class="fas fa-eye mr-2"></i>
+                Solo Lectura
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Información Adicional -->
+        {% if usuario.telefono or usuario.ciudad %}
+        <div class="mt-4 pt-4 border-t border-gray-100">
+          <div class="flex items-center space-x-6 text-sm text-gray-600">
+            {% if usuario.telefono %}
+            <div class="flex items-center">
+              <i class="fas fa-phone mr-2"></i>
+              <span>{{ usuario.telefono }}</span>
+            </div>
+            {% endif %} {% if usuario.ciudad %}
+            <div class="flex items-center">
+              <i class="fas fa-map-marker-alt mr-2"></i>
+              <span
+                >{{ usuario.ciudad }}{% if usuario.estado %}, {{ usuario.estado
+                }}{% endif %}</span
+              >
+            </div>
+            {% endif %} {% if usuario.ultimo_acceso %}
+            <div class="flex items-center">
+              <i class="fas fa-clock mr-2"></i>
+              <span
+                >Último acceso: {{ usuario.ultimo_acceso.strftime('%d/%m/%Y
+                %H:%M') if usuario.ultimo_acceso else 'Nunca' }}</span
+              >
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+      <div
+        class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4"
+      >
+        <i class="fas fa-users text-gray-400 text-3xl"></i>
+      </div>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">
+        No hay clientes registrados
+      </h3>
+      <p class="text-gray-600">
+        Aún no se han registrado clientes en el sistema.
+      </p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Acciones Disponibles para Lector -->
+  <div
+    class="mt-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white"
+  >
+    <h2 class="text-xl font-semibold mb-4">Acciones Disponibles</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a
+        href="{{ url_for('main.dashboard_lector') }}"
+        class="bg-white bg-opacity-20 rounded-lg p-4 hover:bg-opacity-30 transition-all"
+      >
+        <i class="fas fa-chart-line text-2xl mb-2"></i>
+        <p class="font-medium">Dashboard</p>
+        <p class="text-sm opacity-75">Ver estadísticas generales</p>
+      </a>
+      <a
+        href="{{ url_for('main.profile') }}"
+        class="bg-white bg-opacity-20 rounded-lg p-4 hover:bg-opacity-30 transition-all"
+      >
+        <i class="fas fa-user-cog text-2xl mb-2"></i>
+        <p class="font-medium">Mi Perfil</p>
+        <p class="text-sm opacity-75">Ver y editar tu información</p>
+      </a>
+      <div
+        class="bg-white bg-opacity-10 rounded-lg p-4 opacity-50 cursor-not-allowed"
+      >
+        <i class="fas fa-lock text-2xl mb-2"></i>
+        <p class="font-medium">Funciones Limitadas</p>
+        <p class="text-sm opacity-75">Contacta al administrador</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

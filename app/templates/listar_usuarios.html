@@ -64,8 +64,8 @@ Inmigración OK{% endblock %} {% block styles %}
   }
 
   .role-option input[type="radio"]:checked + div .w-4 {
-    background-color: #dc2626;
-    border-color: #dc2626;
+    background-color: #0076a8;
+    border-color: #0076a8;
     position: relative;
   }
 
@@ -241,11 +241,6 @@ Inmigración OK{% endblock %} {% block styles %}
               <th
                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                Estado
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
                 Fecha Registro
               </th>
               <th
@@ -265,7 +260,7 @@ Inmigración OK{% endblock %} {% block styles %}
                 <div class="flex items-center">
                   <div class="flex-shrink-0 h-10 w-10">
                     <div
-                      class="h-10 w-10 rounded-full bg-primary flex items-center justify-center"
+                      class="h-10 w-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0"
                     >
                       <span class="text-white font-medium text-sm">
                         {{ usuario.nombre[0] if usuario.nombre else
@@ -321,17 +316,6 @@ Inmigración OK{% endblock %} {% block styles %}
                   </div>
                 </div>
                 {% endif %}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}"
-                >
-                  {% if usuario.activo %}
-                  <i class="fas fa-check-circle mr-1"></i>
-                  Activo {% else %}
-                  <i class="fas fa-times-circle mr-1"></i>
-                  Inactivo {% endif %}
-                </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {{ usuario.fecha_registro.strftime('%d/%m/%Y') if
@@ -580,6 +564,7 @@ Inmigración OK{% endblock %} {% block styles %}
         class="space-y-6"
         x-data="{ rolSeleccionado: 'cliente' }"
       >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <!-- Información Básica -->
         <div>
           <h4
@@ -1998,6 +1983,8 @@ Inmigración OK{% endblock %} {% block styles %}
           );
           if (roleRadio) {
             roleRadio.checked = true;
+            // Forzar la actualización visual
+            toggleLectorPermissions();
           } else {
             // Mapear roles antiguos a nuevos si es necesario
             let mappedRole = user.rol;
@@ -2009,6 +1996,8 @@ Inmigración OK{% endblock %} {% block styles %}
             );
             if (fallbackRadio) {
               fallbackRadio.checked = true;
+              // Forzar la actualización visual
+              toggleLectorPermissions();
             }
           }
 
@@ -2082,7 +2071,7 @@ Inmigración OK{% endblock %} {% block styles %}
       if (svg) {
         svg.style.transform = "rotate(0deg)";
       }
-      dropdownBtn.classList.remove("text-primary", "bg-primary/10");
+      dropdownBtn.classList.remove("text-primary", "bg-white");
       dropdownBtn.classList.add("text-gray-400");
     }
   }
@@ -2101,7 +2090,7 @@ Inmigración OK{% endblock %} {% block styles %}
         dropdownSvg.style.transform = "rotate(180deg)";
       }
       if (dropdownBtn) {
-        dropdownBtn.classList.add("text-primary", "bg-primary/10");
+        dropdownBtn.classList.add("text-primary", "bg-white");
         dropdownBtn.classList.remove("text-gray-400", "hover:bg-gray-200");
       }
     } else {
@@ -2111,7 +2100,7 @@ Inmigración OK{% endblock %} {% block styles %}
         dropdownSvg.style.transform = "rotate(0deg)";
       }
       if (dropdownBtn) {
-        dropdownBtn.classList.remove("text-primary", "bg-primary/10");
+        dropdownBtn.classList.remove("text-primary", "bg-white");
         dropdownBtn.classList.add("text-gray-400");
       }
     }
@@ -2176,26 +2165,12 @@ Inmigración OK{% endblock %} {% block styles %}
       });
     });
 
-    // Agregar funcionalidad para mostrar/ocultar contraseñas
-    const passwordToggles = document.querySelectorAll(".password-toggle");
-    passwordToggles.forEach((toggle) => {
-      toggle.addEventListener("click", function () {
-        const input = this.parentElement.querySelector("input");
-        const type = input.type === "password" ? "text" : "password";
-        input.type = type;
-
-        // Cambiar el ícono
-        const svg = this.querySelector("svg");
-        if (type === "text") {
-          svg.innerHTML = `
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-          `;
-        } else {
-          svg.innerHTML = `
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          `;
-        }
+    // Agregar event listeners para los radio buttons de roles
+    const roleRadios = document.querySelectorAll('input[name="rol"]');
+    roleRadios.forEach((radio) => {
+      radio.addEventListener("change", function () {
+        // Forzar la actualización visual
+        toggleLectorPermissions();
       });
     });
   });
@@ -2240,12 +2215,49 @@ Inmigración OK{% endblock %} {% block styles %}
       e.preventDefault();
 
       // Validación básica
-      const email = document.getElementById("editEmail").value;
+      const email = document.getElementById("edit-email").value;
+      const userId = document.getElementById("edit-user-id").value;
+      const selectedRole = document.querySelector('input[name="rol"]:checked');
 
       if (!email) {
         alert("Email es obligatorio");
         return;
       }
+
+      if (!userId) {
+        alert("Error: ID de usuario no encontrado");
+        return;
+      }
+
+      if (!selectedRole) {
+        alert("Por favor selecciona un rol para el usuario");
+        return;
+      }
+
+      // Verificar que si el rol es lector, al menos un permiso esté seleccionado
+      if (selectedRole.value === "lector") {
+        const permisosSeleccionados = document.querySelectorAll(
+          'input[name="puede_renombrar"], input[name="puede_mover"], input[name="puede_eliminar"], input[name="puede_agregar_beneficiarios"]:checked'
+        );
+        if (permisosSeleccionados.length === 0) {
+          alert(
+            "Para el rol Lector, debes seleccionar al menos un permiso adicional"
+          );
+          return;
+        }
+      }
+
+      console.log("Enviando formulario con:", {
+        userId: userId,
+        email: email,
+        rol: selectedRole.value,
+        permisos:
+          selectedRole.value === "lector"
+            ? Array.from(
+                document.querySelectorAll('input[name^="puede_"]:checked')
+              ).map((cb) => cb.name)
+            : [],
+      });
 
       // Enviar formulario
       this.submit();

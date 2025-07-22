@@ -80,6 +80,8 @@ def login():
                     return redirect(url_for('main.dashboard_cliente'))
                 elif user.puede_administrar():
                     return redirect(url_for('main.dashboard_admin'))
+                elif user.es_lector():
+                    return redirect(url_for('main.listar_carpetas'))
                 else:
                     return redirect(url_for('main.dashboard_lector'))
         else:
@@ -103,7 +105,6 @@ def logout():
     registrar_actividad(current_user, 'logout', f'Cierre de sesión desde {request.remote_addr}')
     
     logout_user()
-    flash('Has cerrado sesión correctamente.', 'success')
     return redirect(url_for('auth.login'))
 
 @bp.route('/register', methods=['GET', 'POST'])
