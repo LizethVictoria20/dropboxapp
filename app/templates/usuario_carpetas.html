@@ -94,6 +94,12 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   </div>
   {% endif %}
 
+
+  <!-- Datos de estructuras de usuarios (necesario para openMoveModal) -->
+  <script id="estructuras-usuarios-data" type="application/json">
+    {{ estructuras_usuarios_json|safe }}
+  </script>
+
   <!-- Contenedor de carpetas -->
   <div class="bg-white rounded-lg shadow-sm border border-gray-200">
     <div
@@ -119,16 +125,19 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
           </h2>
         </div>
         <div class="text-sm text-gray-500">
-          {% if estructura._subcarpetas %} {{ estructura._subcarpetas|length }}
-          carpeta(s) {% else %} Sin carpetas {% endif %}
+          {% set estructura_usuario = estructuras_usuarios[usuario_id] %} {% if
+          estructura_usuario._subcarpetas %} {{
+          estructura_usuario._subcarpetas|length }} carpeta(s) {% else %} Sin
+          carpetas {% endif %}
         </div>
       </div>
     </div>
 
     <div class="p-6">
-      {% if estructura._subcarpetas or estructura._archivos %} {% import
-      "tree_macros.html" as macros with context %} {{
-      macros.render_tree(estructura, '', usuario_id, usuario_actual,
+      {% set estructura_usuario = estructuras_usuarios[usuario_id] %} {% if
+      estructura_usuario._subcarpetas or estructura_usuario._archivos %} {%
+      import "tree_macros.html" as macros with context %} {{
+      macros.render_tree(estructura_usuario, '', usuario_id, usuario_actual,
       folders_por_ruta) }} {% else %}
       <div class="text-center py-12">
         <svg
@@ -477,6 +486,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <input type="hidden" name="archivo_nombre" id="moveArchivoNombre" />
       <input type="hidden" name="carpeta_actual" id="moveCarpetaActual" />
+      <input type="hidden" name="redirect_url" value="{{ request.url }}" />
       <input type="hidden" name="usuario_id" value="{{ usuario.id }}" />
 
       <div class="flex-1 p-6 overflow-y-auto">
@@ -682,10 +692,8 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 
     if (destinoTree) {
       try {
-        // Usar solo la estructura del usuario específico
-        const estructurasUsuarios = {
-          "{{ usuario.id }}": {{ estructura|tojson|safe }}
-        };
+        // Usar la estructura del usuario específico desde el elemento de datos
+        const estructurasUsuarios = {{ estructuras_usuarios_json|safe }};
         const estructuraUsuario = estructurasUsuarios["{{ usuario.id }}"];
 
         console.log("=== DEBUG MODAL MOVE (USUARIO ESPECÍFICO) ===");
@@ -705,7 +713,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 
         console.log("¿Tiene carpetas reales?:", tieneCarpetas);
 
-                // Usar la función renderDestinoTreeExpandible si está disponible
+        // Usar la función renderDestinoTreeExpandible si está disponible
         if (typeof window.renderDestinoTreeExpandible === 'function') {
           if (tieneCarpetas) {
             console.log("✅ Renderizando árbol de carpetas del usuario...");
@@ -971,5 +979,33 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       }
     });
   });
+
+    // Función de prueba para debug
+  function testEstructura() {
+    console.log("=== TEST ESTRUCTURA ===");
+    console.log("Usuario ID:", "{{ usuario.id }}");
+    console.log("Usuario Email:", "{{ usuario.email }}");
+
+    const estructurasUsuarios = {{ estructuras_usuarios_json|safe }};
+    const estructura = estructurasUsuarios["{{ usuario.id }}"];
+
+    console.log("Estructuras usuarios:", estructurasUsuarios);
+    console.log("Estructura del usuario:", estructura);
+    console.log("¿Estructura es null/undefined?:", estructura == null);
+    console.log("¿Tiene _subcarpetas?:", estructura && estructura._subcarpetas);
+    console.log("¿Cuántas subcarpetas?:", estructura && estructura._subcarpetas ? Object.keys(estructura._subcarpetas).length : 0);
+    console.log("Carpetas encontradas:", estructura && estructura._subcarpetas ? Object.keys(estructura._subcarpetas) : []);
+
+    // Probar renderDestinoTreeExpandible
+    if (typeof window.renderDestinoTreeExpandible === 'function') {
+      console.log("✅ renderDestinoTreeExpandible está disponible");
+      const resultado = window.renderDestinoTreeExpandible(estructura, "");
+      console.log("Resultado de renderDestinoTreeExpandible:", resultado);
+    } else {
+      console.log("❌ renderDestinoTreeExpandible NO está disponible");
+    }
+
+    alert(`Estructura de debug:\nUsuario: {{ usuario.email }}\nCarpetas: ${estructura && estructura._subcarpetas ? Object.keys(estructura._subcarpetas).length : 0}\nCarpetas: ${estructura && estructura._subcarpetas ? Object.keys(estructura._subcarpetas).join(', ') : 'Ninguna'}`);
+  }
 </script>
 {% endblock %}

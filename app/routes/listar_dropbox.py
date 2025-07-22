@@ -1,4 +1,5 @@
 from flask import Blueprint, json, jsonify, render_template, current_app, request, redirect, url_for, flash
+import json
 from flask_login import current_user, login_required
 from app.categorias import CATEGORIAS
 import dropbox
@@ -34,7 +35,6 @@ def obtener_estructura_dropbox(path="", dbx=None):
     
     try:
         # Obtener contenido del directorio actual (no recursivo)
-        print(f"Obteniendo estructura para path: '{path}'")
         res = dbx.files_list_folder(path, recursive=False)
         print(f"Encontrados {len(res.entries)} elementos en '{path}'")
     except dropbox.exceptions.ApiError as e:
@@ -53,10 +53,8 @@ def obtener_estructura_dropbox(path="", dbx=None):
             estructura["_subcarpetas"][entry.name] = sub_estructura
         elif isinstance(entry, dropbox.files.FileMetadata):
             # Es un archivo
-            print(f"  Archivo encontrado: {entry.name}")
             estructura["_archivos"].append(entry.name)
 
-    print(f"Estructura final para '{path}': {len(estructura['_subcarpetas'])} carpetas, {len(estructura['_archivos'])} archivos")
     return estructura
 
 def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, current_depth=0):
@@ -64,6 +62,9 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
     Versión optimizada que obtiene la estructura de forma recursiva pero con límite de profundidad
     para evitar problemas de rendimiento con estructuras muy profundas
     """
+    print(f"=== obtener_estructura_dropbox_optimizada ===")
+    print(f"Path: '{path}', current_depth: {current_depth}, max_depth: {max_depth}")
+    
     if dbx is None:
         api_key = current_app.config.get("DROPBOX_API_KEY")
         if not api_key:
@@ -77,9 +78,23 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
         return {"_subcarpetas": {}, "_archivos": []}
     
     try:
-        print(f"Obteniendo estructura para path: '{path}' (profundidad: {current_depth})")
+        print(f"Llamando a Dropbox API para path: '{path}'")
+        # Si el path está vacío, usar la raíz de Dropbox
+        if not path or path == "":
+            path = ""
+            print("Path vacío, usando raíz de Dropbox")
+        
         res = dbx.files_list_folder(path, recursive=False)
         print(f"Encontrados {len(res.entries)} elementos en '{path}'")
+        print(f"Entries: {[entry.name for entry in res.entries]}")
+        
+        # Debug adicional para ver qué tipo de entradas son
+        for i, entry in enumerate(res.entries):
+            print(f"  Entry {i}: {entry.name} - Tipo: {type(entry).__name__}")
+            if isinstance(entry, dropbox.files.FolderMetadata):
+                print(f"    Es carpeta: {entry.name}")
+            elif isinstance(entry, dropbox.files.FileMetadata):
+                print(f"    Es archivo: {entry.name}")
     except dropbox.exceptions.ApiError as e:
         print(f"Error accediendo a Dropbox path '{path}': {e}")
         # Re-lanzar el error para que sea manejado por el llamador
@@ -113,6 +128,7 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
             estructura["_archivos"].append(entry.name)
 
     print(f"Estructura final para '{path}': {len(estructura['_subcarpetas'])} carpetas, {len(estructura['_archivos'])} archivos")
+    print(f"Estructura completa: {estructura}")
     return estructura
 
 def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
@@ -717,9 +733,15 @@ def mover_archivo_modal():
         print(f"  Tipo nueva_carpeta: {type(nueva_carpeta)}")
         print(f"  Longitud nueva_carpeta: {len(nueva_carpeta) if nueva_carpeta else 'None'}")
         
+        # Obtener la URL de redirección
+        redirect_url = request.form.get("redirect_url", "")
+        
         if not all([archivo_nombre, carpeta_actual, nueva_carpeta]):
             flash("Faltan datos requeridos para mover el archivo", "error")
-            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
         
         # Limpiar y normalizar la ruta de la nueva carpeta
         nueva_carpeta = nueva_carpeta.strip()
@@ -781,7 +803,10 @@ def mover_archivo_modal():
             
             if not archivo_encontrado:
                 flash(f"Archivo '{archivo_nombre}' no encontrado en Dropbox", "error")
-                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+                if redirect_url and "/usuario/" in redirect_url:
+                    return redirect(redirect_url)
+                else:
+                    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
             
             # Debug: Mostrar información del archivo encontrado
             print(f"DEBUG | Archivo encontrado:")
@@ -961,6 +986,12 @@ def mover_archivo_modal():
             
             flash(f"Archivo '{archivo_nombre}' movido exitosamente", "success")
             
+            # Redirigir a la URL apropiada
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            
         except Exception as e:
             print(f"ERROR | Error de Dropbox API: {e}")
             print(f"ERROR | Tipo de error: {type(e)}")
@@ -985,7 +1016,10 @@ def mover_archivo_modal():
                 else:
                     flash(f"Error moviendo archivo: {error_msg}", "error")
             
-            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
         
     except Exception as e:
         print(f"ERROR | Error general en mover_archivo_modal: {e}")
@@ -1730,8 +1764,10 @@ def subir_archivo_rapido():
 def ver_usuario_carpetas(usuario_id):
     usuario = User.query.get_or_404(usuario_id)
     
-    # Usar la misma lógica que carpetas_dropbox
+    # Usar EXACTAMENTE la misma lógica que carpetas_dropbox
     try:
+        estructuras_usuarios = {}
+        
         # Verificar configuración de Dropbox
         api_key = current_app.config.get("DROPBOX_API_KEY")
         if not api_key:
@@ -1739,7 +1775,8 @@ def ver_usuario_carpetas(usuario_id):
             return render_template("usuario_carpetas.html", 
                                  usuario=usuario,
                                  usuario_id=usuario.id,
-                                 estructura={"_subcarpetas": {}, "_archivos": []},
+                                 estructuras_usuarios={},
+                                 estructuras_usuarios_json="{}",
                                  folders_por_ruta={},
                                  usuario_actual=current_user)
         
@@ -1756,39 +1793,63 @@ def ver_usuario_carpetas(usuario_id):
             db.session.commit()
 
         path = usuario.dropbox_folder_path
+        print(f"=== ver_usuario_carpetas DEBUG ===")
+        print(f"Usuario ID: {usuario.id}")
+        print(f"Usuario Email: {usuario.email}")
+        print(f"Dropbox folder path: {path}")
         
-        # Obtener estructura usando la función que ya funciona
-        estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
+        try:
+            # Usar la función optimizada con recursión limitada para mejor rendimiento
+            estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
+        except Exception as e:
+            print(f"Error obteniendo estructura para usuario {usuario.email}: {e}")
+            estructura = {"_subcarpetas": {}, "_archivos": []}
         
-        # Control de permisos para ver carpetas
-        if current_user.rol == "cliente" and current_user.id != usuario.id:
-            # Si un cliente intenta ver carpetas de otro cliente, no permitirlo
-            flash("No tienes permiso para ver estas carpetas.", "error")
-            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
-        elif current_user.rol == "cliente" and current_user.id == usuario.id:
-            # Cliente viendo sus propias carpetas - mostrar todas
-            pass
-        elif current_user.rol == "cliente" and current_user.id != usuario.id:
-            # Cliente viendo carpetas de otro - solo mostrar públicas
-            folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
-            rutas_visibles = set(f.dropbox_path for f in folders)
-            estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, usuario.email)
+        # Control de permisos para ver carpetas (misma lógica que carpetas_dropbox)
+        if current_user.rol == "cliente":
+            if current_user.id != usuario.id:
+                # Cliente intentando ver carpetas de otro cliente - no permitir
+                print("❌ Cliente intentando ver carpetas de otro cliente")
+                flash("No tienes permiso para ver estas carpetas.", "error")
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            else:
+                # Cliente viendo sus propias carpetas - mostrar todas
+                print("✅ Cliente viendo sus propias carpetas - mostrar todas")
+                pass
         elif current_user.rol == "lector":
             # Lector puede ver todas las carpetas de todos los usuarios
+            print("✅ Lector - puede ver todas las carpetas")
             pass
         elif current_user.rol == "admin" or current_user.rol == "superadmin":
             # Admin puede ver todas las carpetas
+            print("✅ Admin/Superadmin - puede ver todas las carpetas")
             pass
+        else:
+            # Otros roles - solo mostrar carpetas públicas
+            print("⚠️ Otro rol - solo mostrar carpetas públicas")
+            folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
+            rutas_visibles = set(f.dropbox_path for f in folders)
+            estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, usuario.email)
+        
+        # Guardar la estructura en el diccionario (misma lógica que carpetas_dropbox)
+        estructuras_usuarios[usuario.id] = estructura
         
         # Carpetas de este usuario
         folders = Folder.query.filter_by(user_id=usuario.id).all()
         folders_por_ruta = {f.dropbox_path: f for f in folders}
+        
+        print(f"=== FINAL DEBUG ===")
+        print(f"Estructura final: {estructura}")
+        print(f"Número de carpetas final: {len(estructura.get('_subcarpetas', {}))}")
+        print(f"Carpetas encontradas: {list(estructura.get('_subcarpetas', {}).keys())}")
+        print(f"Estructuras usuarios: {estructuras_usuarios}")
 
         return render_template(
             "usuario_carpetas.html",
             usuario=usuario,
             usuario_id=usuario.id,
-            estructura=estructura,
+            estructuras_usuarios=estructuras_usuarios,
+            estructuras_usuarios_json=json.dumps(estructuras_usuarios),
             folders_por_ruta=folders_por_ruta,
             usuario_actual=current_user
         )
@@ -1799,7 +1860,8 @@ def ver_usuario_carpetas(usuario_id):
         return render_template("usuario_carpetas.html", 
                              usuario=usuario,
                              usuario_id=usuario.id,
-                             estructura={"_subcarpetas": {}, "_archivos": []},
+                             estructuras_usuarios={},
+                             estructuras_usuarios_json="{}",
                              folders_por_ruta={},
                              usuario_actual=current_user)
 
