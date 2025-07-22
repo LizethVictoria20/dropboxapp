@@ -119,6 +119,43 @@ class User(UserMixin, db.Model):
     def puede_administrar(self):
         """Verifica si el usuario puede realizar tareas administrativas"""
         return self.rol in ['admin', 'superadmin']
+    
+    def tiene_permiso_lector(self, permiso):
+        """Verifica si el lector tiene un permiso específico"""
+        if self.rol != 'lector':
+            return False
+        
+        if not self.lector_extra_permissions:
+            return False
+        
+        try:
+            import json
+            permisos = json.loads(self.lector_extra_permissions)
+            return permiso in permisos
+        except (json.JSONDecodeError, TypeError):
+            return False
+    
+    def puede_renombrar_archivos(self):
+        """Verifica si el lector puede renombrar archivos"""
+        return self.tiene_permiso_lector('renombrar')
+    
+    def puede_mover_archivos(self):
+        """Verifica si el lector puede mover archivos"""
+        return self.tiene_permiso_lector('mover')
+    
+    def puede_eliminar_archivos(self):
+        """Verifica si el lector puede eliminar archivos"""
+        return self.tiene_permiso_lector('eliminar')
+    
+    def puede_agregar_beneficiarios(self):
+        """Verifica si el lector puede agregar beneficiarios"""
+        return self.tiene_permiso_lector('agregar_beneficiarios')
+    
+    def puede_modificar_archivos(self):
+        """Verifica si el lector puede realizar cualquier modificación de archivos"""
+        return (self.puede_renombrar_archivos() or 
+                self.puede_mover_archivos() or 
+                self.puede_eliminar_archivos())
         
     def registrar_actividad(self, accion, descripcion=None):
         """Registra una actividad del usuario"""

@@ -373,6 +373,11 @@ def obtener_contenido_carpeta(ruta):
 
 @bp.route("/crear_carpeta", methods=["POST"])
 def crear_carpeta():
+    # Verificar permisos del lector
+    if current_user.rol == 'lector' and not current_user.puede_modificar_archivos():
+        flash("No tienes permisos para crear carpetas.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
     nombre = request.form.get("nombre")
     padre = request.form.get("padre", "")
     es_publica = request.form.get("es_publica", "true").lower() == "true"  # Por defecto pública
@@ -721,6 +726,16 @@ def mover_archivo(archivo_nombre, carpeta_actual):
 @login_required
 def mover_archivo_modal():
     """Mueve un archivo de una carpeta a otra usando Dropbox API"""
+    
+    # Verificar permisos del lector
+    if current_user.rol == 'lector' and not current_user.puede_mover_archivos():
+        flash("No tienes permisos para mover archivos.", "error")
+        redirect_url = request.form.get("redirect_url", "")
+        if redirect_url and "/usuario/" in redirect_url:
+            return redirect(redirect_url)
+        else:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
     try:
         archivo_nombre = request.form.get("archivo_nombre")
         carpeta_actual = request.form.get("carpeta_actual")
@@ -984,7 +999,6 @@ def mover_archivo_modal():
             # Registrar actividad
             current_user.registrar_actividad('file_moved', f'Archivo "{archivo_nombre}" movido de {archivo_path} a {result_path}')
             
-            flash(f"Archivo '{archivo_nombre}' movido exitosamente", "success")
             
             # Redirigir a la URL apropiada
             if redirect_url and "/usuario/" in redirect_url:
@@ -1033,6 +1047,12 @@ def mover_archivo_modal():
 @bp.route('/renombrar_archivo', methods=['POST'])
 def renombrar_archivo():
     from app.models import Archivo
+    
+    # Verificar permisos del lector
+    if current_user.rol == 'lector' and not current_user.puede_renombrar_archivos():
+        flash("No tienes permisos para renombrar archivos.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
     print("🚩 ¡Llegué a la función renombrar_archivo!")
 
     archivo_nombre_actual = request.form.get("archivo_nombre_actual")
@@ -1665,6 +1685,11 @@ def subir_archivo_rapido():
     from app.models import User, Beneficiario, Archivo
     import json
 
+    # Verificar permisos del lector
+    if current_user.rol == 'lector' and not current_user.puede_modificar_archivos():
+        flash("No tienes permisos para subir archivos.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
     print("POST: Procesando subida rápida de archivo")
     
     # Obtener datos del formulario
@@ -1864,5 +1889,70 @@ def ver_usuario_carpetas(usuario_id):
                              estructuras_usuarios_json="{}",
                              folders_por_ruta={},
                              usuario_actual=current_user)
+
+@bp.route('/eliminar_archivo', methods=['POST'])
+@login_required
+def eliminar_archivo():
+    """Elimina un archivo de Dropbox y de la base de datos"""
+    from app.models import Archivo
+    
+    # Verificar permisos del lector
+    if current_user.rol == 'lector' and not current_user.puede_eliminar_archivos():
+        flash("No tienes permisos para eliminar archivos.", "error")
+        redirect_url = request.form.get("redirect_url", "")
+        if redirect_url and "/usuario/" in redirect_url:
+            return redirect(redirect_url)
+        else:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
+    try:
+        archivo_nombre = request.form.get("archivo_nombre")
+        carpeta_actual = request.form.get("carpeta_actual")
+        redirect_url = request.form.get("redirect_url", "")
+        
+        if not archivo_nombre or not carpeta_actual:
+            flash("Faltan datos para eliminar el archivo.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # Construir la ruta completa del archivo
+        archivo_path = f"{carpeta_actual}/{archivo_nombre}".replace('//', '/')
+        
+        # Conectar a Dropbox
+        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        
+        # Eliminar archivo de Dropbox
+        try:
+            dbx.files_delete_v2(archivo_path)
+            print(f"DEBUG | Archivo eliminado de Dropbox: {archivo_path}")
+        except dropbox.exceptions.ApiError as e:
+            if "not_found" in str(e):
+                print(f"DEBUG | Archivo no encontrado en Dropbox: {archivo_path}")
+            else:
+                raise e
+        
+        # Eliminar registro de la base de datos
+        archivo_bd = Archivo.query.filter_by(dropbox_path=archivo_path).first()
+        if archivo_bd:
+            db.session.delete(archivo_bd)
+            db.session.commit()
+            print(f"DEBUG | Registro eliminado de BD: {archivo_bd.nombre}")
+        
+        # Registrar actividad
+        current_user.registrar_actividad('file_deleted', f'Archivo "{archivo_nombre}" eliminado')
+        
+        flash("Archivo eliminado correctamente.", "success")
+        
+    except Exception as e:
+        print(f"ERROR | Error eliminando archivo: {e}")
+        flash(f"Error eliminando archivo: {e}", "error")
+    
+    # Redirigir a la URL apropiada
+    if redirect_url and "/usuario/" in redirect_url:
+        return redirect(redirect_url)
+    else:
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
 

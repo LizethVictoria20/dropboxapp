@@ -76,24 +76,35 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 
   <!-- Nota informativa para lectores -->
   {% if usuario_actual.rol == 'lector' and usuario_actual.id != usuario.id %}
-  <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+  <div
+    class="mb-6 {% if usuario_actual.puede_modificar_archivos() %}bg-green-50 border border-green-200{% else %}bg-blue-50 border border-blue-200{% endif %} rounded-xl p-4"
+  >
     <div class="flex items-center space-x-3">
-      <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+      <i
+        class="fas {% if usuario_actual.puede_modificar_archivos() %}fa-check-circle text-green-600{% else %}fa-info-circle text-blue-600{% endif %} text-xl"
+      ></i>
       <div>
-        <h3 class="text-sm font-medium text-blue-900">
-          Modo Lector - Acceso de Solo Lectura
+        <h3
+          class="text-sm font-medium {% if usuario_actual.puede_modificar_archivos() %}text-green-900{% else %}text-blue-900{% endif %}"
+        >
+          {% if usuario_actual.puede_modificar_archivos() %} Modo Lector -
+          Acceso con Permisos de Modificación {% else %} Modo Lector - Acceso de
+          Solo Lectura {% endif %}
         </h3>
-        <p class="text-sm text-blue-800 mt-1">
+        <p
+          class="text-sm {% if usuario_actual.puede_modificar_archivos() %}text-green-800{% else %}text-blue-800{% endif %} mt-1"
+        >
           Estás viendo las carpetas de
-          <strong>{{ usuario.nombre or usuario.email }}</strong> en modo de solo
-          lectura. Puedes explorar todas las carpetas y archivos, pero no puedes
-          realizar modificaciones.
+          <strong>{{ usuario.nombre or usuario.email }}</strong>
+          {% if usuario_actual.puede_modificar_archivos() %} con permisos para
+          modificar archivos y carpetas. {% else %} en modo de solo lectura.
+          Puedes explorar todas las carpetas y archivos, pero no puedes realizar
+          modificaciones. {% endif %}
         </p>
       </div>
     </div>
   </div>
   {% endif %}
-
 
   <!-- Datos de estructuras de usuarios (necesario para openMoveModal) -->
   <script id="estructuras-usuarios-data" type="application/json">
@@ -1006,6 +1017,46 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
     }
 
     alert(`Estructura de debug:\nUsuario: {{ usuario.email }}\nCarpetas: ${estructura && estructura._subcarpetas ? Object.keys(estructura._subcarpetas).length : 0}\nCarpetas: ${estructura && estructura._subcarpetas ? Object.keys(estructura._subcarpetas).join(', ') : 'Ninguna'}`);
+  }
+
+  // Función para confirmar eliminación de archivo
+  function confirmarEliminarArchivo(archivo, carpeta, usuarioId) {
+    if (confirm(`¿Estás seguro de que quieres eliminar el archivo "${archivo}"? Esta acción no se puede deshacer.`)) {
+      // Crear formulario temporal para enviar la solicitud
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '{{ url_for("listar_dropbox.eliminar_archivo") }}';
+
+      // Agregar token CSRF
+      const csrfToken = document.createElement('input');
+      csrfToken.type = 'hidden';
+      csrfToken.name = 'csrf_token';
+      csrfToken.value = '{{ csrf_token() }}';
+      form.appendChild(csrfToken);
+
+      // Agregar datos del archivo
+      const archivoInput = document.createElement('input');
+      archivoInput.type = 'hidden';
+      archivoInput.name = 'archivo_nombre';
+      archivoInput.value = archivo;
+      form.appendChild(archivoInput);
+
+      const carpetaInput = document.createElement('input');
+      carpetaInput.type = 'hidden';
+      carpetaInput.name = 'carpeta_actual';
+      carpetaInput.value = carpeta;
+      form.appendChild(carpetaInput);
+
+      const redirectInput = document.createElement('input');
+      redirectInput.type = 'hidden';
+      redirectInput.name = 'redirect_url';
+      redirectInput.value = window.location.href;
+      form.appendChild(redirectInput);
+
+      // Enviar formulario
+      document.body.appendChild(form);
+      form.submit();
+    }
   }
 </script>
 {% endblock %}

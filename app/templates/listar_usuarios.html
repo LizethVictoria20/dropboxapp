@@ -368,27 +368,6 @@ Inmigración OK{% endblock %} {% block styles %}
                       <!-- Separador -->
                       <div class="border-t border-gray-100 my-1"></div>
 
-                      <!-- Activar/Desactivar -->
-                      {% if usuario.activo %}
-                      <button
-                        class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                      >
-                        <i
-                          class="fas fa-pause mr-3 text-gray-400 group-hover:text-yellow-500"
-                        ></i>
-                        Desactivar
-                      </button>
-                      {% else %}
-                      <button
-                        class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                      >
-                        <i
-                          class="fas fa-play mr-3 text-gray-400 group-hover:text-green-500"
-                        ></i>
-                        Activar
-                      </button>
-                      {% endif %}
-
                       <!-- Separador -->
                       <div class="border-t border-gray-100 my-1"></div>
 
@@ -1717,6 +1696,27 @@ Inmigración OK{% endblock %} {% block styles %}
   function openCreateUserModal() {
     document.getElementById("createUserModal").classList.remove("hidden");
     document.body.style.overflow = "hidden";
+    
+    // Agregar event listeners para los checkboxes de permisos de lector en el modal de crear usuario
+    setTimeout(() => {
+      const permisosCheckboxes = document.querySelectorAll('#createUserModal input[name="puede_renombrar"], #createUserModal input[name="puede_mover"], #createUserModal input[name="puede_eliminar"], #createUserModal input[name="puede_agregar_beneficiarios"]');
+      permisosCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener("change", function() {
+          if (this.checked) {
+            // Si se marca un permiso, seleccionar automáticamente el rol Lector
+            const lectorRadio = document.querySelector('#createUserModal input[name="rol"][value="lector"]');
+            if (lectorRadio) {
+              lectorRadio.checked = true;
+              // Actualizar la interfaz para mostrar los permisos
+              const rolSeleccionado = document.querySelector('#createUserModal [x-data]');
+              if (rolSeleccionado) {
+                rolSeleccionado.__x.$data.rolSeleccionado = 'lector';
+              }
+            }
+          }
+        });
+      });
+    }, 100); // Pequeño delay para asegurar que el modal esté completamente renderizado
   }
 
   function closeCreateUserModal() {
@@ -2168,9 +2168,26 @@ Inmigración OK{% endblock %} {% block styles %}
     // Agregar event listeners para los radio buttons de roles
     const roleRadios = document.querySelectorAll('input[name="rol"]');
     roleRadios.forEach((radio) => {
-      radio.addEventListener("change", function () {
-        // Forzar la actualización visual
-        toggleLectorPermissions();
+      radio.addEventListener("change", toggleLectorPermissions);
+    });
+
+    // Agregar event listeners para los checkboxes de permisos de lector
+    // Estos harán que se seleccione automáticamente el rol Lector cuando se marquen
+    const permisosCheckboxes = document.querySelectorAll(
+      'input[name="puede_renombrar"], input[name="puede_mover"], input[name="puede_eliminar"], input[name="puede_agregar_beneficiarios"]'
+    );
+    permisosCheckboxes.forEach((checkbox) => {
+      checkbox.addEventListener("change", function () {
+        if (this.checked) {
+          // Si se marca un permiso, seleccionar automáticamente el rol Lector
+          const lectorRadio = document.querySelector(
+            'input[name="rol"][value="lector"]'
+          );
+          if (lectorRadio) {
+            lectorRadio.checked = true;
+            toggleLectorPermissions(); // Actualizar la interfaz
+          }
+        }
       });
     });
   });
