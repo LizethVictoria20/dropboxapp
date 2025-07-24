@@ -171,6 +171,11 @@ def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
 @bp.route("/carpetas_dropbox")
 @login_required
 def carpetas_dropbox():
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated:
+        flash("Debes iniciar sesión para acceder a esta función", "error")
+        return redirect(url_for("auth.login"))
+        
     try:
         estructuras_usuarios = {}
         
@@ -313,6 +318,10 @@ def obtener_info_carpeta(ruta):
 @login_required
 def obtener_contenido_carpeta(ruta):
     """Endpoint para obtener el contenido de una carpeta específica"""
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated:
+        return jsonify({"success": False, "error": "Debes iniciar sesión para acceder a esta función"}), 401
+        
     print(f"API: Obteniendo contenido de carpeta: {ruta}")
     try:
         # Verificar permisos
@@ -374,6 +383,11 @@ def obtener_contenido_carpeta(ruta):
 @bp.route("/crear_carpeta", methods=["POST"])
 @login_required
 def crear_carpeta():
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated:
+        flash("Debes iniciar sesión para acceder a esta función", "error")
+        return redirect(url_for("auth.login"))
+        
     # Verificar permisos del lector
     if current_user.rol == 'lector' and not current_user.puede_modificar_archivos():
         flash("No tienes permisos para crear carpetas.", "error")
@@ -430,6 +444,11 @@ def subir_archivo():
     if request.method == "GET":
         print("GET: Mostrando formulario de subida")
         
+        # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+        if not current_user.is_authenticated:
+            flash("Debes iniciar sesión para acceder a esta función", "error")
+            return redirect(url_for("auth.login"))
+            
         # Filtrar usuarios según el rol del usuario actual
         if current_user.rol == "cliente":
             # Cliente solo ve sus propias carpetas
@@ -502,6 +521,11 @@ def subir_archivo():
         flash("Usuario no encontrado en la base de datos", "error")
         return redirect(url_for("listar_dropbox.subir_archivo"))
 
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated:
+        flash("Debes iniciar sesión para acceder a esta función", "error")
+        return redirect(url_for("auth.login"))
+        
     # Validación de seguridad: cliente solo puede subir a sus propias carpetas
     if current_user.rol == "cliente":
         if usuario_id.startswith("user-"):
@@ -729,6 +753,11 @@ def mover_archivo(archivo_nombre, carpeta_actual):
 @login_required
 def mover_archivo_modal():
     """Mueve un archivo de una carpeta a otra usando Dropbox API"""
+    
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated:
+        flash("Debes iniciar sesión para acceder a esta función", "error")
+        return redirect(url_for("auth.login"))
     
     # Verificar permisos del lector
     if current_user.rol == 'lector' and not current_user.puede_mover_archivos():
@@ -1051,6 +1080,11 @@ def mover_archivo_modal():
 @login_required
 def renombrar_archivo():
     from app.models import Archivo
+    
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated:
+        flash("Debes iniciar sesión para acceder a esta función", "error")
+        return redirect(url_for("auth.login"))
     
     # Verificar permisos del lector
     if current_user.rol == 'lector' and not current_user.puede_renombrar_archivos():
@@ -1693,6 +1727,11 @@ def subir_archivo_rapido():
     from app.models import User, Beneficiario, Archivo
     import json
 
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated:
+        flash("Debes iniciar sesión para acceder a esta función", "error")
+        return redirect(url_for("auth.login"))
+
     # Verificar permisos del lector
     if current_user.rol == 'lector' and not current_user.puede_modificar_archivos():
         flash("No tienes permisos para subir archivos.", "error")
@@ -1795,6 +1834,11 @@ def subir_archivo_rapido():
 @bp.route("/usuario/<int:usuario_id>/carpetas")
 @login_required
 def ver_usuario_carpetas(usuario_id):
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated:
+        flash("Debes iniciar sesión para acceder a esta función", "error")
+        return redirect(url_for("auth.login"))
+        
     usuario = User.query.get_or_404(usuario_id)
     
     # Usar EXACTAMENTE la misma lógica que carpetas_dropbox
@@ -1903,6 +1947,11 @@ def ver_usuario_carpetas(usuario_id):
 def eliminar_archivo():
     """Elimina un archivo de Dropbox y de la base de datos"""
     from app.models import Archivo
+    
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated:
+        flash("Debes iniciar sesión para acceder a esta función", "error")
+        return redirect(url_for("auth.login"))
     
     # Verificar permisos del lector
     if current_user.rol == 'lector' and not current_user.puede_eliminar_archivos():
