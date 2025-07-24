@@ -23,7 +23,7 @@ class Config:
     DROPBOX_APP_KEY = os.environ.get('DROPBOX_APP_KEY')
     DROPBOX_APP_SECRET = os.environ.get('DROPBOX_APP_SECRET')
     DROPBOX_ACCESS_TOKEN = os.environ.get('DROPBOX_ACCESS_TOKEN')
-    DROPBOX_API_KEY = os.environ.get('DROPBOX_ACCESS_TOKEN')  # Alias para compatibilidad
+    DROPBOX_API_KEY = os.environ.get('DROPBOX_API_KEY')
     
     # Configuración de logging
     LOG_LEVEL = 'INFO'
