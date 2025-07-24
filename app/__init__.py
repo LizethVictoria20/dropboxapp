@@ -37,6 +37,12 @@ def create_app(config_name=None):
         from app.models import User 
         return User.query.get(int(user_id))
 
+    # Contexto global para CSRF token
+    @app.context_processor
+    def inject_csrf_token():
+        from flask_wtf.csrf import generate_csrf
+        return dict(csrf_token=generate_csrf)
+    
     # Filtros personalizados de Jinja2
     @app.template_filter('format_colombia_time')
     def format_colombia_time(dt):

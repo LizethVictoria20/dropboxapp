@@ -20,6 +20,7 @@ class Config:
     # Configuración CSRF para producción
     WTF_CSRF_SSL_STRICT = False  # Deshabilitar si no usas HTTPS
     WTF_CSRF_TIME_LIMIT = 3600
+    WTF_CSRF_CHECK_DEFAULT = True
 
 class DevelopmentConfig(Config):
     DEBUG = True
@@ -29,7 +30,7 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
-    WTF_CSRF_SSL_STRICT = True
+    WTF_CSRF_SSL_STRICT = False  # Deshabilitar temporalmente para debug
     
     # Asegurar que SECRET_KEY esté configurada en producción
     @classmethod
