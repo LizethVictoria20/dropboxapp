@@ -1,7 +1,8 @@
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from config import Config
+from config import config
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 from datetime import datetime, timedelta
@@ -12,9 +13,17 @@ csrf = CSRFProtect()
 
 login_manager = LoginManager()
 
-def create_app():
+def create_app(config_name=None):
     app = Flask(__name__)
-    app.config.from_object(Config)
+    
+    if config_name is None:
+        config_name = os.environ.get('FLASK_ENV', 'default')
+    
+    app.config.from_object(config[config_name])
+    
+    # Inicializar configuración específica del entorno
+    if hasattr(config[config_name], 'init_app'):
+        config[config_name].init_app(app)
 
     db.init_app(app)
     migrate.init_app(app, db)

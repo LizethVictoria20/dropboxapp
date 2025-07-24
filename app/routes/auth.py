@@ -52,9 +52,9 @@ def login():
     form = LoginForm()
     error = None
     
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
+    if form.validate_on_submit():
+        email = form.username.data
+        password = form.password.data
         
         user = User.query.filter_by(email=email).first()
         
@@ -77,7 +77,7 @@ def login():
                 if next_page:
                     return redirect(next_page)
                 elif user.es_cliente():
-                    return redirect(url_for('main.dashboard_cliente'))
+                    return redirect(url_for('listar_dropbox.carpetas_dropbox'))
                 elif user.puede_administrar():
                     return redirect(url_for('main.dashboard_admin'))
                 elif user.es_lector():
@@ -90,6 +90,8 @@ def login():
             # Registrar intento de login fallido
             if user:
                 registrar_actividad(user, 'login_failed', f'Intento de login fallido desde {request.remote_addr}')
+    elif request.method == 'POST':
+        error = "Por favor, completa todos los campos correctamente."
     
     return render_template('login.html', form=form, error=error)
 
