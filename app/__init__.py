@@ -1,11 +1,15 @@
 import os
-from flask import Flask
+from flask import Flask, jsonify, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import config
 from flask_login import LoginManager
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from datetime import datetime, timedelta
+import logging
+
+# Configurar logging
+logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -32,6 +36,20 @@ def create_app(config_name=None):
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     
+    # Handler para errores de CSRF
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        logger.error(f"CSRF Error: {e}")
+        logger.error(f"CSRF Error description: {e.description}")
+        logger.error(f"Request method: {request.method}")
+        logger.error(f"Request URL: {request.url}")
+        
+        if request.is_xhr:
+            return jsonify({'error': 'CSRF token missing or invalid'}), 400
+        else:
+            flash('Error de seguridad: Token CSRF faltante o inválido. Por favor, recarga la página e intenta nuevamente.', 'error')
+            return redirect(url_for('auth.login'))
+
     @login_manager.user_loader
     def load_user(user_id):
         from app.models import User 
@@ -41,7 +59,7 @@ def create_app(config_name=None):
     @app.context_processor
     def inject_csrf_token():
         from flask_wtf.csrf import generate_csrf
-        return dict(csrf_token=generate_csrf)
+        return dict(csrf_token=generate_csrf())
     
     # Filtros personalizados de Jinja2
     @app.template_filter('format_colombia_time')

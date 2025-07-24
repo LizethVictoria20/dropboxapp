@@ -1,11 +1,15 @@
 from functools import wraps
-from flask import Blueprint, abort, redirect, render_template, request, jsonify, url_for, flash
+from flask import Blueprint, abort, redirect, render_template, request, jsonify, url_for, flash, current_app, session
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from app import db
 from app.models import Beneficiario, User, UserActivityLog
 from forms import LoginForm, BeneficiarioForm
+import logging
+
+# Configurar logging
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -91,6 +95,7 @@ def login():
             if user:
                 registrar_actividad(user, 'login_failed', f'Intento de login fallido desde {request.remote_addr}')
     elif request.method == 'POST':
+        logger.error(f"Form validation failed: {form.errors}")
         error = "Por favor, completa todos los campos correctamente."
     
     return render_template('login.html', form=form, error=error)
