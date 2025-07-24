@@ -83,7 +83,13 @@ def login():
                 db.session.add(activity_log)
                 db.session.commit()
                 
-                # Redirigir según el rol
+                # Verificar si hay una URL de destino (next parameter)
+                next_page = request.args.get('next')
+                if next_page and next_page.startswith('/'):
+                    # Solo redirigir si es una URL relativa y segura
+                    return redirect(next_page)
+                
+                # Redirigir según el rol si no hay next parameter
                 if user.rol == 'superadmin':
                     return redirect(url_for('main.dashboard_admin'))
                 elif user.rol == 'admin':

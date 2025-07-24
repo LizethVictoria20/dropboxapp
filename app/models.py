@@ -102,27 +102,27 @@ class User(UserMixin, db.Model):
     
     # Métodos helper para verificación de roles
     def es_superadmin(self):
-        return self.rol == 'superadmin'
+        return hasattr(self, 'rol') and self.rol == 'superadmin'
     
     def es_admin(self):
-        return self.rol == 'admin'
+        return hasattr(self, 'rol') and self.rol == 'admin'
     
     def es_cliente(self):
-        return self.rol == 'cliente'
+        return hasattr(self, 'rol') and self.rol == 'cliente'
     
     def es_lector(self):
-        return self.rol == 'lector'
+        return hasattr(self, 'rol') and self.rol == 'lector'
     
     def tiene_rol(self, rol):
-        return self.rol == rol
+        return hasattr(self, 'rol') and self.rol == rol
     
     def puede_administrar(self):
         """Verifica si el usuario puede realizar tareas administrativas"""
-        return self.rol in ['admin', 'superadmin']
+        return hasattr(self, 'rol') and self.rol in ['admin', 'superadmin']
     
     def tiene_permiso_lector(self, permiso):
         """Verifica si el lector tiene un permiso específico"""
-        if self.rol != 'lector':
+        if not hasattr(self, 'rol') or self.rol != 'lector':
             return False
         
         if not self.lector_extra_permissions:

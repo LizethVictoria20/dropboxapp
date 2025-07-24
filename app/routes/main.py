@@ -26,6 +26,11 @@ def auth_direct():
 def dashboard():
     """Dashboard principal - redirige según el rol"""
     
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+        return redirect(url_for("auth.login"))
+    
     # Registrar actividad de acceso al dashboard
     current_user.registrar_actividad('dashboard_access', 'Acceso al dashboard principal')
     
