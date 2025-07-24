@@ -222,8 +222,6 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         action="{{ url_for('listar_dropbox.crear_carpeta') }}"
         method="post"
       >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <input type="hidden" id="createFolderParent" name="padre" value="" />
         <input type="hidden" name="usuario_id" value="{{ usuario_id }}" />
         <div class="mb-4">
           <label
@@ -310,13 +308,6 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         method="post"
         enctype="multipart/form-data"
       >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <input
-          type="hidden"
-          id="uploadFileFolder"
-          name="carpeta_destino"
-          value=""
-        />
         <input
           type="hidden"
           name="usuario_id"
@@ -391,14 +382,6 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         action="{{ url_for('listar_dropbox.renombrar_archivo') }}"
         method="post"
       >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <input
-          type="hidden"
-          id="renameOldName"
-          name="archivo_nombre_actual"
-          value=""
-        />
-        <input type="hidden" id="renamePath" name="carpeta_actual" value="" />
         <input type="hidden" name="usuario_id" value="{{ usuario_id }}" />
         <div class="mb-4">
           <label
@@ -494,10 +477,6 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       action="{{ url_for('listar_dropbox.mover_archivo_modal') }}"
       class="flex flex-col h-full"
     >
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <input type="hidden" name="archivo_nombre" id="moveArchivoNombre" />
-      <input type="hidden" name="carpeta_actual" id="moveCarpetaActual" />
-      <input type="hidden" name="redirect_url" value="{{ request.url }}" />
       <input type="hidden" name="usuario_id" value="{{ usuario.id }}" />
 
       <div class="flex-1 p-6 overflow-y-auto">
@@ -1026,13 +1005,6 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = '{{ url_for("listar_dropbox.eliminar_archivo") }}';
-
-      // Agregar token CSRF
-      const csrfToken = document.createElement('input');
-      csrfToken.type = 'hidden';
-      csrfToken.name = 'csrf_token';
-      csrfToken.value = '{{ csrf_token() }}';
-      form.appendChild(csrfToken);
 
       // Agregar datos del archivo
       const archivoInput = document.createElement('input');

@@ -451,9 +451,6 @@
     </h3>
     <form method="POST" action="{{ url_for('main.editar_beneficiario') }}">
       {{ form.hidden_tag() }}
-      {% if csrf_token %}
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      {% endif %}
       <input type="hidden" name="beneficiary_id" id="edit_beneficiary_id" />
       <div class="grid grid-cols-1 gap-4">
         <div>
@@ -555,9 +552,6 @@
 
       <div class="max-h-[70vh] overflow-auto">
         <form id="profileForm" action="{{ url_for('main.profile') }}" method="POST" class="p-6">
-          {% if csrf_token %}
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          {% endif %}
 
           <div class="px-6 py-5 bg-gray-50">
             <div id="messageBox" class="message-box hidden" role="alert"></div>
@@ -1091,7 +1085,6 @@
         body: JSON.stringify(formObject),
         headers: {
           "Content-Type": "application/json",
-          "X-CSRFToken": formObject["csrf_token"],
         },
       });
 

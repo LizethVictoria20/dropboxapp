@@ -13,9 +13,16 @@
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;600;700&display=swap"
       rel="stylesheet"
     />
-    {% if csrf_token %}
-    <meta name="csrf-token" content="{{ csrf_token() }}" />
-    {% endif %}
+    <meta name="description" content="Sistema de gestión de archivos Dropbox" />
+    <meta name="keywords" content="dropbox, archivos, gestión, sistema" />
+    <meta name="author" content="Tu Empresa" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#3B82F6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Dropbox App" />
+    <meta name="msapplication-TileColor" content="#3B82F6" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
     <title>{% block title %}Inmigración OK{% endblock %}</title>
     <script>
       tailwind.config = {
@@ -400,8 +407,8 @@
                     {% endif %}
 
                     <!-- Enlaces comunes para todos los usuarios autenticados -->
-                    {% if current_user.is_authenticated %}
-                    {% if user_role == 'admin' %}
+                    {% if current_user.is_authenticated %} {% if user_role ==
+                    'admin' %}
                     <a
                       href="{{ url_for('main.dashboard_admin_profile') }}"
                       class="{% if request.endpoint == 'main.dashboard_admin_profile' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"

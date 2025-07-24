@@ -540,7 +540,6 @@ Inmigración OK{% endblock %} {% block styles %}
         class="space-y-6"
         x-data="{ rolSeleccionado: 'cliente' }"
       >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <!-- Información Básica -->
         <div>
           <h4
@@ -1090,7 +1089,6 @@ Inmigración OK{% endblock %} {% block styles %}
           method="POST"
           action="{{ url_for('users.update_user') }}"
         >
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <input type="hidden" id="edit-user-id" name="user_id" />
 
           <div class="px-6 py-5 bg-gray-50">
@@ -1693,21 +1691,27 @@ Inmigración OK{% endblock %} {% block styles %}
   function openCreateUserModal() {
     document.getElementById("createUserModal").classList.remove("hidden");
     document.body.style.overflow = "hidden";
-    
+
     // Agregar event listeners para los checkboxes de permisos de lector en el modal de crear usuario
     setTimeout(() => {
-      const permisosCheckboxes = document.querySelectorAll('#createUserModal input[name="puede_renombrar"], #createUserModal input[name="puede_mover"], #createUserModal input[name="puede_eliminar"], #createUserModal input[name="puede_agregar_beneficiarios"]');
+      const permisosCheckboxes = document.querySelectorAll(
+        '#createUserModal input[name="puede_renombrar"], #createUserModal input[name="puede_mover"], #createUserModal input[name="puede_eliminar"], #createUserModal input[name="puede_agregar_beneficiarios"]'
+      );
       permisosCheckboxes.forEach((checkbox) => {
-        checkbox.addEventListener("change", function() {
+        checkbox.addEventListener("change", function () {
           if (this.checked) {
             // Si se marca un permiso, seleccionar automáticamente el rol Lector
-            const lectorRadio = document.querySelector('#createUserModal input[name="rol"][value="lector"]');
+            const lectorRadio = document.querySelector(
+              '#createUserModal input[name="rol"][value="lector"]'
+            );
             if (lectorRadio) {
               lectorRadio.checked = true;
               // Actualizar la interfaz para mostrar los permisos
-              const rolSeleccionado = document.querySelector('#createUserModal [x-data]');
+              const rolSeleccionado = document.querySelector(
+                "#createUserModal [x-data]"
+              );
               if (rolSeleccionado) {
-                rolSeleccionado.__x.$data.rolSeleccionado = 'lector';
+                rolSeleccionado.__x.$data.rolSeleccionado = "lector";
               }
             }
           }

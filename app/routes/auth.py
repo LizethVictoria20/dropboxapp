@@ -7,7 +7,6 @@ from app import db
 from app.models import Beneficiario, User, UserActivityLog
 from forms import LoginForm, BeneficiarioForm
 import logging
-from flask_wtf.csrf import csrf_exempt
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -49,7 +48,6 @@ def registrar_actividad(user, accion, descripcion=None):
     db.session.commit()
 
 @bp.route('/', methods=['GET', 'POST'])
-@csrf_exempt
 def login():
     # Redirigir si ya está logueado
     if current_user.is_authenticated:
@@ -75,30 +73,29 @@ def login():
                 # Login exitoso
                 login_user(user, remember=True)
                 
-                # Registrar actividad
-                registrar_actividad(user, 'login', f'Inicio de sesión desde {request.remote_addr}')
+                # Log de actividad
+                activity_log = UserActivityLog(
+                    user_id=user.id,
+                    accion='login',
+                    descripcion=f'Login exitoso desde {request.remote_addr}',
+                    ip_address=request.remote_addr
+                )
+                db.session.add(activity_log)
+                db.session.commit()
                 
                 # Redirigir según el rol
-                next_page = request.args.get('next')
-                if next_page:
-                    return redirect(next_page)
-                elif user.es_cliente():
-                    return redirect(url_for('listar_dropbox.carpetas_dropbox'))
-                elif user.puede_administrar():
+                if user.rol == 'superadmin':
                     return redirect(url_for('main.dashboard_admin'))
-                elif user.es_lector():
+                elif user.rol == 'admin':
+                    return redirect(url_for('main.dashboard_admin'))
+                elif user.rol == 'cliente':
+                    return redirect(url_for('listar_dropbox.carpetas_dropbox'))
+                elif user.rol == 'lector':
                     return redirect(url_for('main.listar_carpetas'))
                 else:
                     return redirect(url_for('main.dashboard_lector'))
         else:
             error = "Credenciales incorrectas."
-            
-            # Registrar intento de login fallido
-            if user:
-                registrar_actividad(user, 'login_failed', f'Intento de login fallido desde {request.remote_addr}')
-    elif request.method == 'POST':
-        logger.error(f"Form validation failed: {form.errors}")
-        error = "Por favor, completa todos los campos correctamente."
     
     return render_template('login.html', form=form, error=error)
 
@@ -174,8 +171,6 @@ def register():
         else:
             # Errores de validación del formulario
             for field, field_errors in form.errors.items():
-                if field == 'csrf_token':
-                    continue
                 field_name = getattr(form, field).label.text
                 errors[field] = f"{field_name}: {', '.join(field_errors)}"
     
