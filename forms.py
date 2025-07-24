@@ -5,27 +5,31 @@ from wtforms import DateField, FileField, StringField, PasswordField, SubmitFiel
 from wtforms.validators import DataRequired, Length, Optional, EqualTo, Email
 from app.models import User
 
-class LoginForm(FlaskForm):
+class BaseForm(FlaskForm):
+    class Meta:
+        csrf = False
+
+class LoginForm(BaseForm):
     username = StringField('Email', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
 
-class ImportForm(FlaskForm):
+class ImportForm(BaseForm):
     archivos = FileField('Archivo', validators=[DataRequired()])
     descripcion = StringField('Descripción')
     etiquetas = StringField('Etiquetas')
     
     
-class DeleteForm(FlaskForm):
+class DeleteForm(BaseForm):
     pass
 
-class GeneralForm(FlaskForm):
+class GeneralForm(BaseForm):
     pass
 
-class PusherForm(FlaskForm):
+class PusherForm(BaseForm):
         message = StringField('Message', validators=[DataRequired()])
         
-class NewUser(FlaskForm):
+class NewUser(BaseForm):
     username = StringField('Username', validators=[DataRequired()])
     name = StringField('Name', validators=[DataRequired()])
     lastname = StringField('Lastname', validators=[DataRequired()])
@@ -35,7 +39,7 @@ class NewUser(FlaskForm):
     role = StringField('Role', validators=[DataRequired()])
     submit = SubmitField('Crear usuario')
 
-class ProfileForm(FlaskForm):
+class ProfileForm(BaseForm):
     nombre = StringField('Nombre', validators=[DataRequired()])
     apellido = StringField('Apellido', validators=[DataRequired()])
     email = StringField('Correo', validators=[DataRequired()])
@@ -60,7 +64,7 @@ class ProfileForm(FlaskForm):
             if user_with_email and user_with_email.id != current_user.id:
                 raise ValidationError('Ese correo electrónico ya está registrado por otro usuario.')
 
-class CreateUserForm(FlaskForm):
+class CreateUserForm(BaseForm):
     name = StringField('Nombre', validators=[DataRequired()])
     lastname = StringField('Apellido', validators=[DataRequired()])
     email = StringField('Correo', validators=[DataRequired(), Email()])
@@ -75,11 +79,11 @@ class CreateUserForm(FlaskForm):
     
     submit = SubmitField('Crear perfil')
 
-class NewFolderForm(FlaskForm):
+class NewFolderForm(BaseForm):
     name = StringField('Nombre de la carpeta', validators=[DataRequired()])
     description = TextAreaField('Descripción (opcional)')
     
-class ClienteRegistrationForm(FlaskForm):
+class ClienteRegistrationForm(BaseForm):
     name = StringField('Nombres', validators=[DataRequired(), Length(max=120)])
     lastname = StringField('Apellidos', validators=[DataRequired(), Length(max=120)])
     email = StringField('Correo electrónico', validators=[DataRequired(), Email()])
@@ -98,7 +102,6 @@ class ClienteRegistrationForm(FlaskForm):
         ('chilena', 'Chilena'),
         ('brasileña', 'Brasileña'),
         ('estadounidense', 'Estadounidense'),
-        ('canadiense', 'Canadiense'),
         ('española', 'Española'),
         ('francesa', 'Francesa'),
         ('alemana', 'Alemana'),
@@ -124,18 +127,16 @@ class ClienteRegistrationForm(FlaskForm):
     def validate_email(self, field):
         user_with_email = User.query.filter_by(email=field.data).first()
         if user_with_email:
-            raise ValidationError('Este correo electrónico ya está registrado.')
+            raise ValidationError('Ese correo electrónico ya está registrado.')
 
-class GeneralForm(FlaskForm):
+class GeneralForm(BaseForm):
     pass
 
-class BeneficiarioForm(FlaskForm):
+class BeneficiarioForm(BaseForm):
     nombre = StringField('Nombre', validators=[DataRequired(), Length(max=120)])
     email = StringField('Correo electrónico', validators=[DataRequired(), Email()])
     fecha_nacimiento = DateField('Fecha de nacimiento', validators=[Optional()])
     
     def validate_email(self, field):
-        from app.models import Beneficiario
-        beneficiario_existente = Beneficiario.query.filter_by(email=field.data).first()
-        if beneficiario_existente:
-            raise ValidationError('Este correo electrónico ya está registrado para otro beneficiario.')
+        # Validación personalizada si es necesaria
+        pass

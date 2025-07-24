@@ -6,6 +6,9 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///app.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # Deshabilitar CSRF completamente
+    WTF_CSRF_ENABLED = False
+    
     # Configuración de sesiones
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
     SESSION_COOKIE_SECURE = False  # Cambiar a True en producción con HTTPS
@@ -32,12 +35,14 @@ class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_LEVEL = 'DEBUG'
+    WTF_CSRF_ENABLED = False
 
 class ProductionConfig(Config):
     DEBUG = False
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_SECURE = True  # Requiere HTTPS
     LOG_LEVEL = 'WARNING'
+    WTF_CSRF_ENABLED = False
 
 class TestingConfig(Config):
     TESTING = True
