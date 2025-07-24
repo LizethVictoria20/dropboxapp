@@ -7,6 +7,7 @@ from app import db
 from app.models import Beneficiario, User, UserActivityLog
 from forms import LoginForm, BeneficiarioForm
 import logging
+from flask_wtf.csrf import csrf_exempt
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ def registrar_actividad(user, accion, descripcion=None):
     db.session.commit()
 
 @bp.route('/', methods=['GET', 'POST'])
+@csrf_exempt
 def login():
     # Redirigir si ya está logueado
     if current_user.is_authenticated:

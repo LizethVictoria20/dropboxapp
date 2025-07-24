@@ -44,7 +44,11 @@ def create_app(config_name=None):
         logger.error(f"Request method: {request.method}")
         logger.error(f"Request URL: {request.url}")
         
-        if request.is_xhr:
+        # Detectar si es una petición AJAX basándose en headers
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                  request.headers.get('Content-Type') == 'application/json'
+        
+        if is_ajax:
             return jsonify({'error': 'CSRF token missing or invalid'}), 400
         else:
             flash('Error de seguridad: Token CSRF faltante o inválido. Por favor, recarga la página e intenta nuevamente.', 'error')
