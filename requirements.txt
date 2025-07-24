@@ -5,3 +5,4 @@ Flask-WTF
 psycopg2-binary
 dropbox
 python-dotenv
+gunicorn
