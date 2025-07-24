@@ -372,6 +372,7 @@ def obtener_contenido_carpeta(ruta):
 
 
 @bp.route("/crear_carpeta", methods=["POST"])
+@login_required
 def crear_carpeta():
     # Verificar permisos del lector
     if current_user.rol == 'lector' and not current_user.puede_modificar_archivos():
@@ -421,6 +422,7 @@ def normaliza(nombre):
     return solo_ascii.upper().strip().replace(" ", "_")
 
 @bp.route("/subir_archivo", methods=["GET", "POST"])
+@login_required
 def subir_archivo():
     from app.models import User, Beneficiario, Archivo, Folder
     import json
@@ -652,6 +654,7 @@ def subir_archivo():
  
 
 @bp.route('/mover_archivo/<archivo_nombre>/<path:carpeta_actual>', methods=['GET', 'POST'])
+@login_required
 def mover_archivo(archivo_nombre, carpeta_actual):
     from app.models import Archivo, User
 
@@ -1045,6 +1048,7 @@ def mover_archivo_modal():
 
 
 @bp.route('/renombrar_archivo', methods=['POST'])
+@login_required
 def renombrar_archivo():
     from app.models import Archivo
     
@@ -1183,6 +1187,7 @@ def sincronizar_dropbox_a_bd():
     print(f"DEBUG | Total de archivos en BD después de sincronización: {Archivo.query.count()}")
 
 @bp.route("/sincronizar_dropbox")
+@login_required
 def sincronizar_dropbox():
     print("🚩 Iniciando sincronización completa...")
     try:
@@ -1195,6 +1200,7 @@ def sincronizar_dropbox():
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
 @bp.route("/verificar_bd")
+@login_required
 def verificar_bd():
     """Verifica el estado de la base de datos y muestra información útil"""
     print("🔍 Verificando estado de la base de datos...")
@@ -1223,6 +1229,7 @@ def verificar_bd():
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
 @bp.route("/sincronizar_usuario/<email>")
+@login_required
 def sincronizar_usuario(email):
     """Sincroniza archivos de un usuario específico"""
     print(f"🔄 Sincronizando archivos del usuario: {email}")
@@ -1680,6 +1687,7 @@ def sincronizar_carpetas_dropbox():
     print(f"Sincronización de carpetas completada: {nuevos} carpetas nuevas agregadas a la base de datos.")
 
 @bp.route("/subir_archivo_rapido", methods=["POST"])
+@login_required
 def subir_archivo_rapido():
     """Endpoint para subir archivos directamente a una carpeta específica sin categorías"""
     from app.models import User, Beneficiario, Archivo
