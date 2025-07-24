@@ -172,8 +172,8 @@ def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
 @login_required
 def carpetas_dropbox():
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
-    if not current_user.is_authenticated:
-        flash("Debes iniciar sesión para acceder a esta función", "error")
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
         return redirect(url_for("auth.login"))
         
     try:
@@ -394,8 +394,8 @@ def obtener_contenido_carpeta(ruta):
 @login_required
 def crear_carpeta():
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
-    if not current_user.is_authenticated:
-        flash("Debes iniciar sesión para acceder a esta función", "error")
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
         return redirect(url_for("auth.login"))
         
     # Verificar permisos del lector
@@ -774,8 +774,8 @@ def mover_archivo_modal():
     """Mueve un archivo de una carpeta a otra usando Dropbox API"""
     
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
-    if not current_user.is_authenticated:
-        flash("Debes iniciar sesión para acceder a esta función", "error")
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
         return redirect(url_for("auth.login"))
     
     # Verificar permisos del lector
@@ -1101,8 +1101,8 @@ def renombrar_archivo():
     from app.models import Archivo
     
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
-    if not current_user.is_authenticated:
-        flash("Debes iniciar sesión para acceder a esta función", "error")
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
         return redirect(url_for("auth.login"))
     
     # Verificar permisos del lector
@@ -1747,8 +1747,8 @@ def subir_archivo_rapido():
     import json
 
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
-    if not current_user.is_authenticated:
-        flash("Debes iniciar sesión para acceder a esta función", "error")
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
         return redirect(url_for("auth.login"))
 
     # Verificar permisos del lector
@@ -1972,8 +1972,8 @@ def eliminar_archivo():
     from app.models import Archivo
     
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
-    if not current_user.is_authenticated:
-        flash("Debes iniciar sesión para acceder a esta función", "error")
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
         return redirect(url_for("auth.login"))
     
     # Verificar permisos del lector
