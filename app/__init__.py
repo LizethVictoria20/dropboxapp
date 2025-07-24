@@ -91,4 +91,15 @@ def create_app(config_name=None):
             return s
         return s[:length] + end
     
+    @app.template_filter('format_colombia_time')
+    def format_colombia_time(value):
+        """Convierte una fecha UTC a la zona horaria de Colombia (UTC-5)"""
+        if value is None:
+            return None
+        
+        from datetime import timedelta
+        # Colombia está en UTC-5
+        colombia_offset = timedelta(hours=-5)
+        return value + colombia_offset
+    
     return app
