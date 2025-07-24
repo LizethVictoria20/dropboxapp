@@ -243,6 +243,9 @@ def carpetas_dropbox():
                 estructura = {"_subcarpetas": {}, "_archivos": []}
             
             # Filtrar la estructura según los permisos del usuario
+            if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+                flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+                return redirect(url_for("auth.login"))
             if current_user.rol == "cliente":
                 # Para clientes, mostrar todo (ya están filtrados por usuario)
                 # No necesitamos filtrar más porque solo cargamos sus carpetas
@@ -325,6 +328,10 @@ def obtener_contenido_carpeta(ruta):
     print(f"API: Obteniendo contenido de carpeta: {ruta}")
     try:
         # Verificar permisos
+        if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+            flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+            return redirect(url_for("auth.login"))
+        
         if current_user.rol == "cliente":
             # Cliente solo puede ver sus propias carpetas y las de sus beneficiarios
             user_ids = [current_user.id]
@@ -364,6 +371,9 @@ def obtener_contenido_carpeta(ruta):
         
         # Determinar el usuario_id basado en la ruta
         usuario_id = None
+        if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+            flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+            return redirect(url_for("auth.login"))
         if current_user.rol == "cliente":
             # Para clientes, el usuario_id será el del cliente actual
             usuario_id = current_user.id
@@ -450,6 +460,11 @@ def subir_archivo():
             return redirect(url_for("auth.login"))
             
         # Filtrar usuarios según el rol del usuario actual
+        if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+            flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+            return redirect(url_for("auth.login"))
+
+
         if current_user.rol == "cliente":
             # Cliente solo ve sus propias carpetas
             titulares = [current_user]  # Solo el usuario actual
@@ -527,6 +542,10 @@ def subir_archivo():
         return redirect(url_for("auth.login"))
         
     # Validación de seguridad: cliente solo puede subir a sus propias carpetas
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+        return redirect(url_for("auth.login"))
+    
     if current_user.rol == "cliente":
         if usuario_id.startswith("user-"):
             # Si es un titular, debe ser el usuario actual
@@ -1883,6 +1902,10 @@ def ver_usuario_carpetas(usuario_id):
             estructura = {"_subcarpetas": {}, "_archivos": []}
         
         # Control de permisos para ver carpetas (misma lógica que carpetas_dropbox)
+        if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+            flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+            return redirect(url_for("auth.login"))
+        
         if current_user.rol == "cliente":
             if current_user.id != usuario.id:
                 # Cliente intentando ver carpetas de otro cliente - no permitir
