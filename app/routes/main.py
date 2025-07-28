@@ -972,3 +972,85 @@ def api_usuario_eliminar(usuario_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500 
+
+@bp.route('/webhook/dropbox', methods=['GET', 'POST'])
+def dropbox_webhook():
+    """
+    Endpoint para manejar webhooks de Dropbox
+    
+    GET: Verificación del desafío (challenge)
+    POST: Notificaciones de cambios en archivos
+    """
+    print("🔔 Webhook de Dropbox recibido")
+    print(f"Método: {request.method}")
+    print(f"Headers: {dict(request.headers)}")
+    
+    if request.method == 'GET':
+        # Dropbox envía un desafío para verificar la URL del webhook
+        challenge = request.args.get('challenge')
+        print(f"Desafío recibido: {challenge}")
+        
+        if challenge:
+            # Responder con el mismo valor del desafío
+            print(f"Respondiendo al desafío: {challenge}")
+            return challenge, 200, {'Content-Type': 'text/plain'}
+        else:
+            print("No se recibió parámetro de desafío")
+            return "No challenge parameter", 400
+    
+    elif request.method == 'POST':
+        # Procesar notificaciones de cambios en Dropbox
+        try:
+            # Verificar que el contenido sea JSON
+            if not request.is_json:
+                print("Error: El contenido no es JSON válido")
+                return "Invalid JSON", 400
+            
+            data = request.get_json()
+            print(f"Datos del webhook: {data}")
+            
+            # Verificar que el webhook es de Dropbox
+            if 'list_folder' not in data:
+                print("Error: No es un webhook válido de Dropbox")
+                return "Invalid webhook", 400
+            
+            # Procesar el webhook usando las funciones de utilidad
+            from app.dropbox_utils import process_dropbox_webhook
+            success = process_dropbox_webhook(data)
+            
+            if success:
+                print("Webhook procesado exitosamente")
+                return "OK", 200
+            else:
+                print("Error procesando webhook")
+                return "Error processing webhook", 500
+            
+        except Exception as e:
+            print(f"Error procesando webhook: {e}")
+            return "Internal Server Error", 500
+    
+    else:
+        return "Method not allowed", 405 
+
+@bp.route('/test/webhook', methods=['GET'])
+def test_webhook():
+    """
+    Ruta de prueba para verificar que el webhook funciona correctamente
+    """
+    challenge = "test_challenge_12345"
+    print(f"Prueba de webhook - Desafío: {challenge}")
+    
+    # Simular la respuesta que debería dar el webhook
+    return f"""
+    <html>
+    <head><title>Test Webhook</title></head>
+    <body>
+        <h1>Test Webhook de Dropbox</h1>
+        <p>Esta es una página de prueba para verificar que el webhook funciona.</p>
+        <p>Si Dropbox envía un desafío, debería responder con: <strong>{challenge}</strong></p>
+        <hr>
+        <p><strong>URL del webhook:</strong> https://micaso.inmigracionokabogados.com/webhook/dropbox</p>
+        <p><strong>Método:</strong> GET (para desafío) / POST (para notificaciones)</p>
+    </body>
+    </html>
+    """ 

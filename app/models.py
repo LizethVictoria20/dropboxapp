@@ -19,6 +19,8 @@ class User(UserMixin, db.Model):
     ultimo_acceso = db.Column(db.DateTime, nullable=True)
     activo = db.Column(db.Boolean, default=True)
     dropbox_folder_path = db.Column(db.String, nullable=True)
+    dropbox_account_id = db.Column(db.String(100), nullable=True)  # ID de la cuenta de Dropbox
+    dropbox_cursor = db.Column(db.String(500), nullable=True)  # Cursor para sincronización incremental
     es_beneficiario = db.Column(db.Boolean, default=False)
     titular_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     rol = db.Column(db.String(20), nullable=False, default='cliente')
