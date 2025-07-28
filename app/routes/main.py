@@ -15,7 +15,8 @@ from app.utils.dashboard_stats import (
 
 bp = Blueprint('main', __name__)
 
-@bp.route('/auth', methods=['GET', 'POST'])
+
+@bp.route('/', methods=['GET', 'POST'])
 def auth_direct():
     """Ruta directa para /auth que muestra el login sin redirección"""
     from app.routes.auth import login
