@@ -1054,3 +1054,48 @@ def test_webhook():
     </body>
     </html>
     """ 
+
+@bp.route('/config/dropbox/status')
+def dropbox_config_status():
+    """
+    Ruta para verificar el estado de la configuración de Dropbox
+    """
+    from app.dropbox_utils import verify_dropbox_config
+    
+    # Obtener estado de configuración
+    status = verify_dropbox_config()
+    
+    # Convertir a formato para el template
+    config_status = {
+        'DROPBOX_API_KEY': {
+            'configurado': status['config']['api_key']['available'],
+            'valor': status['config']['api_key']['value']
+        },
+        'DROPBOX_APP_KEY': {
+            'configurado': status['config']['app_key']['available'],
+            'valor': status['config']['app_key']['value']
+        },
+        'DROPBOX_APP_SECRET': {
+            'configurado': status['config']['app_secret']['available'],
+            'valor': status['config']['app_secret']['value']
+        },
+        'DROPBOX_ACCESS_TOKEN': {
+            'configurado': status['config']['access_token']['available'],
+            'valor': status['config']['access_token']['value']
+        }
+    }
+    
+    # Estado de conexión
+    if status['connection']['connected']:
+        account_info = status['connection']['account_info']
+        dropbox_status = f"Conectado como: {account_info['email']} ({account_info['name']})"
+    elif status['connection']['error']:
+        dropbox_status = f"Error de conexión: {status['connection']['error']}"
+    else:
+        dropbox_status = "No configurado"
+    
+    return render_template('config_status.html', 
+                         config_status=config_status,
+                         dropbox_status=dropbox_status,
+                         todas_configuradas=status['all_configured'],
+                         connection_status=status['connection']) 

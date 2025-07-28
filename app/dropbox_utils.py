@@ -179,3 +179,82 @@ def rename_dropbox_item(from_path, new_name):
     """Renombra un elemento en Dropbox"""
     to_path = '/'.join(from_path.split('/')[:-1] + [new_name])
     move_dropbox_item(from_path, to_path)
+
+def verify_dropbox_config():
+    """
+    Verifica que la configuración de Dropbox esté disponible y funcional
+    
+    Returns:
+        dict: Estado de la configuración con detalles
+    """
+    config_status = {
+        'api_key': {
+            'available': bool(current_app.config.get('DROPBOX_API_KEY')),
+            'value': current_app.config.get('DROPBOX_API_KEY', 'No configurado')[:10] + '...' if current_app.config.get('DROPBOX_API_KEY') else 'No configurado'
+        },
+        'app_key': {
+            'available': bool(current_app.config.get('DROPBOX_APP_KEY')),
+            'value': current_app.config.get('DROPBOX_APP_KEY', 'No configurado')
+        },
+        'app_secret': {
+            'available': bool(current_app.config.get('DROPBOX_APP_SECRET')),
+            'value': 'Configurado' if current_app.config.get('DROPBOX_APP_SECRET') else 'No configurado'
+        },
+        'access_token': {
+            'available': bool(current_app.config.get('DROPBOX_ACCESS_TOKEN')),
+            'value': 'Configurado' if current_app.config.get('DROPBOX_ACCESS_TOKEN') else 'No configurado'
+        }
+    }
+    
+    # Verificar si al menos la API_KEY está configurada
+    api_key_available = config_status['api_key']['available']
+    
+    # Intentar conectar a Dropbox si hay API_KEY
+    connection_status = {
+        'connected': False,
+        'error': None,
+        'account_info': None
+    }
+    
+    if api_key_available:
+        try:
+            dbx = get_dbx()
+            account = dbx.users_get_current_account()
+            connection_status['connected'] = True
+            connection_status['account_info'] = {
+                'email': account.email,
+                'name': account.name.display_name,
+                'country': account.country
+            }
+            logger.info(f"Conectado a Dropbox como: {account.email}")
+        except Exception as e:
+            connection_status['connected'] = False
+            connection_status['error'] = str(e)
+            logger.error(f"Error conectando a Dropbox: {e}")
+    
+    return {
+        'config': config_status,
+        'connection': connection_status,
+        'all_configured': all(status['available'] for status in config_status.values()),
+        'api_key_configured': api_key_available
+    }
+
+def get_dropbox_client():
+    """
+    Obtiene un cliente de Dropbox configurado
+    
+    Returns:
+        dropbox.Dropbox: Cliente de Dropbox configurado
+        
+    Raises:
+        ValueError: Si la configuración no está disponible
+    """
+    config_status = verify_dropbox_config()
+    
+    if not config_status['api_key_configured']:
+        raise ValueError("DROPBOX_API_KEY no está configurado. Verifica las variables de entorno.")
+    
+    if not config_status['connection']['connected']:
+        raise ValueError(f"No se pudo conectar a Dropbox: {config_status['connection']['error']}")
+    
+    return get_dbx()

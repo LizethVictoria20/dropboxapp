@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Estado de Configuración - Dropbox</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+      <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h1 class="text-3xl font-bold text-gray-800 mb-2">
+            Estado de Configuración de Dropbox
+          </h1>
+          <p class="text-gray-600">
+            Verificación de variables de entorno y conectividad
+          </p>
+        </div>
+
+        <!-- Estado General -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">
+            Estado General
+          </h2>
+
+          <div class="flex items-center mb-4">
+            <div class="flex-shrink-0">
+              {% if todas_configuradas %}
+              <svg
+                class="w-8 h-8 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              {% else %}
+              <svg
+                class="w-8 h-8 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                ></path>
+              </svg>
+              {% endif %}
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium text-gray-900">
+                {% if todas_configuradas %} Configuración Completa {% else %}
+                Configuración Incompleta {% endif %}
+              </p>
+              <p class="text-sm text-gray-500">
+                {% if todas_configuradas %} Todas las variables de entorno están
+                configuradas correctamente {% else %} Faltan algunas variables
+                de entorno necesarias {% endif %}
+              </p>
+            </div>
+          </div>
+
+          <!-- Estado de Conexión -->
+          <div class="border-t pt-4">
+            <h3 class="text-lg font-medium text-gray-800 mb-2">
+              Estado de Conexión
+            </h3>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <p class="text-sm text-gray-700">{{ dropbox_status }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variables de Entorno -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">
+            Variables de Entorno
+          </h2>
+
+          <div class="space-y-4">
+            {% for var_name, status in config_status.items() %}
+            <div
+              class="border rounded-lg p-4 {% if status.configurado %}border-green-200 bg-green-50{% else %}border-red-200 bg-red-50{% endif %}"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-medium text-gray-900">
+                    {{ var_name }}
+                  </h3>
+                  <p class="text-sm text-gray-600 mt-1">
+                    {% if status.configurado %} ✅ Configurado {% else %} ❌ No
+                    configurado {% endif %}
+                  </p>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Valor: {{ status.valor }}
+                  </p>
+                </div>
+                <div class="flex-shrink-0">
+                  {% if status.configurado %}
+                  <svg
+                    class="w-6 h-6 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    ></path>
+                  </svg>
+                  {% else %}
+                  <svg
+                    class="w-6 h-6 text-red-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    ></path>
+                  </svg>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Instrucciones -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h2 class="text-xl font-semibold text-blue-800 mb-4">
+            Cómo Configurar las Variables de Entorno
+          </h2>
+
+          <div class="space-y-4 text-sm text-blue-700">
+            <div>
+              <h3 class="font-medium text-blue-800 mb-2">
+                1. Variables Requeridas
+              </h3>
+              <ul class="list-disc list-inside space-y-1 ml-4">
+                <li>
+                  <strong>DROPBOX_API_KEY:</strong> Token de acceso de la API de
+                  Dropbox (obligatorio)
+                </li>
+                <li>
+                  <strong>DROPBOX_APP_KEY:</strong> Clave de la aplicación de
+                  Dropbox
+                </li>
+                <li>
+                  <strong>DROPBOX_APP_SECRET:</strong> Secreto de la aplicación
+                  de Dropbox
+                </li>
+                <li>
+                  <strong>DROPBOX_ACCESS_TOKEN:</strong> Token de acceso de
+                  Dropbox
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 class="font-medium text-blue-800 mb-2">
+                2. Configuración en Producción
+              </h3>
+              <p class="mb-2">
+                En tu servidor de producción, configura las variables de
+                entorno:
+              </p>
+              <div
+                class="bg-gray-800 text-green-400 p-3 rounded-lg font-mono text-xs overflow-x-auto"
+              >
+                <code>
+                  export DROPBOX_API_KEY="tu_api_key_aqui"<br />
+                  export DROPBOX_APP_KEY="tu_app_key_aqui"<br />
+                  export DROPBOX_APP_SECRET="tu_app_secret_aqui"<br />
+                  export DROPBOX_ACCESS_TOKEN="tu_access_token_aqui"
+                </code>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="font-medium text-blue-800 mb-2">
+                3. Obtener Credenciales de Dropbox
+              </h3>
+              <ol class="list-decimal list-inside space-y-1 ml-4">
+                <li>
+                  Ve a
+                  <a
+                    href="https://www.dropbox.com/developers/apps"
+                    class="underline"
+                    target="_blank"
+                    >Dropbox App Console</a
+                  >
+                </li>
+                <li>Crea una nueva aplicación o selecciona una existente</li>
+                <li>En la sección "OAuth 2", genera un token de acceso</li>
+                <li>Copia las credenciales y configúralas en tu servidor</li>
+              </ol>
+            </div>
+
+            <div>
+              <h3 class="font-medium text-blue-800 mb-2">
+                4. Verificar Configuración
+              </h3>
+              <p>
+                Después de configurar las variables, recarga esta página para
+                verificar que todo esté funcionando correctamente.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enlaces Útiles -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">
+            Enlaces Útiles
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a
+              href="https://www.dropbox.com/developers/apps"
+              target="_blank"
+              class="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <svg
+                class="w-6 h-6 text-blue-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                ></path>
+              </svg>
+              <div>
+                <p class="font-medium text-gray-900">Dropbox App Console</p>
+                <p class="text-sm text-gray-500">
+                  Gestionar aplicaciones y credenciales
+                </p>
+              </div>
+            </a>
+
+            <a
+              href="/webhook/dropbox"
+              class="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <svg
+                class="w-6 h-6 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                ></path>
+              </svg>
+              <div>
+                <p class="font-medium text-gray-900">Webhook de Dropbox</p>
+                <p class="text-sm text-gray-500">
+                  Endpoint para notificaciones
+                </p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

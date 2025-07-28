@@ -182,14 +182,15 @@ def carpetas_dropbox():
         # Verificar configuración de Dropbox
         api_key = current_app.config.get("DROPBOX_API_KEY")
         if not api_key:
-            flash("Error: Configuración de Dropbox no disponible.", "error")
+            flash("Error: Configuración de Dropbox no disponible. Visita /config/dropbox/status para más información.", "error")
             return render_template("carpetas_dropbox.html", 
                                  estructuras_usuarios={},
                                  usuarios={},
                                  usuario_actual=current_user,
                                  estructuras_usuarios_json="{}",
                                  usuarios_emails_json="{}",
-                                 folders_por_ruta={})
+                                 folders_por_ruta={},
+                                 config_error=True)
         
         dbx = dropbox.Dropbox(api_key)
 
