@@ -407,7 +407,6 @@ block content %}
 
     <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
       <form id="formImportar" enctype="multipart/form-data" class="space-y-6">
-        {{ form.hidden_tag() }}
         <input type="hidden" id="importarUsuarioId" name="usuario_id" />
 
         <!-- Selección de archivo -->
@@ -532,7 +531,6 @@ block content %}
 
     <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
       <form id="formEditar" class="space-y-6">
-        {{ form.hidden_tag() }}
         <input type="hidden" id="editarUsuarioId" name="usuario_id" />
 
         <!-- Información Personal -->
