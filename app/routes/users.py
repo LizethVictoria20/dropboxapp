@@ -32,28 +32,59 @@ def create_user():
 def crear_beneficiario():
     titulares = User.query.filter_by(es_beneficiario=False).all()
     if request.method == "POST":
-        nombre = request.form.get("nombre")
-        email = request.form.get("email")
-        fecha_nac = request.form.get("fecha_nacimiento")
-        titular_id = request.form.get("titular_id")
-        # Validaciones aquí...
-
-        beneficiario = Beneficiario(
-            nombre=nombre,
-            email=email,
-            fecha_nacimiento=fecha_nac,
-            titular_id=titular_id
-        )
-        db.session.add(beneficiario)
-        db.session.commit()
-        # Crea carpeta en Dropbox dentro del titular
-        titular = User.query.get(titular_id)
-        path_ben = f"{titular.dropbox_folder_path}/{nombre}_{beneficiario.id}"
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
-        dbx.files_create_folder_v2(path_ben)
-        beneficiario.dropbox_folder_path = path_ben
-        db.session.commit()
-        return redirect(url_for("users.crear_beneficiario"))
+        try:
+            nombre = request.form.get("nombre")
+            email = request.form.get("email")
+            fecha_nac = request.form.get("fecha_nacimiento")
+            titular_id = request.form.get("titular_id")
+            
+            # Validaciones básicas
+            if not nombre or not email or not titular_id:
+                flash("Todos los campos son obligatorios", "error")
+                return redirect(url_for("users.crear_beneficiario"))
+            
+            # Verificar que el titular existe
+            titular = User.query.get(titular_id)
+            if not titular:
+                flash("Titular no encontrado", "error")
+                return redirect(url_for("users.crear_beneficiario"))
+            
+            # Verificar que el titular tenga carpeta en Dropbox
+            if not titular.dropbox_folder_path:
+                flash("El titular no tiene carpeta configurada en Dropbox", "error")
+                return redirect(url_for("users.crear_beneficiario"))
+            
+            # Crear beneficiario
+            beneficiario = Beneficiario(
+                nombre=nombre,
+                email=email,
+                fecha_nacimiento=fecha_nac,
+                titular_id=titular_id
+            )
+            db.session.add(beneficiario)
+            db.session.commit()
+            
+            # Crear carpeta en Dropbox
+            try:
+                from app.dropbox_utils import create_dropbox_folder
+                path_ben = f"{titular.dropbox_folder_path}/{nombre}_{beneficiario.id}"
+                create_dropbox_folder(path_ben)
+                beneficiario.dropbox_folder_path = path_ben
+                db.session.commit()
+                flash(f"Beneficiario '{nombre}' creado exitosamente con carpeta en Dropbox", "success")
+            except Exception as e:
+                # Si falla la creación de carpeta, no es crítico
+                flash(f"Beneficiario creado pero error al crear carpeta en Dropbox: {str(e)}", "warning")
+                print(f"Error creando carpeta Dropbox para beneficiario: {e}")
+            
+            return redirect(url_for("users.crear_beneficiario"))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al crear beneficiario: {str(e)}", "error")
+            print(f"Error en crear_beneficiario: {e}")
+            return redirect(url_for("users.crear_beneficiario"))
+            
     return render_template("crear_beneficiario.html", titulares=titulares)
 
 
