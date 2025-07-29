@@ -150,20 +150,55 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
           </h2>
         </div>
         <div class="text-sm text-gray-500">
+          {% if estructuras_usuarios and usuario_id in estructuras_usuarios %}
           {% set estructura_usuario = estructuras_usuarios[usuario_id] %} {% if
           estructura_usuario._subcarpetas %} {{
           estructura_usuario._subcarpetas|length }} carpeta(s) {% else %} Sin
-          carpetas {% endif %}
+          carpetas {% endif %} {% else %} Sin carpetas {% endif %}
         </div>
       </div>
     </div>
 
     <div class="p-6">
-      {% set estructura_usuario = estructuras_usuarios[usuario_id] %} {% if
+      {% if estructuras_usuarios and usuario_id in estructuras_usuarios %} {%
+      set estructura_usuario = estructuras_usuarios[usuario_id] %} {% if
       estructura_usuario._subcarpetas or estructura_usuario._archivos %} {%
       import "tree_macros.html" as macros with context %} {{
       macros.render_tree(estructura_usuario, '', usuario_id, usuario_actual,
       folders_por_ruta) }} {% else %}
+      <div class="text-center py-12">
+        <svg
+          class="w-16 h-16 text-gray-400 mx-auto mb-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+          />
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No hay carpetas</h3>
+        <p class="text-gray-500 mb-4">
+          {% if beneficiario %} Este beneficiario aún no tiene carpetas creadas.
+          {% else %} Este usuario aún no tiene carpetas creadas. {% endif %}
+        </p>
+        {% if usuario_actual.rol == 'admin' %}
+        <p class="text-sm text-gray-400">
+          Las carpetas se crearán automáticamente cuando se suban archivos.
+        </p>
+        <button
+          onclick="openUploadModal('', '{{ usuario_id }}')"
+          class="inline-flex items-center px-4 py-2 mt-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <i class="fas fa-upload mr-2"></i>
+          Subir archivo
+        </button>
+        {% endif %}
+      </div>
+      {% endif %} {% else %}
       <div class="text-center py-12">
         <svg
           class="w-16 h-16 text-gray-400 mx-auto mb-4"
