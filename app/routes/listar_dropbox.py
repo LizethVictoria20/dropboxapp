@@ -36,7 +36,6 @@ def obtener_estructura_dropbox(path="", dbx=None):
     try:
         # Obtener contenido del directorio actual (no recursivo)
         res = dbx.files_list_folder(path, recursive=False)
-        print(f"Encontrados {len(res.entries)} elementos en '{path}'")
     except dropbox.exceptions.ApiError as e:
         print(f"Error accediendo a Dropbox path '{path}': {e}")
         # Retornar estructura vacía si el path no existe
@@ -47,7 +46,6 @@ def obtener_estructura_dropbox(path="", dbx=None):
     for entry in res.entries:
         if isinstance(entry, dropbox.files.FolderMetadata):
             # Es una carpeta - explorar recursivamente
-            print(f"  Carpeta encontrada: {entry.name}")
             sub_path = f"{path}/{entry.name}" if path else f"/{entry.name}"
             sub_estructura = obtener_estructura_dropbox(path=sub_path, dbx=dbx)
             estructura["_subcarpetas"][entry.name] = sub_estructura
@@ -62,8 +60,6 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
     Versión optimizada que obtiene la estructura de forma recursiva pero con límite de profundidad
     para evitar problemas de rendimiento con estructuras muy profundas
     """
-    print(f"=== obtener_estructura_dropbox_optimizada ===")
-    print(f"Path: '{path}', current_depth: {current_depth}, max_depth: {max_depth}")
     
     if dbx is None:
         api_key = current_app.config.get("DROPBOX_API_KEY")
@@ -74,27 +70,15 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
     
     # Limitar la profundidad para evitar recursión infinita
     if current_depth >= max_depth:
-        print(f"Alcanzada profundidad máxima ({max_depth}) para path: '{path}'")
         return {"_subcarpetas": {}, "_archivos": []}
     
     try:
-        print(f"Llamando a Dropbox API para path: '{path}'")
         # Si el path está vacío, usar la raíz de Dropbox
         if not path or path == "":
             path = ""
-            print("Path vacío, usando raíz de Dropbox")
         
         res = dbx.files_list_folder(path, recursive=False)
-        print(f"Encontrados {len(res.entries)} elementos en '{path}'")
-        print(f"Entries: {[entry.name for entry in res.entries]}")
-        
-        # Debug adicional para ver qué tipo de entradas son
-        for i, entry in enumerate(res.entries):
-            print(f"  Entry {i}: {entry.name} - Tipo: {type(entry).__name__}")
-            if isinstance(entry, dropbox.files.FolderMetadata):
-                print(f"    Es carpeta: {entry.name}")
-            elif isinstance(entry, dropbox.files.FileMetadata):
-                print(f"    Es archivo: {entry.name}")
+
     except dropbox.exceptions.ApiError as e:
         print(f"Error accediendo a Dropbox path '{path}': {e}")
         # Re-lanzar el error para que sea manejado por el llamador
@@ -108,7 +92,6 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
     for entry in res.entries:
         if isinstance(entry, dropbox.files.FolderMetadata):
             # Es una carpeta - explorar recursivamente
-            print(f"  Carpeta encontrada: {entry.name}")
             sub_path = f"{path}/{entry.name}" if path else f"/{entry.name}"
             try:
                 sub_estructura = obtener_estructura_dropbox_optimizada(
@@ -124,11 +107,8 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
                 estructura["_subcarpetas"][entry.name] = {"_subcarpetas": {}, "_archivos": []}
         elif isinstance(entry, dropbox.files.FileMetadata):
             # Es un archivo
-            print(f"  Archivo encontrado: {entry.name}")
             estructura["_archivos"].append(entry.name)
 
-    print(f"Estructura final para '{path}': {len(estructura['_subcarpetas'])} carpetas, {len(estructura['_archivos'])} archivos")
-    print(f"Estructura completa: {estructura}")
     return estructura
 
 def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
@@ -1197,7 +1177,6 @@ def sincronizar_dropbox_a_bd():
         try:
             # Listar archivos del usuario en Dropbox
             res = dbx.files_list_folder(usuario.dropbox_folder_path, recursive=True)
-            print(f"DEBUG | Encontrados {len(res.entries)} elementos para {usuario.email}")
             
             for entry in res.entries:
                 if isinstance(entry, dropbox.files.FileMetadata):
@@ -1633,7 +1612,6 @@ def sincronizar_dropbox_completo():
     try:
         # Buscar desde la raíz
         res = dbx.files_list_folder(path="", recursive=True)
-        print(f"DEBUG | Encontrados {len(res.entries)} elementos en Dropbox")
         
         # Obtener archivos existentes
         paths_existentes = set([a.dropbox_path for a in Archivo.query.all()])
@@ -1890,10 +1868,6 @@ def ver_usuario_carpetas(usuario_id):
             db.session.commit()
 
         path = usuario.dropbox_folder_path
-        print(f"=== ver_usuario_carpetas DEBUG ===")
-        print(f"Usuario ID: {usuario.id}")
-        print(f"Usuario Email: {usuario.email}")
-        print(f"Dropbox folder path: {path}")
         
         try:
             # Usar la función optimizada con recursión limitada para mejor rendimiento
@@ -1939,12 +1913,6 @@ def ver_usuario_carpetas(usuario_id):
         folders = Folder.query.filter_by(user_id=usuario.id).all()
         folders_por_ruta = {f.dropbox_path: f for f in folders}
         
-        print(f"=== FINAL DEBUG ===")
-        print(f"Estructura final: {estructura}")
-        print(f"Número de carpetas final: {len(estructura.get('_subcarpetas', {}))}")
-        print(f"Carpetas encontradas: {list(estructura.get('_subcarpetas', {}).keys())}")
-        print(f"Estructuras usuarios: {estructuras_usuarios}")
-
         return render_template(
             "usuario_carpetas.html",
             usuario=usuario,

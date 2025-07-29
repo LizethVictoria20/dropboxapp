@@ -97,7 +97,7 @@ def login():
                 elif user.rol == 'cliente':
                     return redirect(url_for('listar_dropbox.carpetas_dropbox'))
                 elif user.rol == 'lector':
-                    return redirect(url_for('main.listar_carpetas'))
+                    return redirect(url_for('main.dashboard_admin'))
                 else:
                     return redirect(url_for('main.dashboard_lector'))
         else:

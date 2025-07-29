@@ -1,18 +1,32 @@
-{% extends "base.html" %} {% block title %}Carpetas de Usuarios{% endblock %} {%
-block content %}
-<div class="max-w-7xl mx-auto px-6 py-8">
+{% extends "base.html" %} {% block title %} {% if current_user.es_lector() %}
+Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-8">
   <!-- Header -->
-  <div class="mb-8">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">Carpetas de Usuarios</h1>
-        <p class="text-gray-600 mt-2">
-          Vista general de todas las carpetas del sistema.
-        </p>
-      </div>
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-primary-dark">
+        {% if current_user.es_lector() %} Clientes del Sistema {% else %}
+        Carpetas de Usuarios {% endif %}
+      </h1>
+      <p class="text-gray-500 mt-1">
+        {% if current_user.es_lector() %} Vista de clientes del sistema - Acceso
+        de solo lectura {% else %} Vista general de todas las carpetas del
+        sistema {% endif %}
+      </p>
+    </div>
+    <div class="flex items-center space-x-3">
+      {% if current_user.es_lector() %}
+      <span
+        class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+      >
+        <i class="fas fa-eye mr-2"></i>
+        Modo Lector
+      </span>
+      {% endif %}
       <a
         href="{{ url_for('main.dashboard_admin') }}"
-        class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition"
       >
         <i class="fas fa-arrow-left mr-2"></i>
         Volver al Dashboard
@@ -20,197 +34,286 @@ block content %}
     </div>
   </div>
 
-  <!-- Estadísticas Rápidas -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm font-medium text-gray-600">Total Usuarios</p>
-          <p class="text-2xl font-bold text-blue-600">{{ usuarios|length }}</p>
-        </div>
-        <div
-          class="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center"
-        >
-          <i class="fas fa-users text-blue-600"></i>
-        </div>
-      </div>
+  <!-- Información del Rol para Lectores -->
+  {% if current_user.es_lector() %}
+  <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+    <div class="flex items-center space-x-3 mb-3">
+      <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+      <h3 class="text-lg font-medium text-blue-900">Modo Lector</h3>
     </div>
-
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm font-medium text-gray-600">Total Carpetas</p>
-          <p class="text-2xl font-bold text-green-600">
-            {{ carpetas_por_usuario.values() | sum }}
-          </p>
-        </div>
-        <div
-          class="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center"
-        >
-          <i class="fas fa-folder text-green-600"></i>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm font-medium text-gray-600">Usuarios con Carpetas</p>
-          <p class="text-2xl font-bold text-purple-600">
-            {{ carpetas_por_usuario.values() | select('>', 0) | list | length }}
-          </p>
-        </div>
-        <div
-          class="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center"
-        >
-          <i class="fas fa-folder-plus text-purple-600"></i>
-        </div>
-      </div>
+    <p class="text-blue-800 mb-4">
+      Como usuario con rol de lector, puedes ver la información de los clientes
+      pero no puedes realizar modificaciones. Esta es una vista de solo lectura
+      para consulta y seguimiento.
+    </p>
+    <div class="flex flex-wrap gap-3">
+      <span
+        class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+      >
+        <i class="fas fa-eye mr-2"></i>
+        Solo Lectura
+      </span>
+      <span
+        class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800"
+      >
+        <i class="fas fa-users mr-2"></i>
+        Ver Clientes
+      </span>
+      <span
+        class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800"
+      >
+        <i class="fas fa-folder mr-2"></i>
+        Ver Carpetas
+      </span>
     </div>
   </div>
+  {% endif %}
 
-  <!-- Lista de Usuarios y sus Carpetas -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-    <div class="p-6 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-900">
-        Usuarios y sus Carpetas
-      </h2>
+  <!-- Search -->
+  <form
+    method="get"
+    action="{{ url_for('main.listar_carpetas') }}"
+    class="mb-6"
+  >
+    <div>
+      <input
+        type="text"
+        name="q"
+        value="{{ request.args.get('q', '') }}"
+        placeholder="🔍 Buscar por nombre o email"
+        class="w-[32rem] h-[3rem] text-sm px-4 py-3 rounded-xl border border-transparent focus:ring-2 focus:ring-blue-200 focus:outline-none placeholder-gray-400"
+      />
+    </div>
+  </form>
+
+  <!-- Tabla de usuarios -->
+  <div
+    class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden"
+  >
+    <div class="px-6 py-3 border-b bg-blue-50 flex items-center">
+      <div class="flex items-center gap-2 text-primary-dark font-semibold">
+        <i class="fas fa-users"></i>
+        {% if current_user.es_lector() %} Clientes del Sistema {% else %}
+        Usuarios y sus Carpetas {% endif %}
+      </div>
+      <span
+        class="ml-auto text-xs font-bold bg-blue-100 text-primary-dark px-3 py-1 rounded-full"
+      >
+        {{ usuarios|length }} {% if current_user.es_lector() %} clientes {% else
+        %} usuarios {% endif %}
+      </span>
     </div>
 
     {% if usuarios %}
-    <div class="divide-y divide-gray-200">
-      {% for usuario in usuarios %}
-      <div class="p-6">
-        <div class="flex items-center justify-between mb-4">
-          <!-- Información del Usuario -->
-          <div class="flex items-center space-x-4">
-            <div
-              class="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center"
+    <table class="min-w-full text-sm text-gray-700">
+      <thead>
+        <tr class="border-b text-gray-500">
+          <th class="py-3 px-6 text-left">NOMBRE</th>
+          <th class="py-3 px-2 text-left">EMAIL</th>
+          <th class="py-3 px-2 text-left">ROL</th>
+          <th class="py-3 px-2 text-right">ACCIONES</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for usuario in usuarios %}
+        <!-- Fila de tabla en escritorio -->
+        <tr
+          class="border-b last:border-0 hover:bg-blue-50 transition hidden md:table-row"
+        >
+          <td class="flex items-center gap-3 py-3 px-6">
+            <span
+              class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-primary-dark font-bold text-lg"
             >
-              <span class="text-blue-600 font-medium">
-                {{ (usuario.nombre or usuario.email)[0]|upper }}
-              </span>
-            </div>
+              {{ (usuario.nombre or usuario.email)[0]|upper }}
+            </span>
             <div>
-              <h3 class="text-lg font-medium text-gray-900">
-                {{ usuario.nombre_completo }}
-              </h3>
-              <p class="text-sm text-gray-500">{{ usuario.email }}</p>
-              <div class="flex items-center space-x-3 mt-1">
-                <span
-                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {% if usuario.rol == 'superadmin' %}bg-red-100 text-red-800 {% elif usuario.rol == 'admin' %}bg-blue-100 text-blue-800 {% elif usuario.rol == 'cliente' %}bg-green-100 text-green-800 {% else %}bg-gray-100 text-gray-800{% endif %}"
+              <div class="font-semibold text-gray-900">
+                {{ usuario.nombre_completo or usuario.email.split('@')[0] }}
+              </div>
+              <div class="text-xs text-gray-500">
+                @{{ usuario.email.split('@')[0] }}
+              </div>
+            </div>
+          </td>
+          <td class="px-2">{{ usuario.email }}</td>
+          <td class="px-2">
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.rol == 'superadmin' %}bg-red-100 text-red-800 {% elif usuario.rol == 'admin' %}bg-blue-100 text-blue-800 {% elif usuario.rol == 'lector' %}bg-purple-100 text-purple-800 {% else %}bg-green-100 text-green-800{% endif %}"
+            >
+              {% if usuario.rol == 'superadmin' %}
+              <i class="fas fa-crown mr-1"></i>
+              {% elif usuario.rol == 'admin' %}
+              <i class="fas fa-user-shield mr-1"></i>
+              {% elif usuario.rol == 'lector' %}
+              <i class="fas fa-eye mr-1"></i>
+              {% else %}
+              <i class="fas fa-user mr-1"></i>
+              {% endif %} {{ usuario.rol|title }}
+            </span>
+          </td>
+          <td class="px-2 text-right">
+            <div class="relative" x-data="{ open: false }">
+              <button
+                @click="open = !open"
+                class="p-2 rounded hover:bg-gray-100 group relative"
+              >
+                <i class="fas fa-ellipsis-v text-gray-400"></i>
+              </button>
+
+              <!-- Menú desplegable de acciones -->
+              <div
+                x-show="open"
+                @click.away="open = false"
+                x-transition:enter="transition ease-out duration-100"
+                x-transition:enter-start="transform opacity-0 scale-95"
+                x-transition:enter-end="transform opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-75"
+                x-transition:leave-start="transform opacity-100 scale-100"
+                x-transition:leave-end="transform opacity-0 scale-95"
+                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+              >
+                <!-- Ver Carpetas -->
+                <a
+                  href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=usuario.id) }}"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                 >
-                  {{ usuario.rol|title }}
-                </span>
-                {% if usuario.activo %}
-                <span
-                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                  <i class="fas fa-folder-open mr-3 text-blue-500"></i>
+                  Ver Carpetas
+                </a>
+
+                <!-- Ver Historial -->
+                <button
+                  onclick="abrirModalHistorial({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                 >
-                  <i class="fas fa-check-circle mr-1"></i>Activo
-                </span>
-                {% else %}
-                <span
-                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                  <i class="fas fa-history mr-3 text-green-500"></i>
+                  Ver Historial
+                </button>
+
+                {% if current_user.puede_administrar() %}
+                <!-- Separador -->
+                <div class="border-t border-gray-100"></div>
+
+                <!-- Editar Usuario -->
+                <button
+                  onclick="abrirModalEditar({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                 >
-                  <i class="fas fa-times-circle mr-1"></i>Inactivo
-                </span>
+                  <i class="fas fa-edit mr-3 text-yellow-500"></i>
+                  Editar Usuario
+                </button>
+
+                <!-- Eliminar Usuario -->
+                <button
+                  onclick="confirmarEliminarUsuario({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                >
+                  <i class="fas fa-trash mr-3"></i>
+                  Eliminar Usuario
+                </button>
                 {% endif %}
               </div>
             </div>
-          </div>
+          </td>
+        </tr>
 
-          <!-- Estadísticas y Acciones -->
-          <div class="flex items-center space-x-4">
-            <div class="text-center">
-              <p class="text-2xl font-bold text-green-600">
-                {{ carpetas_por_usuario[usuario.id] }}
-              </p>
-              <p class="text-xs text-gray-500">Carpetas</p>
-            </div>
-            <div class="flex items-center space-x-2">
-              <a
-                href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=usuario.id) }}"
-                class="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                title="Ver carpetas detalladas"
-              >
-                <i class="fas fa-folder-open mr-2"></i>
-                Ver Carpetas
-              </a>
-              <button
-                class="inline-flex items-center px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors"
-                title="Gestionar usuario"
-              >
-                <i class="fas fa-cog mr-2"></i>
-                Gestionar
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Vista previa de carpetas (si las tiene) -->
-        {% if carpetas_por_usuario[usuario.id] > 0 %}
-        <div class="ml-16">
-          <div class="bg-gray-50 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="text-sm font-medium text-gray-700">
-                Carpetas Recientes
-              </h4>
-              <span class="text-xs text-gray-500"
-                >{{ carpetas_por_usuario[usuario.id] }} total</span
-              >
-            </div>
-
-            <!-- Aquí se mostrarían las carpetas más recientes -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {% for i in range(3) %} {% if loop.index <=
-              carpetas_por_usuario[usuario.id] %}
-              <div
-                class="flex items-center space-x-2 p-2 bg-white rounded border"
-              >
-                <div
-                  class="h-6 w-6 bg-yellow-100 rounded flex items-center justify-center"
-                >
-                  <i class="fas fa-folder text-yellow-600 text-xs"></i>
-                </div>
-                <span class="text-sm text-gray-700 truncate"
-                  >Carpeta {{ loop.index }}</span
-                >
-              </div>
-              {% endif %} {% endfor %} {% if carpetas_por_usuario[usuario.id] >
-              3 %}
-              <div
-                class="flex items-center justify-center p-2 bg-gray-100 rounded border border-dashed"
-              >
-                <span class="text-xs text-gray-500">
-                  +{{ carpetas_por_usuario[usuario.id] - 3 }} más
-                </span>
-              </div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        {% else %}
-        <div class="ml-16">
-          <div class="bg-gray-50 rounded-lg p-4 text-center">
-            <i class="fas fa-folder-open text-gray-300 text-2xl mb-2"></i>
-            <p class="text-sm text-gray-500">
-              Este usuario no tiene carpetas creadas
-            </p>
-            <button
-              class="mt-2 inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+        <!-- Tarjeta en móvil -->
+        <tr class="md:hidden">
+          <td colspan="5" class="p-4">
+            <div
+              class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-2 hover:bg-blue-50 transition"
             >
-              <i class="fas fa-plus mr-1"></i>
-              Crear Primera Carpeta
-            </button>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-      {% endfor %}
-    </div>
+              <div class="flex items-center gap-3 mb-3">
+                <span
+                  class="w-10 h-10 rounded-full bg-blue-100 text-primary-dark font-bold text-lg flex items-center justify-center"
+                >
+                  {{ (usuario.nombre or usuario.email)[0]|upper }}
+                </span>
+                <div>
+                  <div class="font-semibold text-gray-900 text-base">
+                    {{ usuario.nombre_completo or usuario.email.split('@')[0] }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    @{{ usuario.email.split('@')[0] }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-sm text-gray-700 space-y-2">
+                <p><strong>Email:</strong> {{ usuario.email }}</p>
+                <p>
+                  <strong>Rol:</strong>
+                  <span
+                    class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.rol == 'superadmin' %}bg-red-100 text-red-800 {% elif usuario.rol == 'admin' %}bg-blue-100 text-blue-800 {% elif usuario.rol == 'lector' %}bg-purple-100 text-purple-800 {% else %}bg-green-100 text-green-800{% endif %}"
+                  >
+                    {% if usuario.rol == 'superadmin' %}
+                    <i class="fas fa-crown mr-1"></i>
+                    {% elif usuario.rol == 'admin' %}
+                    <i class="fas fa-user-shield mr-1"></i>
+                    {% elif usuario.rol == 'lector' %}
+                    <i class="fas fa-eye mr-1"></i>
+                    {% else %}
+                    <i class="fas fa-user mr-1"></i>
+                    {% endif %} {{ usuario.rol|title }}
+                  </span>
+                </p>
+                <p>
+                  <strong>Carpetas:</strong>
+                  <span class="text-lg font-bold text-green-600 ml-2">
+                    {{ carpetas_por_usuario[usuario.id] }}
+                  </span>
+                  <span class="text-xs text-gray-500">carpetas</span>
+                </p>
+                <p>
+                  <strong>Estado:</strong>
+                  <span
+                    class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}"
+                  >
+                    {% if usuario.activo %}
+                    <i class="fas fa-check-circle mr-1"></i>Activo {% else %}
+                    <i class="fas fa-times-circle mr-1"></i>Inactivo {% endif %}
+                  </span>
+                </p>
+              </div>
+
+              <!-- Acciones en móvil -->
+              <div class="flex flex-wrap gap-2 mt-4">
+                <a
+                  href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=usuario.id) }}"
+                  class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition text-center"
+                >
+                  <i class="fas fa-folder-open mr-1"></i> Ver Carpetas
+                </a>
+                {% if current_user.puede_administrar() %}
+                <button
+                  class="flex-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition text-center"
+                >
+                  <i class="fas fa-cog mr-1"></i> Gestionar
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
     {% else %}
     <!-- Sin usuarios -->
     <div class="p-12 text-center">
+      {% if current_user.es_lector() %}
+      <div
+        class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4"
+      >
+        <i class="fas fa-users text-gray-400 text-3xl"></i>
+      </div>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">
+        No hay clientes registrados
+      </h3>
+      <p class="text-gray-600">
+        Aún no se han registrado clientes en el sistema.
+      </p>
+      {% else %}
       <i class="fas fa-users text-gray-300 text-6xl mb-4"></i>
       <h3 class="text-lg font-medium text-gray-900 mb-2">
         No hay usuarios en el sistema
@@ -218,75 +321,39 @@ block content %}
       <p class="text-gray-500 mb-6">
         Crea el primer usuario para comenzar a gestionar carpetas.
       </p>
+      {% if current_user.puede_administrar() %}
       <button
         class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
       >
         <i class="fas fa-user-plus mr-2"></i>
         Crear Usuario
       </button>
+      {% endif %} {% endif %}
     </div>
     {% endif %}
   </div>
-
-  <!-- Acciones Rápidas -->
-  {% if usuarios %}
-  <div
-    class="mt-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white"
-  >
-    <h2 class="text-xl font-semibold mb-4">Acciones Administrativas</h2>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <a
-        href="{{ url_for('main.listar_usuarios_admin') }}"
-        class="bg-white bg-opacity-20 rounded-lg p-4 hover:bg-opacity-30 transition-all"
-      >
-        <i class="fas fa-users text-2xl mb-2"></i>
-        <p class="font-medium">Gestionar Usuarios</p>
-        <p class="text-sm opacity-75">Administrar cuentas</p>
-      </a>
-      <a
-        href="{{ url_for('listar_dropbox.carpetas_dropbox') }}"
-        class="bg-white bg-opacity-20 rounded-lg p-4 hover:bg-opacity-30 transition-all"
-      >
-        <i class="fas fa-folder-tree text-2xl mb-2"></i>
-        <p class="font-medium">Vista de Árbol</p>
-        <p class="text-sm opacity-75">Explorar estructura</p>
-      </a>
-      <button
-        class="bg-white bg-opacity-20 rounded-lg p-4 hover:bg-opacity-30 transition-all text-left"
-      >
-        <i class="fas fa-sync text-2xl mb-2"></i>
-        <p class="font-medium">Sincronizar</p>
-        <p class="text-sm opacity-75">Actualizar desde Dropbox</p>
-      </button>
-      <button
-        class="bg-white bg-opacity-20 rounded-lg p-4 hover:bg-opacity-30 transition-all text-left"
-      >
-        <i class="fas fa-download text-2xl mb-2"></i>
-        <p class="font-medium">Exportar</p>
-        <p class="text-sm opacity-75">Descargar reporte</p>
-      </button>
-    </div>
   </div>
-  {% endif %}
-</div>
 
+<!-- Scripts para las acciones del menú -->
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Funcionalidad para botones de gestión
-    document.querySelectorAll('[title="Gestionar usuario"]').forEach((btn) => {
-      btn.addEventListener("click", function () {
-        alert("Funcionalidad de gestión en desarrollo");
-      });
-    });
+  // Función para abrir modal de historial
+  function abrirModalHistorial(usuarioId, nombreUsuario) {
+    // Por ahora mostrar un alert, pero se puede implementar un modal real
+    alert(`Ver historial de ${nombreUsuario} (ID: ${usuarioId})`);
+  }
 
-    // Funcionalidad para crear carpetas
-    document
-      .querySelectorAll('button:contains("Crear Primera Carpeta")')
-      .forEach((btn) => {
-        btn.addEventListener("click", function () {
-          alert("Funcionalidad de creación de carpetas en desarrollo");
-        });
-      });
-  });
+  // Función para abrir modal de editar usuario
+  function abrirModalEditar(usuarioId, nombreUsuario) {
+    // Por ahora mostrar un alert, pero se puede implementar un modal real
+    alert(`Editar usuario ${nombreUsuario} (ID: ${usuarioId})`);
+  }
+
+  // Función para confirmar eliminación de usuario
+  function confirmarEliminarUsuario(usuarioId, nombreUsuario) {
+    if (confirm(`¿Estás seguro de que quieres eliminar al usuario ${nombreUsuario}?`)) {
+      // Aquí se puede implementar la lógica de eliminación
+      alert(`Usuario ${nombreUsuario} eliminado (ID: ${usuarioId})`);
+    }
+  }
 </script>
 {% endblock %}

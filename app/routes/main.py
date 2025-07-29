@@ -128,9 +128,13 @@ def dashboard_test():
 
 @bp.route('/dashboard/admin')
 @login_required
-@role_required('admin')
 def dashboard_admin():
-    """Dashboard específico para administradores"""
+    """Dashboard específico para administradores y lectores"""
+    
+    # Verificar que el usuario tenga permisos de admin o sea lector
+    if not (current_user.puede_administrar() or current_user.es_lector()):
+        flash('No tienes permisos para acceder a esta página.', 'error')
+        return redirect(url_for('main.dashboard'))
     
     # Registrar actividad de acceso al dashboard de admin
     current_user.registrar_actividad('dashboard_admin_access', 'Acceso al dashboard de administrador')
@@ -529,23 +533,35 @@ def listar_carpetas():
         flash('No tienes permisos para acceder a esta página.', 'error')
         return redirect(url_for('main.dashboard'))
     
-    # Obtener todos los usuarios con sus carpetas
-    usuarios = User.query.all()
+    # Parámetros de búsqueda
+    busqueda = request.args.get('q', '').strip()
+    
+    # Query base
+    query = User.query
+    
+    # Aplicar filtro de búsqueda si se proporciona
+    if busqueda:
+        query = query.filter(
+            db.or_(
+                User.nombre.ilike(f'%{busqueda}%'),
+                User.apellido.ilike(f'%{busqueda}%'),
+                User.email.ilike(f'%{busqueda}%')
+            )
+        )
+    
+    # Obtener usuarios
+    usuarios = query.all()
     
     # Contar carpetas por usuario
     carpetas_por_usuario = {}
     for usuario in usuarios:
         carpetas_por_usuario[usuario.id] = Folder.query.filter_by(user_id=usuario.id).count()
     
-    # Si es lector, usar template específico
-    if current_user.es_lector():
-        return render_template('admin/listar_carpetas_lector.html',
-                             usuarios=usuarios,
-                             carpetas_por_usuario=carpetas_por_usuario)
-    
+    # Usar el mismo template para admin y lector
     return render_template('admin/listar_carpetas.html',
                          usuarios=usuarios,
-                         carpetas_por_usuario=carpetas_por_usuario)
+                         carpetas_por_usuario=carpetas_por_usuario,
+                         busqueda=busqueda)
 
 @bp.route('/listar_usuarios_admin')
 @login_required
