@@ -539,6 +539,12 @@ def listar_carpetas():
     # Query base
     query = User.query
     
+    # Filtrar usuarios según el rol del usuario actual
+    if current_user.es_lector():
+        # Los lectores solo pueden ver usuarios con rol 'cliente'
+        query = query.filter(User.rol == 'cliente')
+    # Los administradores pueden ver todos los usuarios
+    
     # Aplicar filtro de búsqueda si se proporciona
     if busqueda:
         query = query.filter(

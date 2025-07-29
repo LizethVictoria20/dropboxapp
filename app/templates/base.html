@@ -192,7 +192,7 @@
                   Clientes
                 </a>
                 <a
-                  href="#"
+                  href="{{ url_for('main.profile') }}"
                   class="{% if request.endpoint == 'main.profile' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
                 >
                   Mi Perfil
@@ -243,7 +243,7 @@
                     <!-- Opciones de Perfil -->
                     <div class="py-1">
                       <a
-                        href="#"
+                        href="{{ url_for('main.profile') }}"
                         class="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-surface transition-colors"
                       >
                         <i class="fas fa-user-circle text-primary w-5"></i>
