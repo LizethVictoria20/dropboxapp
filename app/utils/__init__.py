@@ -1,1 +1,1 @@
-# Utilities package for the application 
+# Módulo de utilidades 

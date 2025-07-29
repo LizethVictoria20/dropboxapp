@@ -2,7 +2,6 @@ import os
 from flask import Flask, jsonify, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from app.models import Beneficiario
 from config import config
 from flask_login import LoginManager
 from datetime import datetime, timedelta
@@ -56,19 +55,9 @@ def create_app(config_name=None):
     app.register_blueprint(usuarios.bp)
     app.register_blueprint(web_register.bp)
     
-    # Eventos de SQLAlchemy para hooks automáticos
-    @db.event.listens_for(Beneficiario, 'after_insert')
-    def after_beneficiario_insert(mapper, connection, target):
-        """Hook automático para crear carpeta después de insertar beneficiario"""
-        try:
-            from app.utils.beneficiario_utils import ensure_beneficiario_folder
-            result = ensure_beneficiario_folder(target.id)
-            if result['success']:
-                print(f"✅ Carpeta del beneficiario creada automáticamente: {result['path']}")
-            else:
-                print(f"⚠️  Error creando carpeta automáticamente: {result['error']}")
-        except Exception as e:
-            print(f"⚠️  Error en hook after_insert: {e}")
+    # Configurar eventos de SQLAlchemy
+    from app.events import setup_events
+    setup_events()
     
     # Filtros personalizados de Jinja2
     @app.template_filter('datetime')
