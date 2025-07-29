@@ -201,6 +201,18 @@ class Beneficiario(db.Model):
 
     def __repr__(self):
         return f"<Beneficiario {self.nombre} ({self.email}) de titular {self.titular_id}>"
+    
+    def after_insert(self):
+        """Hook que se ejecuta después de insertar el beneficiario"""
+        try:
+            from app.utils.beneficiario_utils import ensure_beneficiario_folder
+            result = ensure_beneficiario_folder(self.id)
+            if result['success']:
+                print(f"✅ Carpeta del beneficiario creada automáticamente: {result['path']}")
+            else:
+                print(f"⚠️  Error creando carpeta automáticamente: {result['error']}")
+        except Exception as e:
+            print(f"⚠️  Error en hook after_insert: {e}")
 
 class Folder(db.Model):
     id = db.Column(db.Integer, primary_key=True)

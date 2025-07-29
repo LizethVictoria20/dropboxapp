@@ -49,33 +49,33 @@ def crear_beneficiario():
                 flash("Titular no encontrado", "error")
                 return redirect(url_for("users.crear_beneficiario"))
             
-            # Verificar que el titular tenga carpeta en Dropbox
-            if not titular.dropbox_folder_path:
-                flash("El titular no tiene carpeta configurada en Dropbox", "error")
-                return redirect(url_for("users.crear_beneficiario"))
+            # Usar la función robusta para crear beneficiario con carpeta
+            from app.utils.beneficiario_utils import create_beneficiario_with_folder
             
-            # Crear beneficiario
-            beneficiario = Beneficiario(
+            # Procesar fecha de nacimiento
+            fecha_nacimiento = None
+            if fecha_nac:
+                try:
+                    from datetime import datetime
+                    fecha_nacimiento = datetime.strptime(fecha_nac, '%Y-%m-%d').date()
+                except ValueError:
+                    flash("Formato de fecha de nacimiento inválido", "error")
+                    return redirect(url_for("users.crear_beneficiario"))
+            
+            # Crear beneficiario con carpeta garantizada
+            result = create_beneficiario_with_folder(
                 nombre=nombre,
                 email=email,
-                fecha_nacimiento=fecha_nac,
-                titular_id=titular_id
+                fecha_nacimiento=fecha_nacimiento,
+                titular_id=int(titular_id)
             )
-            db.session.add(beneficiario)
-            db.session.commit()
             
-            # Crear carpeta en Dropbox
-            try:
-                from app.dropbox_utils import create_dropbox_folder
-                path_ben = f"{titular.dropbox_folder_path}/{nombre}_{beneficiario.id}"
-                create_dropbox_folder(path_ben)
-                beneficiario.dropbox_folder_path = path_ben
-                db.session.commit()
+            if result['success']:
                 flash(f"Beneficiario '{nombre}' creado exitosamente con carpeta en Dropbox", "success")
-            except Exception as e:
-                # Si falla la creación de carpeta, no es crítico
-                flash(f"Beneficiario creado pero error al crear carpeta en Dropbox: {str(e)}", "warning")
-                print(f"Error creando carpeta Dropbox para beneficiario: {e}")
+                print(f"Beneficiario creado: {result['message']} - Carpeta: {result['folder_path']}")
+            else:
+                flash(f"Error al crear beneficiario: {result['error']}", "error")
+                print(f"Error creando beneficiario: {result['error']}")
             
             return redirect(url_for("users.crear_beneficiario"))
             
