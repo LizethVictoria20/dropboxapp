@@ -1,4 +1,5 @@
 from flask import Blueprint, redirect, render_template, request, jsonify, current_app, url_for, flash
+from flask_login import login_required, current_user
 from app import db
 from app.models import Beneficiario, User, UserActivityLog
 from app.dropbox_utils import create_dropbox_folder
@@ -30,7 +31,33 @@ def create_user():
 
 @bp.route("/crear_beneficiario", methods=["GET", "POST"])
 def crear_beneficiario():
+    """Crear beneficiario - maneja tanto formularios normales como AJAX"""
+    
+    # Verificar si el usuario está autenticado
+    if not current_user.is_authenticated:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': False,
+                'error': 'Debes iniciar sesión para realizar esta acción',
+                'redirect': url_for('auth.login')
+            }), 401
+        else:
+            flash("Debes iniciar sesión para realizar esta acción", "error")
+            return redirect(url_for("auth.login"))
+    
+    # Verificar permisos: admin, superadmin o lector con permiso específico
+    if not (current_user.puede_administrar() or current_user.puede_agregar_beneficiarios()):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': False,
+                'error': 'No tienes permisos para agregar beneficiarios'
+            }), 403
+        else:
+            flash("No tienes permisos para agregar beneficiarios", "error")
+            return redirect(url_for("main.dashboard"))
+    
     titulares = User.query.filter_by(es_beneficiario=False).all()
+    
     if request.method == "POST":
         try:
             nombre = request.form.get("nombre")
@@ -40,17 +67,26 @@ def crear_beneficiario():
             
             # Validaciones básicas
             if not nombre or not email or not titular_id:
-                flash("Todos los campos son obligatorios", "error")
-                return redirect(url_for("users.crear_beneficiario"))
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False, 
+                        'error': 'Todos los campos son obligatorios'
+                    }), 400
+                else:
+                    flash("Todos los campos son obligatorios", "error")
+                    return redirect(url_for("users.crear_beneficiario"))
             
             # Verificar que el titular existe
             titular = User.query.get(titular_id)
             if not titular:
-                flash("Titular no encontrado", "error")
-                return redirect(url_for("users.crear_beneficiario"))
-            
-            # Usar la función robusta para crear beneficiario con carpeta
-            from app.utils.beneficiario_utils import create_beneficiario_with_folder
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False, 
+                        'error': 'Titular no encontrado'
+                    }), 404
+                else:
+                    flash("Titular no encontrado", "error")
+                    return redirect(url_for("users.crear_beneficiario"))
             
             # Procesar fecha de nacimiento
             fecha_nacimiento = None
@@ -59,33 +95,89 @@ def crear_beneficiario():
                     from datetime import datetime
                     fecha_nacimiento = datetime.strptime(fecha_nac, '%Y-%m-%d').date()
                 except ValueError:
-                    flash("Formato de fecha de nacimiento inválido", "error")
-                    return redirect(url_for("users.crear_beneficiario"))
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return jsonify({
+                            'success': False, 
+                            'error': 'Formato de fecha de nacimiento inválido'
+                        }), 400
+                    else:
+                        flash("Formato de fecha de nacimiento inválido", "error")
+                        return redirect(url_for("users.crear_beneficiario"))
             
-            # Crear beneficiario con carpeta garantizada
-            result = create_beneficiario_with_folder(
+            # Crear beneficiario de manera simple
+            print(f"🔍 Creando beneficiario: {nombre} ({email}) para titular {titular_id}")
+            from app.utils.beneficiario_utils import create_beneficiario_simple
+            result = create_beneficiario_simple(
                 nombre=nombre,
                 email=email,
                 fecha_nacimiento=fecha_nacimiento,
                 titular_id=int(titular_id)
             )
             
-            if result['success']:
-                flash(f"Beneficiario '{nombre}' creado exitosamente con carpeta en Dropbox", "success")
-                print(f"Beneficiario creado: {result['message']} - Carpeta: {result['folder_path']}")
-            else:
-                flash(f"Error al crear beneficiario: {result['error']}", "error")
-                print(f"Error creando beneficiario: {result['error']}")
+            print(f"📋 Resultado de crear beneficiario: {result}")
             
-            return redirect(url_for("users.crear_beneficiario"))
+            if result['success']:
+                # Debug: Verificar headers
+                print(f"🔍 Headers de la petición:")
+                print(f"   X-Requested-With: {request.headers.get('X-Requested-With')}")
+                print(f"   Content-Type: {request.headers.get('Content-Type')}")
+                print(f"   User-Agent: {request.headers.get('User-Agent')}")
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    response_data = {
+                        'success': True,
+                        'message': f"Beneficiario '{nombre}' creado exitosamente",
+                        'beneficiario_id': result['beneficiario_id'],
+                        'folder_path': result.get('folder_path')
+                    }
+                    
+                    # Agregar warning si existe
+                    if 'warning' in result:
+                        response_data['warning'] = result['warning']
+                    
+                    print(f"✅ Enviando respuesta JSON exitosa: {response_data}")
+                    return jsonify(response_data)
+                else:
+                    print(f"⚠️  No es AJAX, redirigiendo...")
+                    flash(f"Beneficiario '{nombre}' creado exitosamente con carpeta en Dropbox", "success")
+                    print(f"Beneficiario creado: {result['message']} - Carpeta: {result.get('folder_path')}")
+                    return redirect(url_for("users.crear_beneficiario"))
+            else:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    error_response = {
+                        'success': False,
+                        'error': result['error']
+                    }
+                    print(f"❌ Enviando respuesta de error: {error_response}")
+                    return jsonify(error_response), 500
+                else:
+                    flash(f"Error al crear beneficiario: {result['error']}", "error")
+                    print(f"Error creando beneficiario: {result['error']}")
+                    return redirect(url_for("users.crear_beneficiario"))
             
         except Exception as e:
-            db.session.rollback()
-            flash(f"Error al crear beneficiario: {str(e)}", "error")
+            # Manejar rollback de manera segura
+            try:
+                db.session.rollback()
+            except Exception as rollback_error:
+                print(f"Error en rollback: {rollback_error}")
+            
+            error_message = f'Error al crear beneficiario: {str(e)}'
             print(f"Error en crear_beneficiario: {e}")
-            return redirect(url_for("users.crear_beneficiario"))
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': False,
+                    'error': error_message
+                }), 500
+            else:
+                flash(error_message, "error")
+                return redirect(url_for("users.crear_beneficiario"))
             
     return render_template("crear_beneficiario.html", titulares=titulares)
+
+
+
 
 
 @bp.route("/listar_beneficiarios")

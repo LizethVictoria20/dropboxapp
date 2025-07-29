@@ -40,6 +40,21 @@ def create_app(config_name=None):
     login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
     login_manager.login_message_category = 'info'
     
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        """Manejador personalizado para usuarios no autenticados"""
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Para requests AJAX, devolver JSON
+            return jsonify({
+                'success': False,
+                'error': 'Debes iniciar sesión para realizar esta acción',
+                'redirect': url_for('auth.login')
+            }), 401
+        else:
+            # Para requests normales, redirigir al login
+            flash('Por favor inicia sesión para acceder a esta página.', 'info')
+            return redirect(url_for('auth.login'))
+    
     @login_manager.user_loader
     def load_user(user_id):
         from app.models import User 

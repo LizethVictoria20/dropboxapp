@@ -190,10 +190,20 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
                   Ver Historial
                 </button>
 
-                {% if current_user.puede_administrar() %}
+                {% if current_user.puede_administrar() or
+                current_user.puede_agregar_beneficiarios() %}
                 <!-- Separador -->
                 <div class="border-t border-gray-100"></div>
 
+                <!-- Agregar Beneficiario -->
+                <button
+                  onclick="abrirModalBeneficiario({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-user-plus mr-3 text-purple-500"></i>
+                  Agregar Beneficiario
+                </button>
+                {% endif %} {% if current_user.puede_administrar() %}
                 <!-- Editar Usuario -->
                 <button
                   onclick="abrirModalEditar({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
@@ -284,11 +294,13 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
                 >
                   <i class="fas fa-folder-open mr-1"></i> Ver Carpetas
                 </a>
-                {% if current_user.puede_administrar() %}
+                {% if current_user.puede_administrar() or
+                current_user.puede_agregar_beneficiarios() %}
                 <button
-                  class="flex-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition text-center"
+                  onclick="abrirModalBeneficiario({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="flex-1 bg-purple-100 text-purple-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 transition text-center"
                 >
-                  <i class="fas fa-cog mr-1"></i> Gestionar
+                  <i class="fas fa-user-plus mr-1"></i> Agregar Beneficiario
                 </button>
                 {% endif %}
               </div>
@@ -332,7 +344,113 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
     </div>
     {% endif %}
   </div>
+</div>
+
+<!-- Modal para Agregar Beneficiario -->
+<div
+  id="modalBeneficiario"
+  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden"
+>
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+    <!-- Header del modal -->
+    <div class="flex items-center justify-between p-6 border-b border-gray-200">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">
+          Agregar Beneficiario
+        </h3>
+        <p class="text-sm text-gray-600 mt-1">
+          Para: <span id="nombreTitular" class="font-medium"></span>
+        </p>
+      </div>
+      <button
+        onclick="cerrarModalBeneficiario()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Formulario -->
+    <form id="formBeneficiario" class="p-6">
+      <input type="hidden" id="titularId" name="titular_id" />
+
+      <div class="space-y-4">
+        <!-- Nombre -->
+        <div>
+          <label
+            for="nombreBeneficiario"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Nombre completo <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="nombreBeneficiario"
+            name="nombre"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Ingresa el nombre completo"
+          />
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label
+            for="emailBeneficiario"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Correo electrónico <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="email"
+            id="emailBeneficiario"
+            name="email"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="ejemplo@correo.com"
+          />
+        </div>
+
+        <!-- Fecha de nacimiento -->
+        <div>
+          <label
+            for="fechaNacimiento"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Fecha de nacimiento
+          </label>
+          <input
+            type="date"
+            id="fechaNacimiento"
+            name="fecha_nacimiento"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+      </div>
+
+      <!-- Mensaje de estado -->
+      <div id="mensajeBeneficiario" class="hidden mt-4 p-3 rounded-lg"></div>
+
+      <!-- Botones -->
+      <div class="flex justify-end space-x-3 mt-6">
+        <button
+          type="button"
+          onclick="cerrarModalBeneficiario()"
+          class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+        >
+          <i class="fas fa-user-plus mr-2"></i>
+          Agregar Beneficiario
+        </button>
+      </div>
+    </form>
   </div>
+</div>
 
 <!-- Scripts para las acciones del menú -->
 <script>
@@ -350,10 +468,177 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
 
   // Función para confirmar eliminación de usuario
   function confirmarEliminarUsuario(usuarioId, nombreUsuario) {
-    if (confirm(`¿Estás seguro de que quieres eliminar al usuario ${nombreUsuario}?`)) {
+    if (
+      confirm(
+        `¿Estás seguro de que quieres eliminar al usuario ${nombreUsuario}?`
+      )
+    ) {
       // Aquí se puede implementar la lógica de eliminación
       alert(`Usuario ${nombreUsuario} eliminado (ID: ${usuarioId})`);
     }
   }
+
+  // Función para abrir modal de beneficiario
+  function abrirModalBeneficiario(usuarioId, nombreUsuario) {
+    console.log("Abriendo modal para usuario:", usuarioId, nombreUsuario);
+
+    const titularIdInput = document.getElementById("titularId");
+    const nombreTitularSpan = document.getElementById("nombreTitular");
+    const modal = document.getElementById("modalBeneficiario");
+    const form = document.getElementById("formBeneficiario");
+    const mensajeDiv = document.getElementById("mensajeBeneficiario");
+
+    if (
+      !titularIdInput ||
+      !nombreTitularSpan ||
+      !modal ||
+      !form ||
+      !mensajeDiv
+    ) {
+      console.error("Elementos del modal no encontrados");
+      alert(
+        "Error: No se pudo abrir el modal. Recarga la página e intenta de nuevo."
+      );
+      return;
+    }
+
+    // Configurar datos del modal
+    titularIdInput.value = usuarioId;
+    nombreTitularSpan.textContent = nombreUsuario;
+
+    // Limpiar formulario y mensajes
+    form.reset();
+    mensajeDiv.classList.add("hidden");
+    mensajeDiv.innerHTML = "";
+
+    // Mostrar modal
+    modal.classList.remove("hidden");
+
+    console.log("Modal abierto correctamente");
+  }
+
+  // Función para cerrar modal de beneficiario
+  function cerrarModalBeneficiario() {
+    const modal = document.getElementById("modalBeneficiario");
+    if (modal) {
+      modal.classList.add("hidden");
+      console.log("Modal cerrado");
+    }
+  }
+
+  // Manejar envío del formulario de beneficiario
+  document.addEventListener("DOMContentLoaded", function () {
+    const formBeneficiario = document.getElementById("formBeneficiario");
+    if (formBeneficiario) {
+      formBeneficiario.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const mensajeDiv = document.getElementById("mensajeBeneficiario");
+
+        // Mostrar estado de carga
+        mensajeDiv.className = "mt-4 p-3 rounded-lg bg-blue-100 text-blue-700";
+        mensajeDiv.innerHTML =
+          '<i class="fas fa-spinner fa-spin mr-2"></i>Creando beneficiario...';
+        mensajeDiv.classList.remove("hidden");
+
+        // Enviar datos al servidor
+        fetch("/users/crear_beneficiario", {
+          method: "POST",
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: formData,
+        })
+          .then((response) => {
+            console.log("Response status:", response.status);
+            console.log("Response headers:", response.headers);
+
+            if (!response.ok) {
+              // Manejar errores específicos
+              if (response.status === 401) {
+                throw new Error('No autenticado');
+              } else if (response.status === 403) {
+                throw new Error('Sin permisos');
+              } else if (response.status === 500) {
+                throw new Error('Error del servidor');
+              } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+            }
+            
+            // Verificar el tipo de contenido
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+              throw new Error('Respuesta no es JSON válido');
+            }
+            
+            return response.json();
+          })
+          .then((data) => {
+            console.log("Response data:", data);
+
+            if (data.success) {
+              // Si el beneficiario se creó exitosamente, cerrar modal inmediatamente y recargar
+              console.log(
+                "✅ Beneficiario creado exitosamente, cerrando modal..."
+              );
+              cerrarModalBeneficiario();
+              // Recargar la página para mostrar el nuevo beneficiario
+              window.location.reload();
+            } else {
+              mensajeDiv.className =
+                "mt-4 p-3 rounded-lg bg-red-100 text-red-700";
+              mensajeDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>${data.error || 'Error desconocido'}`;
+              
+              // Si hay redirección sugerida, mostrarla
+              if (data.redirect) {
+                setTimeout(() => {
+                  window.location.href = data.redirect;
+                }, 2000);
+              }
+            }
+          })
+          .catch((error) => {
+            console.error("Error completo:", error);
+            mensajeDiv.className =
+              "mt-4 p-3 rounded-lg bg-red-100 text-red-700";
+            
+            if (error.message === 'No autenticado') {
+              mensajeDiv.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>Debes iniciar sesión para crear beneficiarios. Redirigiendo...';
+              setTimeout(() => {
+                window.location.href = '/auth/login';
+              }, 2000);
+            } else if (error.message === 'Sin permisos') {
+              mensajeDiv.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>No tienes permisos para crear beneficiarios.';
+            } else if (error.message === 'Respuesta no es JSON válido') {
+              mensajeDiv.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>Error de comunicación con el servidor. Verifica tu sesión.';
+            } else {
+              mensajeDiv.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>Error al crear beneficiarios. Intenta de nuevo.';
+            }
+            console.error("Error:", error);
+          });
+      });
+    }
+
+    // Cerrar modal al hacer clic fuera de él
+    const modalBeneficiario = document.getElementById("modalBeneficiario");
+    if (modalBeneficiario) {
+      modalBeneficiario.addEventListener("click", function (e) {
+        if (e.target === this) {
+          cerrarModalBeneficiario();
+        }
+      });
+    }
+  });
+
+  // Cerrar modal al hacer clic fuera de él
+  document
+    .getElementById("modalBeneficiario")
+    .addEventListener("click", function (e) {
+      if (e.target === this) {
+        cerrarModalBeneficiario();
+      }
+    });
 </script>
 {% endblock %}
