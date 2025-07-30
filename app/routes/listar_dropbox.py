@@ -1884,9 +1884,26 @@ def subir_archivo_rapido():
             usuario = Beneficiario.query.get(real_id)
             print(f"Es beneficiario, id extraído: {real_id}")
         else:
-            print(f"usuario_id inválido: '{usuario_id}' (no tiene prefijo válido)")
-            flash("Formato de usuario inválido. Debe seleccionar un usuario del formulario.", "error")
-            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            # Caso especial: usuario_id es un número directo (sin prefijo)
+            try:
+                real_id = int(usuario_id)
+                # Intentar primero como User
+                usuario = User.query.get(real_id)
+                if usuario:
+                    print(f"Es titular (User), id directo: {real_id}")
+                else:
+                    # Si no es User, intentar como Beneficiario
+                    usuario = Beneficiario.query.get(real_id)
+                    if usuario:
+                        print(f"Es beneficiario, id directo: {real_id}")
+                    else:
+                        print(f"usuario_id no encontrado: {real_id}")
+                        flash("Usuario no encontrado en la base de datos", "error")
+                        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            except ValueError:
+                print(f"usuario_id inválido: '{usuario_id}' (no es un número válido)")
+                flash("Formato de usuario inválido. Debe seleccionar un usuario del formulario.", "error")
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
     except (ValueError, IndexError) as e:
         print(f"Error al procesar usuario_id: {e}")
         flash("Error al procesar el usuario seleccionado", "error")
@@ -1904,23 +1921,61 @@ def subir_archivo_rapido():
     try:
         dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
         
+        # Construir la ruta completa usando el dropbox_folder_path del usuario
+        if hasattr(usuario, 'dropbox_folder_path') and usuario.dropbox_folder_path:
+            # Si es un User, usar su dropbox_folder_path
+            ruta_base = usuario.dropbox_folder_path
+        elif hasattr(usuario, 'titular') and usuario.titular and usuario.titular.dropbox_folder_path:
+            # Si es un Beneficiario, usar el dropbox_folder_path de su titular
+            ruta_base = usuario.titular.dropbox_folder_path
+        else:
+            # Fallback: usar el email del usuario
+            if hasattr(usuario, 'email'):
+                ruta_base = f"/{usuario.email}"
+            else:
+                ruta_base = f"/{usuario.titular.email}" if hasattr(usuario, 'titular') else f"/usuario_{usuario.id}"
+        
+        # Construir la ruta completa de destino
+        if carpeta_destino.startswith("/"):
+            # Si la carpeta destino ya empieza con /, verificar si incluye la ruta base del usuario
+            if carpeta_destino.startswith(ruta_base):
+                # Ya incluye la ruta base, usar directamente
+                carpeta_destino_completa = carpeta_destino
+                print(f"🔧 Carpeta destino ya incluye ruta base, usando directamente")
+            else:
+                # No incluye la ruta base, agregarla
+                carpeta_destino_completa = f"{ruta_base}{carpeta_destino}"
+                print(f"🔧 Carpeta destino no incluye ruta base, agregándola")
+        else:
+            # Si no empieza con /, construir la ruta completa
+            carpeta_destino_completa = f"{ruta_base}/{carpeta_destino}"
+            print(f"🔧 Construyendo ruta completa desde ruta relativa")
+        
+        print(f"🔧 Ruta base del usuario: {ruta_base}")
+        print(f"🔧 Carpeta destino original: {carpeta_destino}")
+        print(f"🔧 Carpeta destino completa: {carpeta_destino_completa}")
+        print(f"🔧 Tipo de usuario: {type(usuario).__name__}")
+        print(f"🔧 Usuario ID: {getattr(usuario, 'id', 'N/A')}")
+        print(f"🔧 Usuario email: {getattr(usuario, 'email', 'N/A')}")
+        
         # Verificar que la carpeta destino existe, si no, crearla
         try:
-            dbx.files_get_metadata(carpeta_destino)
-            print(f"Carpeta destino ya existe: {carpeta_destino}")
+            dbx.files_get_metadata(carpeta_destino_completa)
+            print(f"Carpeta destino ya existe: {carpeta_destino_completa}")
         except dropbox.exceptions.ApiError as e:
             if "not_found" in str(e):
-                print(f"Creando carpeta destino: {carpeta_destino}")
-                dbx.files_create_folder_v2(carpeta_destino)
+                print(f"Creando carpeta destino: {carpeta_destino_completa}")
+                dbx.files_create_folder_v2(carpeta_destino_completa)
             else:
                 raise e
 
         # Subir archivo directamente a la carpeta destino
-        dropbox_dest = f"{carpeta_destino}/{archivo.filename}"
+        dropbox_dest = f"{carpeta_destino_completa}/{archivo.filename}"
         dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
         print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
 
         # Guardar en la base de datos con categoría y subcategoría genéricas
+        print(f"🔧 Guardando en BD con ruta: {dropbox_dest}")
         nuevo_archivo = Archivo(
             nombre=archivo.filename,
             categoria="Subida Rápida",  # Categoría genérica
