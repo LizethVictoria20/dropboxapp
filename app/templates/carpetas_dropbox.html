@@ -639,6 +639,59 @@ block content %}
   </div>
 </div>
 
+<!-- Modal de Confirmación de Eliminación -->
+<div
+  id="deleteConfirmModal"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center"
+>
+  <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+    <div class="flex items-center mb-4">
+      <div
+        class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4"
+      >
+        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">
+          Confirmar Eliminación
+        </h3>
+        <p class="text-sm text-red-600">Esta acción no se puede deshacer</p>
+      </div>
+    </div>
+
+    <div class="mb-6">
+      <p class="text-gray-700 mb-2">
+        ¿Estás seguro de que quieres eliminar
+        <strong id="deleteItemName" class="text-red-600"></strong>?
+      </p>
+      <p class="text-sm text-gray-500" id="deleteItemDescription"></p>
+    </div>
+
+    <form id="deleteConfirmForm" method="post">
+      <input type="hidden" name="usuario_id" id="deleteUsuarioId" />
+      <input type="hidden" name="carpeta_actual" id="deleteCarpetaActual" />
+      <input type="hidden" name="item_nombre" id="deleteItemNombre" />
+      <input type="hidden" name="item_tipo" id="deleteItemTipo" />
+
+      <div class="flex gap-3">
+        <button
+          type="button"
+          onclick="cerrarModalEliminacion()"
+          class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+        >
+          Eliminar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Modal para renombrar carpeta -->
 <div
   id="renameFolderModal"
@@ -975,7 +1028,12 @@ block content %}
 
     let selectedUserId = null;
 
-    window.openRenameModal = function (archivo, carpetaActual, usuarioId, tipo) {
+    window.openRenameModal = function (
+      archivo,
+      carpetaActual,
+      usuarioId,
+      tipo
+    ) {
       console.log("openRenameModal (carpetas_dropbox) llamado con:", {
         archivo,
         carpetaActual,
@@ -984,7 +1042,7 @@ block content %}
       });
 
       // Usar el tipo pasado como parámetro en lugar de adivinar
-      const isFolder = tipo === 'carpeta';
+      const isFolder = tipo === "carpeta";
 
       console.log("Análisis:", {
         archivo,
@@ -1277,39 +1335,47 @@ block content %}
     carpetaPadre,
     usuarioId
   ) {
-    if (
-      confirm(
-        `¿Estás seguro de que quieres eliminar la carpeta "${carpeta}"? Esta acción eliminará la carpeta y todo su contenido de forma permanente.`
-      )
-    ) {
-      // Crear formulario temporal para enviar la solicitud
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = '{{ url_for("listar_dropbox.eliminar_carpeta") }}';
+    console.log("🔧 confirmarEliminarCarpeta llamado con:", {
+      carpeta,
+      carpetaPadre,
+      usuarioId,
+    });
 
-      // Agregar datos de la carpeta
-      const carpetaInput = document.createElement("input");
-      carpetaInput.type = "hidden";
-      carpetaInput.name = "carpeta_nombre";
-      carpetaInput.value = carpeta;
-      form.appendChild(carpetaInput);
+    // Configurar el modal de confirmación
+    const modal = document.getElementById("deleteConfirmModal");
+    const itemName = document.getElementById("deleteItemName");
+    const itemDescription = document.getElementById("deleteItemDescription");
+    const form = document.getElementById("deleteConfirmForm");
+    const usuarioIdInput = document.getElementById("deleteUsuarioId");
+    const carpetaActualInput = document.getElementById("deleteCarpetaActual");
+    const itemNombreInput = document.getElementById("deleteItemNombre");
+    const itemTipoInput = document.getElementById("deleteItemTipo");
 
-      const carpetaPadreInput = document.createElement("input");
-      carpetaPadreInput.type = "hidden";
-      carpetaPadreInput.name = "carpeta_padre";
-      carpetaPadreInput.value = carpetaPadre;
-      form.appendChild(carpetaPadreInput);
-
-      const redirectInput = document.createElement("input");
-      redirectInput.type = "hidden";
-      redirectInput.name = "redirect_url";
-      redirectInput.value = window.location.href;
-      form.appendChild(redirectInput);
-
-      // Enviar formulario
-      document.body.appendChild(form);
-      form.submit();
+    if (!modal || !itemName || !itemDescription || !form) {
+      console.error("❌ Elementos del modal de eliminación no encontrados");
+      alert(
+        "Error: No se pudo abrir el modal de confirmación. Recarga la página e intenta de nuevo."
+      );
+      return;
     }
+
+    // Configurar el contenido del modal
+    itemName.textContent = `"${carpeta}"`;
+    itemDescription.textContent =
+      "Esta carpeta y todo su contenido serán eliminados permanentemente de Dropbox y no se podrán recuperar.";
+
+    // Configurar el formulario
+    usuarioIdInput.value = usuarioId;
+    carpetaActualInput.value = carpetaPadre;
+    itemNombreInput.value = carpeta;
+    itemTipoInput.value = "carpeta";
+
+    // Configurar la acción del formulario
+    form.action = '{{ url_for("listar_dropbox.eliminar_carpeta") }}';
+
+    // Mostrar el modal
+    modal.classList.remove("hidden");
+    console.log("🔧 Modal de eliminación de carpeta abierto");
   };
 
   // Función para manejar la creación de carpetas y actualizar la estructura
@@ -1427,7 +1493,76 @@ block content %}
     if (createFolderForm) {
       createFolderForm.addEventListener("submit", handleCreateFolder);
     }
+
+    // Configurar el formulario de eliminación para agregar redirect_url
+    const deleteForm = document.getElementById("deleteConfirmForm");
+    if (deleteForm) {
+      deleteForm.addEventListener("submit", function (e) {
+        // Agregar redirect_url al formulario antes de enviarlo
+        const redirectInput = document.createElement("input");
+        redirectInput.type = "hidden";
+        redirectInput.name = "redirect_url";
+        redirectInput.value = window.location.href;
+        this.appendChild(redirectInput);
+
+        console.log("🔧 Formulario de eliminación enviado");
+      });
+    }
   });
+
+  // Función para confirmar eliminación de archivo
+  function confirmarEliminarArchivo(archivo, carpeta, usuarioId) {
+    console.log("🔧 confirmarEliminarArchivo llamado con:", {
+      archivo,
+      carpeta,
+      usuarioId,
+    });
+
+    // Configurar el modal de confirmación
+    const modal = document.getElementById("deleteConfirmModal");
+    const itemName = document.getElementById("deleteItemName");
+    const itemDescription = document.getElementById("deleteItemDescription");
+    const form = document.getElementById("deleteConfirmForm");
+    const usuarioIdInput = document.getElementById("deleteUsuarioId");
+    const carpetaActualInput = document.getElementById("deleteCarpetaActual");
+    const itemNombreInput = document.getElementById("deleteItemNombre");
+    const itemTipoInput = document.getElementById("deleteItemTipo");
+
+    if (!modal || !itemName || !itemDescription || !form) {
+      console.error("❌ Elementos del modal de eliminación no encontrados");
+      alert(
+        "Error: No se pudo abrir el modal de confirmación. Recarga la página e intenta de nuevo."
+      );
+      return;
+    }
+
+    // Configurar el contenido del modal
+    itemName.textContent = `"${archivo}"`;
+    itemDescription.textContent =
+      "Este archivo será eliminado permanentemente de Dropbox y no se podrá recuperar.";
+
+    // Configurar el formulario
+    usuarioIdInput.value = usuarioId;
+    carpetaActualInput.value = carpeta;
+    itemNombreInput.value = archivo;
+    itemTipoInput.value = "archivo";
+
+    // Configurar la acción del formulario
+    form.action = '{{ url_for("listar_dropbox.eliminar_archivo") }}';
+
+    // Mostrar el modal
+    modal.classList.remove("hidden");
+    console.log("🔧 Modal de eliminación de archivo abierto");
+  }
+
+  // Función para cerrar el modal de eliminación
+  function cerrarModalEliminacion() {
+    const modal = document.getElementById("deleteConfirmModal");
+    if (modal) {
+      modal.classList.add("hidden");
+      console.log("🔧 Modal de eliminación cerrado");
+    }
+  }
 </script>
 
 {% endblock %}

@@ -112,6 +112,47 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
 
     return estructura
 
+def filtra_archivos_ocultos(estructura, usuario_id, prefix=""):
+    """
+    Filtra los archivos ocultos de la estructura basándose en la base de datos.
+    Los archivos que están en la BD son visibles, los que no están están ocultos.
+    - estructura: dict con formato {'_archivos': [...], '_subcarpetas': { ... }}
+    - usuario_id: ID del usuario para filtrar archivos ocultos
+    - prefix: path base actual para construir rutas completas
+    """
+    from app.models import Archivo
+    
+    if not estructura:
+        return estructura
+    
+    nueva_estructura = {"_archivos": [], "_subcarpetas": {}}
+    
+    # Obtener todos los archivos visibles del usuario (los que están en la BD)
+    archivos_visibles = Archivo.query.filter_by(usuario_id=usuario_id).all()
+    rutas_visibles = {archivo.dropbox_path for archivo in archivos_visibles}
+    
+    print(f"DEBUG | Archivos visibles en BD para usuario {usuario_id}: {len(archivos_visibles)}")
+    for archivo in archivos_visibles:
+        print(f"DEBUG | Archivo visible en BD: {archivo.nombre} - {archivo.dropbox_path}")
+    
+    # Filtrar archivos: solo mostrar los que están en la BD (visibles)
+    for archivo_nombre in estructura.get("_archivos", []):
+        archivo_path = f"{prefix}/{archivo_nombre}".replace('//', '/')
+        if archivo_path in rutas_visibles:
+            nueva_estructura["_archivos"].append(archivo_nombre)
+            print(f"DEBUG | Archivo visible mostrado: {archivo_nombre}")
+        else:
+            print(f"DEBUG | Archivo oculto filtrado: {archivo_nombre} - {archivo_path}")
+    
+    # Procesar subcarpetas recursivamente
+    for subcarpeta, contenido in estructura.get("_subcarpetas", {}).items():
+        sub_prefix = f"{prefix}/{subcarpeta}".replace('//', '/')
+        nueva_estructura["_subcarpetas"][subcarpeta] = filtra_archivos_ocultos(
+            contenido, usuario_id, sub_prefix
+        )
+    
+    return nueva_estructura
+
 def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
     """
     Recorta el árbol (estructura) dejando solo las subcarpetas cuya ruta esté en rutas_visibles.
@@ -2131,6 +2172,11 @@ def ver_usuario_carpetas(usuario_id):
         try:
             # Usar la función optimizada con recursión limitada para mejor rendimiento
             estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
+            
+            # Filtrar archivos ocultos de la estructura
+            print(f"DEBUG | Filtrando archivos ocultos para usuario {usuario.id}")
+            estructura = filtra_archivos_ocultos(estructura, usuario.id, path)
+            
         except Exception as e:
             print(f"Error obteniendo estructura para usuario {usuario.email}: {e}")
             estructura = {"_subcarpetas": {}, "_archivos": []}
@@ -2196,8 +2242,8 @@ def ver_usuario_carpetas(usuario_id):
 @bp.route('/eliminar_archivo', methods=['POST'])
 @login_required
 def eliminar_archivo():
-    """Elimina un archivo de Dropbox y de la base de datos"""
-    from app.models import Archivo
+    """Oculta un archivo eliminándolo solo de la base de datos, manteniéndolo en Dropbox"""
+    from app.models import Archivo, User, Beneficiario
     
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
@@ -2214,9 +2260,16 @@ def eliminar_archivo():
             return redirect(url_for("listar_dropbox.carpetas_dropbox"))
     
     try:
-        archivo_nombre = request.form.get("archivo_nombre")
+        # Obtener datos del formulario (el modal usa item_nombre, no archivo_nombre)
+        archivo_nombre = request.form.get("item_nombre") or request.form.get("archivo_nombre")
         carpeta_actual = request.form.get("carpeta_actual")
         redirect_url = request.form.get("redirect_url", "")
+        
+        print(f"DEBUG | Datos recibidos para eliminar archivo:")
+        print(f"DEBUG | archivo_nombre: {archivo_nombre}")
+        print(f"DEBUG | carpeta_actual: {carpeta_actual}")
+        print(f"DEBUG | redirect_url: {redirect_url}")
+        print(f"DEBUG | Todos los datos del formulario: {dict(request.form)}")
         
         if not archivo_nombre or not carpeta_actual:
             flash("Faltan datos para eliminar el archivo.", "error")
@@ -2225,31 +2278,103 @@ def eliminar_archivo():
             else:
                 return redirect(url_for("listar_dropbox.carpetas_dropbox"))
         
-        # Construir la ruta completa del archivo
-        archivo_path = f"{carpeta_actual}/{archivo_nombre}".replace('//', '/')
-        
-        # Conectar a Dropbox
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
-        
-        # Eliminar archivo de Dropbox
+        # Obtener el usuario para construir la ruta base
         try:
-            dbx.files_delete_v2(archivo_path)
-            print(f"DEBUG | Archivo eliminado de Dropbox: {archivo_path}")
-        except dropbox.exceptions.ApiError as e:
-            if "not_found" in str(e):
-                print(f"DEBUG | Archivo no encontrado en Dropbox: {archivo_path}")
+            usuario_id_int = int(request.form.get("usuario_id"))
+            usuario = User.query.get(usuario_id_int)
+            if not usuario:
+                # Intentar buscar como beneficiario
+                usuario = Beneficiario.query.get(usuario_id_int)
+            
+            if not usuario:
+                print(f"DEBUG | Usuario no encontrado con ID: {usuario_id_int}")
+                flash("Usuario no encontrado.", "error")
+                if redirect_url and "/usuario/" in redirect_url:
+                    return redirect(redirect_url)
+                else:
+                    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+                
+        except (ValueError, TypeError):
+            print(f"DEBUG | usuario_id inválido: {request.form.get('usuario_id')}")
+            flash("ID de usuario inválido.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
             else:
-                raise e
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+        # Construir la ruta base del usuario
+        if hasattr(usuario, 'dropbox_folder_path') and usuario.dropbox_folder_path:
+            # Si es un User, usar su dropbox_folder_path
+            ruta_base = usuario.dropbox_folder_path
+        elif hasattr(usuario, 'ruta_base') and usuario.ruta_base:
+            # Si es un Beneficiario, usar su ruta_base
+            ruta_base = usuario.ruta_base
+        else:
+            print(f"DEBUG | No se encontró ruta base para usuario: {usuario_id_int}")
+            flash("No se encontró la ruta base del usuario.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+        print(f"DEBUG | ruta_base: {ruta_base}")
         
-        # Eliminar registro de la base de datos
+        # Construir la ruta completa del archivo incluyendo la ruta base
+        # Asegurar que la ruta base termine con /
+        ruta_base_normalizada = ruta_base.rstrip('/') + '/'
+        
+        if carpeta_actual.startswith(ruta_base_normalizada):
+            # Si la carpeta ya incluye la ruta base, usar tal como está
+            archivo_path = f"{carpeta_actual}/{archivo_nombre}".replace('//', '/')
+        else:
+            # Si no incluye la ruta base, agregarla
+            archivo_path = f"{ruta_base_normalizada}{carpeta_actual}/{archivo_nombre}".replace('//', '/')
+        
+        print(f"DEBUG | ruta_base_normalizada: {ruta_base_normalizada}")
+        
+        print(f"DEBUG | archivo_path construido: {archivo_path}")
+        
+        # Buscar el archivo en la base de datos
         archivo_bd = Archivo.query.filter_by(dropbox_path=archivo_path).first()
-        if archivo_bd:
-            db.session.delete(archivo_bd)
-            db.session.commit()
-            print(f"DEBUG | Registro eliminado de BD: {archivo_bd.nombre}")
+        
+        # Si no se encuentra con la ruta exacta, buscar de manera más flexible
+        if not archivo_bd:
+            print(f"DEBUG | Archivo no encontrado con ruta exacta: {archivo_path}")
+            
+            # Buscar por nombre y usuario
+            archivos_del_usuario = Archivo.query.filter_by(usuario_id=usuario_id_int).all()
+            print(f"DEBUG | Archivos del usuario {usuario_id_int}: {len(archivos_del_usuario)}")
+            
+            for archivo in archivos_del_usuario:
+                print(f"DEBUG | Archivo en BD: {archivo.nombre} - {archivo.dropbox_path}")
+                if archivo.nombre == archivo_nombre:
+                    print(f"DEBUG | Archivo encontrado por nombre: {archivo.nombre}")
+                    archivo_bd = archivo
+                    break
+            
+            # Si aún no se encuentra, buscar por nombre en cualquier ruta
+            if not archivo_bd:
+                archivo_bd = Archivo.query.filter_by(nombre=archivo_nombre).first()
+                if archivo_bd:
+                    print(f"DEBUG | Archivo encontrado por nombre en cualquier ruta: {archivo_bd.nombre} - {archivo_bd.dropbox_path}")
+        
+        if not archivo_bd:
+            print(f"DEBUG | Archivo no encontrado en BD después de búsqueda flexible: {archivo_nombre}")
+            flash("Archivo no encontrado en la base de datos.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # Ocultar el archivo (eliminar solo de la base de datos)
+        # El archivo permanece en Dropbox pero se oculta de la interfaz
+        db.session.delete(archivo_bd)
+        db.session.commit()
+        print(f"DEBUG | Archivo ocultado de BD: {archivo_bd.nombre}")
+        print(f"DEBUG | Archivo mantenido en Dropbox: {archivo_path}")
         
         # Registrar actividad
-        current_user.registrar_actividad('file_deleted', f'Archivo "{archivo_nombre}" eliminado')
+        current_user.registrar_actividad('file_hidden', f'Archivo "{archivo_nombre}" ocultado de la interfaz')
         
         flash("Archivo eliminado correctamente.", "success")
         
