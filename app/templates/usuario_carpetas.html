@@ -1064,21 +1064,6 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
     }
   }
 
-  function toggleFolderMenu(menuId, event) {
-    const menu = document.getElementById(menuId);
-    if (menu) {
-      if (menu.classList.contains("hidden")) {
-        // Posicionar el menú cerca del botón
-        const button = event.currentTarget;
-        const rect = button.getBoundingClientRect();
-        menu.style.top = rect.bottom + 5 + "px";
-        menu.style.left = rect.right - menu.offsetWidth + "px";
-        menu.classList.remove("hidden");
-      } else {
-        menu.classList.add("hidden");
-      }
-    }
-  }
 
   // Cerrar todos los menús al hacer clic fuera de ellos
   document.addEventListener("click", function (event) {

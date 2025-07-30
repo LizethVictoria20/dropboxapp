@@ -260,6 +260,11 @@ def carpetas_dropbox():
             try:
                 # Usar la función optimizada con recursión limitada para mejor rendimiento
                 estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
+                
+                # Filtrar archivos ocultos de la estructura para este usuario
+                print(f"DEBUG | Filtrando archivos ocultos para usuario {user.id} en carpetas_dropbox")
+                estructura = filtra_archivos_ocultos(estructura, user.id, path)
+                
             except Exception as e:
                 user_identifier = user.email if hasattr(user, 'email') else user.nombre
                 print(f"Error obteniendo estructura para usuario {user_identifier}: {e}")

@@ -715,16 +715,29 @@
       };
 
       window.toggleFolderMenu = function (menuId, event) {
-        console.log("toggleFolderMenu llamado con:", { menuId, event });
+        console.log("🔧 toggleFolderMenu (BASE.HTML) llamado con:", {
+          menuId,
+          event,
+        });
+        console.log("🔧 Stack trace:", new Error().stack);
+        console.log("🔧 Timestamp:", new Date().toISOString());
+        console.log("🔧 Función ejecutada desde: base.html");
+        event.stopPropagation();
+
         const menu = document.getElementById(menuId);
-        console.log("Elemento del menú de carpeta encontrado:", menu);
+        console.log("🔧 Elemento del menú de carpeta encontrado:", menu);
 
         if (menu) {
+          // Ocultar todos los menús primero
+          document.querySelectorAll('[id^="folder-menu-"]').forEach((m) => {
+            m.classList.add("hidden");
+          });
+
           if (menu.classList.contains("hidden")) {
             // Posicionar el menú cerca del botón
             const button = event.currentTarget;
             const rect = button.getBoundingClientRect();
-            console.log("Posición del botón de carpeta:", rect);
+            console.log("🔧 Posición del botón de carpeta:", rect);
 
             // Calcular posición del menú
             const menuWidth = 192; // w-48 = 12rem = 192px
@@ -746,17 +759,17 @@
             menu.style.zIndex = "99999";
 
             menu.classList.remove("hidden");
-            console.log("Menú de carpeta abierto:", menuId, "en posición:", {
+            console.log("🔧 Menú de carpeta abierto:", menuId, "en posición:", {
               top,
               left,
             });
           } else {
             menu.classList.add("hidden");
-            console.log("Menú de carpeta cerrado:", menuId);
+            console.log("🔧 Menú de carpeta cerrado:", menuId);
           }
         } else {
-          console.error("Menú de carpeta no encontrado:", menuId);
-          console.log("Elementos con 'folder-menu' en el DOM:");
+          console.error("❌ Menú de carpeta no encontrado:", menuId);
+          console.log("🔧 Elementos con 'folder-menu' en el DOM:");
           document.querySelectorAll('[id^="folder-menu"]').forEach((el) => {
             console.log("-", el.id);
           });

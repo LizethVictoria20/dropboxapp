@@ -1,5 +1,5 @@
-{% extends "base.html" %} {% block title %}Carpetas de Dropbox{% endblock %} {%
-block content %}
+{% extends "base.html" %}
+{% block title %}Carpetas de Dropbox{% endblock %} {% block content %}
 <div class="min-h-screen bg-gray-50 py-8">
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     {# Header Section #}
@@ -33,6 +33,7 @@ block content %}
             </svg>
             🔍 Búsqueda Avanzada
           </a>
+
           <div
             class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"
           >
@@ -239,6 +240,51 @@ block content %}
             <p class="text-sm text-gray-400 mt-1">
               Crea una nueva carpeta para comenzar
             </p>
+
+            {# Botones para clientes cuando no hay carpetas #} {% if
+            usuario_actual.rol == 'cliente' and usuario_actual.id ==
+            usuario_id|int %}
+            <div class="mt-6 flex justify-center space-x-4">
+              <button
+                onclick="openCreateFolderModal('', '{{ usuario_id }}')"
+                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+                📁 Crear Carpeta
+              </button>
+              <button
+                onclick="openUploadModal('', '{{ usuario_id }}')"
+                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                📤 Subir Archivo
+              </button>
+            </div>
+            {% endif %}
           </div>
           {% endif %}
         </div>
@@ -837,35 +883,85 @@ block content %}
       container.innerHTML =
         '<div class="text-center py-4"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div><p class="text-sm text-gray-500 mt-2">Cargando...</p></div>';
 
-      // Hacer petición AJAX para obtener el contenido de la carpeta
-      const url = `/api/carpeta_contenido/${encodeURIComponent(folderId)}`;
-      console.log("Haciendo petición a:", url);
+      // Usar los datos que ya están disponibles en el template
+      try {
+        const estructurasUsuarios = {{ estructuras_usuarios_json|safe }};
+        console.log("Estructuras disponibles:", estructurasUsuarios);
 
-      fetch(url)
-        .then((response) => {
-          console.log("Respuesta recibida:", response.status);
-          return response.json();
-        })
-        .then((data) => {
-          console.log("Datos recibidos:", data);
-          if (data.success) {
-            // Renderizar el contenido de la carpeta
-            container.innerHTML = renderTreeContent(
-              data.estructura,
-              folderId,
-              data.usuario_id
-            );
-          } else {
-            console.error("Error en respuesta:", data.error);
-            container.innerHTML =
-              '<div class="text-center py-4 text-red-500">Error al cargar la carpeta</div>';
+        // Buscar la carpeta en las estructuras disponibles
+        let estructuraEncontrada = null;
+        let usuarioIdEncontrado = null;
+
+        for (const [usuarioId, estructura] of Object.entries(estructurasUsuarios)) {
+          if (estructura && estructura._subcarpetas) {
+            // Buscar la carpeta en las subcarpetas
+            const buscarCarpeta = (estructura, rutaActual = "") => {
+              for (const [carpeta, datos] of Object.entries(estructura._subcarpetas)) {
+                const rutaCompleta = rutaActual ? `${rutaActual}/${carpeta}` : carpeta;
+                if (rutaCompleta === folderId) {
+                  return datos;
+                }
+                if (datos._subcarpetas) {
+                  const resultado = buscarCarpeta(datos, rutaCompleta);
+                  if (resultado) return resultado;
+                }
+              }
+              return null;
+            };
+
+            const carpetaEncontrada = buscarCarpeta(estructura);
+            if (carpetaEncontrada) {
+              estructuraEncontrada = carpetaEncontrada;
+              usuarioIdEncontrado = usuarioId;
+              break;
+            }
           }
-        })
-        .catch((error) => {
-          console.error("Error cargando carpeta:", error);
-          container.innerHTML =
-            '<div class="text-center py-4 text-red-500">Error de conexión</div>';
-        });
+        }
+
+        if (estructuraEncontrada) {
+          console.log("Carpeta encontrada:", estructuraEncontrada);
+          container.innerHTML = renderTreeContent(
+            estructuraEncontrada,
+            folderId,
+            usuarioIdEncontrado
+          );
+        } else {
+          console.log("Carpeta no encontrada en datos locales, intentando API...");
+
+          // Fallback: intentar con la API
+          const url = `/api/carpeta_contenido/${encodeURIComponent(folderId)}`;
+          console.log("Haciendo petición a:", url);
+
+          fetch(url)
+            .then((response) => {
+              console.log("Respuesta recibida:", response.status);
+              return response.json();
+            })
+            .then((data) => {
+              console.log("Datos recibidos:", data);
+              if (data.success) {
+                container.innerHTML = renderTreeContent(
+                  data.estructura,
+                  folderId,
+                  data.usuario_id
+                );
+              } else {
+                console.error("Error en respuesta:", data.error);
+                container.innerHTML =
+                  '<div class="text-center py-4 text-red-500">Error al cargar la carpeta</div>';
+              }
+            })
+            .catch((error) => {
+              console.error("Error cargando carpeta:", error);
+              container.innerHTML =
+                '<div class="text-center py-4 text-red-500">Error de conexión</div>';
+            });
+        }
+      } catch (error) {
+        console.error("Error procesando datos locales:", error);
+        container.innerHTML =
+          '<div class="text-center py-4 text-red-500">Error procesando datos</div>';
+      }
     };
 
     window.renderTreeContent = function (estructura, parent, usuarioId) {
@@ -1280,29 +1376,7 @@ block content %}
     }
   };
 
-  window.toggleFolderMenu = function (menuId, event) {
-    event.stopPropagation();
-    const menu = document.getElementById(menuId);
-    if (menu) {
-      const isHidden = menu.classList.contains("hidden");
-
-      // Ocultar todos los menús primero
-      document.querySelectorAll('[id^="folder-menu-"]').forEach((m) => {
-        m.classList.add("hidden");
-      });
-
-      if (isHidden) {
-        menu.classList.remove("hidden");
-        // Posicionar el menú cerca del botón
-        const button = event.target.closest("button");
-        if (button) {
-          const rect = button.getBoundingClientRect();
-          menu.style.top = rect.bottom + 5 + "px";
-          menu.style.left = rect.left + "px";
-        }
-      }
-    }
-  };
+  // Función toggleFolderMenu eliminada - se usa la de base.html
 
   // Cerrar menús cuando se hace clic fuera
   document.addEventListener("click", function () {
