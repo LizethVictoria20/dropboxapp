@@ -1991,7 +1991,12 @@ def subir_archivo_rapido():
         current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a Subida Rápida/Directo')
 
         # Redirección correcta según si es AJAX o no
-        redirect_url = url_for("listar_dropbox.carpetas_dropbox")
+        # Usar el usuario_id específico para redirigir a la carpeta del usuario
+        usuario_id_redirect = getattr(usuario, "id", None)
+        redirect_url = url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_redirect)
+        
+        print(f"🔧 Redirigiendo a usuario específico: /usuario/{usuario_id_redirect}/carpetas")
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"success": True, "redirectUrl": redirect_url})
         else:
@@ -2002,7 +2007,16 @@ def subir_archivo_rapido():
         print(f"ERROR general en subida rápida de archivo: {e}")
         db.session.rollback()
         flash(f"Error al subir archivo: {str(e)}", "error")
-        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # En caso de error, intentar redirigir al usuario específico si es posible
+        try:
+            usuario_id_redirect = getattr(usuario, "id", None) if 'usuario' in locals() else None
+            if usuario_id_redirect:
+                return redirect(url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_redirect))
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        except:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
 @bp.route("/usuario/<int:usuario_id>/carpetas")
 @login_required
