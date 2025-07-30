@@ -75,7 +75,7 @@ folders_por_ruta={}) %}
             Mover archivo
           </button>
           <button
-            onclick="openRenameModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
+            onclick="openRenameModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}', 'archivo')"
             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
           >
             <svg
@@ -251,7 +251,7 @@ folders_por_ruta={}) %}
               </button>
               {% endif %}
               <button
-                onclick="openRenameModal('{{ carpeta }}', '{{ parent }}', '{{ usuario_id }}')"
+                onclick="openRenameModal('{{ carpeta }}', '{{ parent }}', '{{ usuario_id }}', 'carpeta')"
                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
               >
                 <svg

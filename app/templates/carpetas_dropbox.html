@@ -975,25 +975,49 @@ block content %}
 
     let selectedUserId = null;
 
-    window.openRenameModal = function (archivo, carpetaActual, usuarioId) {
-      // Determinar si es archivo o carpeta basado en el contexto
-      // Si carpetaActual contiene el archivo, es un archivo
-      // Si no, es una carpeta
-      const isFolder = !carpetaActual.includes(archivo);
+    window.openRenameModal = function (archivo, carpetaActual, usuarioId, tipo) {
+      console.log("openRenameModal (carpetas_dropbox) llamado con:", {
+        archivo,
+        carpetaActual,
+        usuarioId,
+        tipo,
+      });
+
+      // Usar el tipo pasado como parámetro en lugar de adivinar
+      const isFolder = tipo === 'carpeta';
+
+      console.log("Análisis:", {
+        archivo,
+        hasExtension,
+        isFolder,
+      });
 
       if (isFolder) {
         // Renombrar carpeta
+        console.log("Abriendo modal de carpeta");
         document.getElementById("renameFolderModal").classList.remove("hidden");
         document.getElementById("renameCarpetaNombreActual").value = archivo;
         document.getElementById("renameCarpetaPadre").value = carpetaActual;
         document.getElementById("newFolderName").value = archivo;
       } else {
         // Renombrar archivo
+        console.log("Abriendo modal de archivo");
         document.getElementById("renameModal").classList.remove("hidden");
         document.getElementById("renameArchivoNombreActual").value = archivo;
         document.getElementById("renameCarpetaActual").value = carpetaActual;
-        document.getElementById("renameUsuarioId").value = usuarioId;
-        document.getElementById("nuevoNombre").value = archivo;
+
+        // Intentar establecer usuario_id si el elemento existe
+        const renameUsuarioIdElement =
+          document.getElementById("renameUsuarioId");
+        if (renameUsuarioIdElement) {
+          renameUsuarioIdElement.value = usuarioId;
+        }
+
+        // Intentar establecer nuevo nombre si el elemento existe
+        const nuevoNombreElement = document.getElementById("nuevoNombre");
+        if (nuevoNombreElement) {
+          nuevoNombreElement.value = archivo;
+        }
       }
     };
 
@@ -1155,15 +1179,6 @@ block content %}
     console.log("openMoveModal no encontrado, definiendo...");
     window.openMoveModal = function (archivo, carpetaActual, usuarioId) {
       console.log("openMoveModal (respaldo) llamado");
-      // Implementación básica de respaldo
-    };
-  }
-
-  // Verificar si openRenameModal está disponible
-  if (typeof window.openRenameModal === "undefined") {
-    console.log("openRenameModal no encontrado, definiendo...");
-    window.openRenameModal = function (archivo, carpetaActual, usuarioId) {
-      console.log("openRenameModal (respaldo) llamado");
       // Implementación básica de respaldo
     };
   }

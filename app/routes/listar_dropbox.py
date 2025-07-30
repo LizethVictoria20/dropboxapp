@@ -1288,13 +1288,25 @@ def renombrar_archivo():
     if not (archivo_nombre_actual and carpeta_actual and usuario_id and nuevo_nombre):
         print("DEBUG | Faltan datos para renombrar")
         flash("Faltan datos para renombrar.", "error")
-        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # En caso de error, intentar redirigir al usuario específico si es posible
+        try:
+            usuario_id_int = int(usuario_id)
+            return redirect(url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_int))
+        except:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
     archivo = Archivo.query.filter_by(dropbox_path=old_path).first()
     if not archivo:
         print(f"DEBUG | Archivo no encontrado en la base para path: {old_path}")
         flash("Archivo no encontrado en la base de datos.", "error")
-        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # En caso de error, intentar redirigir al usuario específico si es posible
+        try:
+            usuario_id_int = int(usuario_id)
+            return redirect(url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_int))
+        except:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
     dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
     try:
@@ -1303,7 +1315,13 @@ def renombrar_archivo():
     except Exception as e:
         print(f"DEBUG | Error renombrando en Dropbox: {e}")
         flash(f"Error renombrando en Dropbox: {e}", "error")
-        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # En caso de error, intentar redirigir al usuario específico si es posible
+        try:
+            usuario_id_int = int(usuario_id)
+            return redirect(url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_int))
+        except:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
     archivo.nombre = nuevo_nombre
     archivo.dropbox_path = new_path
@@ -1314,7 +1332,11 @@ def renombrar_archivo():
 
     print(f"DEBUG | Renombrado exitoso: {old_path} -> {new_path}")
     flash("Archivo renombrado correctamente.", "success")
-    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
+    # Redirigir a la carpeta específica del usuario
+    redirect_url = url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_int)
+    print(f"🔧 Redirigiendo a usuario específico: /usuario/{usuario_id_int}/carpetas")
+    return redirect(redirect_url)
 
 
 def sincronizar_dropbox_a_bd():
@@ -2245,7 +2267,7 @@ def eliminar_archivo():
 @login_required
 def renombrar_carpeta():
     """Renombra una carpeta en Dropbox y actualiza la base de datos"""
-    from app.models import Folder
+    from app.models import Folder, User, Beneficiario
     
     # Verificar que el usuario esté autenticado
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
@@ -2265,20 +2287,74 @@ def renombrar_carpeta():
     nuevo_nombre = request.form.get("nuevo_nombre")
     redirect_url = request.form.get("redirect_url", "")
 
+    # Obtener el usuario para construir la ruta base
+    try:
+        usuario_id_int = int(usuario_id)
+        usuario = User.query.get(usuario_id_int)
+        if not usuario:
+            # Intentar buscar como beneficiario
+            usuario = Beneficiario.query.get(usuario_id_int)
+        
+        if not usuario:
+            print(f"DEBUG | Usuario no encontrado con ID: {usuario_id}")
+            flash("Usuario no encontrado.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            
+    except (ValueError, TypeError):
+        print(f"DEBUG | usuario_id inválido: {usuario_id}")
+        flash("ID de usuario inválido.", "error")
+        if redirect_url and "/usuario/" in redirect_url:
+            return redirect(redirect_url)
+        else:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    # Construir la ruta base del usuario
+    if hasattr(usuario, 'dropbox_folder_path') and usuario.dropbox_folder_path:
+        # Si es un User, usar su dropbox_folder_path
+        ruta_base = usuario.dropbox_folder_path
+    elif hasattr(usuario, 'titular') and usuario.titular and usuario.titular.dropbox_folder_path:
+        # Si es un Beneficiario, usar el dropbox_folder_path de su titular
+        ruta_base = usuario.titular.dropbox_folder_path
+    else:
+        # Fallback: usar el email del usuario
+        if hasattr(usuario, 'email'):
+            ruta_base = f"/{usuario.email}"
+        else:
+            ruta_base = f"/{usuario.titular.email}" if hasattr(usuario, 'titular') else f"/usuario_{usuario.id}"
+
     # --- Normalización robusta de path ---
     def join_dropbox_path(parent, name):
         if not parent or parent in ('/', '', None):
             return f"/{name}"
         return f"{parent.rstrip('/')}/{name}"
 
-    old_path = join_dropbox_path(carpeta_padre, carpeta_nombre_actual)
-    new_path = join_dropbox_path(carpeta_padre, nuevo_nombre)
+    # Construir rutas completas incluyendo la ruta base del usuario
+    if carpeta_padre.startswith("/"):
+        # Si la carpeta padre ya empieza con /, verificar si incluye la ruta base
+        if carpeta_padre.startswith(ruta_base):
+            # Ya incluye la ruta base, usar directamente
+            old_path = join_dropbox_path(carpeta_padre, carpeta_nombre_actual)
+            new_path = join_dropbox_path(carpeta_padre, nuevo_nombre)
+        else:
+            # No incluye la ruta base, agregarla
+            carpeta_padre_completa = f"{ruta_base}{carpeta_padre}"
+            old_path = join_dropbox_path(carpeta_padre_completa, carpeta_nombre_actual)
+            new_path = join_dropbox_path(carpeta_padre_completa, nuevo_nombre)
+    else:
+        # Si no empieza con /, construir la ruta completa
+        carpeta_padre_completa = f"{ruta_base}/{carpeta_padre}"
+        old_path = join_dropbox_path(carpeta_padre_completa, carpeta_nombre_actual)
+        new_path = join_dropbox_path(carpeta_padre_completa, nuevo_nombre)
 
     # --- Log antes de buscar carpeta ---
     print("DEBUG | carpeta_nombre_actual:", carpeta_nombre_actual)
     print("DEBUG | carpeta_padre:", carpeta_padre)
     print("DEBUG | usuario_id:", usuario_id)
     print("DEBUG | nuevo_nombre:", nuevo_nombre)
+    print("DEBUG | ruta_base:", ruta_base)
     print("DEBUG | old_path:", old_path)
     print("DEBUG | new_path:", new_path)
 
@@ -2381,10 +2457,10 @@ def renombrar_carpeta():
     print(f"DEBUG | Carpeta renombrada exitosamente: {old_path} -> {new_path}")
     flash("Carpeta renombrada correctamente.", "success")
     
-    if redirect_url and "/usuario/" in redirect_url:
-        return redirect(redirect_url)
-    else:
-        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    # Redirigir a la carpeta específica del usuario
+    redirect_url_final = url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_int)
+    print(f"🔧 Redirigiendo a usuario específico: /usuario/{usuario_id_int}/carpetas")
+    return redirect(redirect_url_final)
 
 @bp.route('/eliminar_carpeta', methods=['POST'])
 @login_required
