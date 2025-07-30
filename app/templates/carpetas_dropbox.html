@@ -1,5 +1,5 @@
-{% extends "base.html" %}
-{% block title %}Carpetas de Dropbox{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %}Carpetas de Dropbox{% endblock %} {%
+block content %}
 <div class="min-h-screen bg-gray-50 py-8">
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     {# Header Section #}
@@ -1447,6 +1447,9 @@
     // Configurar la acción del formulario
     form.action = '{{ url_for("listar_dropbox.eliminar_carpeta") }}';
 
+    // Ocultar todos los menús antes de mostrar el modal
+    window.hideAllMenus();
+
     // Mostrar el modal
     modal.classList.remove("hidden");
     console.log("🔧 Modal de eliminación de carpeta abierto");
@@ -1623,6 +1626,9 @@
 
     // Configurar la acción del formulario
     form.action = '{{ url_for("listar_dropbox.eliminar_archivo") }}';
+
+    // Ocultar todos los menús antes de mostrar el modal
+    window.hideAllMenus();
 
     // Mostrar el modal
     modal.classList.remove("hidden");

@@ -553,6 +553,9 @@
         // Usar el tipo pasado como parámetro en lugar de adivinar
         const isFolder = tipo === "carpeta";
 
+        // Ocultar todos los menús antes de mostrar el modal
+        window.hideAllMenus();
+
         if (isFolder) {
           // Renombrar carpeta
           document
@@ -1029,6 +1032,20 @@
         closeModal: typeof window.closeModal,
       });
 
+      // Función auxiliar para ocultar todos los menús de carpetas y archivos
+      window.hideAllMenus = function () {
+        console.log("🔧 Ocultando todos los menús...");
+        // Ocultar todos los menús de carpetas
+        document.querySelectorAll('[id^="folder-menu-"]').forEach((menu) => {
+          menu.classList.add("hidden");
+        });
+        // Ocultar todos los menús de archivos
+        document.querySelectorAll('[id^="file-menu-"]').forEach((menu) => {
+          menu.classList.add("hidden");
+        });
+        console.log("🔧 Todos los menús ocultados");
+      };
+
       // Funciones de modal para Dropbox - disponibles globalmente
       window.openCreateFolderModal = function (parentPath, userId) {
         console.log("🔧 openCreateFolderModal EJECUTÁNDOSE con:", {
@@ -1186,6 +1203,9 @@
           console.error("❌ Error estableciendo user ID input value:", error);
           return;
         }
+
+        // Ocultar todos los menús antes de mostrar el modal
+        window.hideAllMenus();
 
         // Mostrar el modal después de establecer los valores
         console.log("🔧 Mostrando modal...");
@@ -1379,6 +1399,9 @@
           return;
         }
 
+        // Ocultar todos los menús antes de mostrar el modal
+        window.hideAllMenus();
+
         // Mostrar el modal después de establecer los valores
         console.log("🔧 Mostrando modal...");
         modal.classList.remove("hidden");
@@ -1571,6 +1594,9 @@
 
         // Guardar el usuarioId en el modal para uso posterior
         modal.dataset.usuarioId = usuarioId;
+
+        // Ocultar todos los menús antes de mostrar el modal
+        window.hideAllMenus();
 
         // Mostrar el modal después de establecer los valores
         console.log("🔧 Mostrando modal...");
