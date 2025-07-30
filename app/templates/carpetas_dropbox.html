@@ -14,6 +14,25 @@ block content %}
           </p>
         </div>
         <div class="flex items-center space-x-3">
+          <a
+            href="{{ url_for('listar_dropbox.buscar_archivos_avanzada') }}"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              ></path>
+            </svg>
+            🔍 Búsqueda Avanzada
+          </a>
           <div
             class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"
           >
@@ -78,31 +97,71 @@ block content %}
       </div>
       {% endfor %}
     </div>
-    {% endif %} {% endwith %}
-
-    {# Configuración Error Section #}
-    {% if config_error %}
+    {% endif %} {% endwith %} {# Configuración Error Section #} {% if
+    config_error %}
     <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
       <div class="flex items-start">
         <div class="flex-shrink-0">
-          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          <svg
+            class="w-6 h-6 text-blue-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
           </svg>
         </div>
         <div class="ml-3">
-          <h3 class="text-sm font-medium text-blue-800">Configuración de Dropbox Requerida</h3>
+          <h3 class="text-sm font-medium text-blue-800">
+            Configuración de Dropbox Requerida
+          </h3>
           <div class="mt-2 text-sm text-blue-700">
-            <p>Para usar esta aplicación, necesitas configurar las credenciales de Dropbox en tu servidor.</p>
+            <p>
+              Para usar esta aplicación, necesitas configurar las credenciales
+              de Dropbox en tu servidor.
+            </p>
             <div class="mt-3 flex space-x-3">
-              <a href="/config/dropbox/status" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              <a
+                href="/config/dropbox/status"
+                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
                 </svg>
                 Ver Estado de Configuración
               </a>
-              <a href="https://www.dropbox.com/developers/apps" target="_blank" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+              <a
+                href="https://www.dropbox.com/developers/apps"
+                target="_blank"
+                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  ></path>
                 </svg>
                 Dropbox App Console
               </a>
@@ -350,7 +409,12 @@ block content %}
         method="post"
       >
         <input type="hidden" id="createFolderParent" name="padre" value="" />
-        <input type="hidden" name="usuario_id" value="" />
+        <input
+          type="hidden"
+          id="createFolderUsuarioId"
+          name="usuario_id"
+          value=""
+        />
         <div class="mb-4">
           <label
             for="folderName"
@@ -442,7 +506,12 @@ block content %}
           name="carpeta_destino"
           value=""
         />
-        <input type="hidden" name="usuario_id" value="" />
+        <input
+          type="hidden"
+          id="uploadFileUsuarioId"
+          name="usuario_id"
+          value=""
+        />
         <div class="mb-4">
           <label
             for="fileInput"
@@ -570,8 +639,108 @@ block content %}
   </div>
 </div>
 
+<!-- Modal para renombrar carpeta -->
+<div
+  id="renameFolderModal"
+  class="hidden fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
+>
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+    <div class="flex items-center justify-between p-6 border-b border-gray-200">
+      <div class="flex items-center space-x-3">
+        <div
+          class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center"
+        >
+          <svg
+            class="w-5 h-5 text-green-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+            />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900">Renombrar carpeta</h3>
+      </div>
+      <button
+        onclick="closeRenameFolderModal()"
+        class="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+      >
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <form
+      id="renameFolderForm"
+      method="post"
+      action="{{ url_for('listar_dropbox.renombrar_carpeta') }}"
+      class="p-6"
+    >
+      <input
+        type="hidden"
+        name="carpeta_nombre_actual"
+        id="renameCarpetaNombreActual"
+      />
+      <input type="hidden" name="carpeta_padre" id="renameCarpetaPadre" />
+      <input type="hidden" name="usuario_id" id="renameFolderUsuarioId" />
+
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+          >Nuevo nombre</label
+        >
+        <input
+          type="text"
+          name="nuevo_nombre"
+          id="newFolderName"
+          class="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          required
+        />
+      </div>
+
+      <div class="flex justify-end space-x-3">
+        <button
+          type="button"
+          onclick="closeRenameFolderModal()"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors duration-200"
+        >
+          Renombrar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
-  // Definir las funciones globalmente inmediatamente
+  // Las funciones de modal están definidas en base.html para disponibilidad global
+  // Verificar que las funciones estén disponibles
+  console.log("Verificando funciones de modal en carpetas_dropbox.html:", {
+    openCreateFolderModal: typeof window.openCreateFolderModal,
+    openUploadModal: typeof window.openUploadModal,
+    openMoveModal: typeof window.openMoveModal,
+  });
+
   window.toggleFolder = function (folderId) {
     console.log("toggleFolder llamado con:", folderId);
     const div = document.getElementById("folder-" + folderId);
@@ -683,7 +852,7 @@ block content %}
                   <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
                 </svg>
               </button>
-              
+
               <!-- Menú desplegable para archivos -->
               <div id="file-menu-${parent.replace(
                 /[^a-zA-Z0-9]/g,
@@ -693,14 +862,14 @@ block content %}
             "-"
           )}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed;">
                 <div class="py-1">
-                  <button onclick="openMoveModal('${archivo}', '${parent}', '${usuarioId}')" 
+                  <button onclick="openMoveModal('${archivo}', '${parent}', '${usuarioId}')"
                           class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                     </svg>
                     Mover archivo
                   </button>
-                  <button onclick="openRenameModal('${archivo}', '${parent}', 'archivo')" 
+                  <button onclick="openRenameModal('${archivo}', '${parent}', 'archivo')"
                           class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -749,7 +918,7 @@ block content %}
                       <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
                     </svg>
                   </button>
-                  
+
                   <!-- Menú desplegable para carpetas -->
                   <div id="folder-menu-${parent.replace(
                     /[^a-zA-Z0-9]/g,
@@ -759,26 +928,33 @@ block content %}
             "-"
           )}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed;">
                     <div class="py-1">
-                      <button onclick="openCreateFolderModal('${parent}/${carpeta}', '${usuarioId}')" 
+                      <button onclick="openCreateFolderModal('${parent}/${carpeta}', '${usuarioId}')"
                               class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                         </svg>
                         Crear carpeta
                       </button>
-                      <button onclick="openUploadModal('${parent}/${carpeta}', '${usuarioId}')" 
+                      <button onclick="openUploadModal('${parent}/${carpeta}', '${usuarioId}')"
                               class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                         </svg>
                         Subir archivo
                       </button>
-                      <button onclick="openRenameModal('${carpeta}', '${parent}', 'carpeta')" 
+                      <button onclick="openRenameModal('${carpeta}', '${parent}', 'carpeta')"
                               class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                         </svg>
                         Modificar nombre
+                      </button>
+                      <button onclick="confirmarEliminarCarpeta('${carpeta}', '${parent}', '${usuarioId}')"
+                              class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100 transition-colors duration-150">
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Eliminar carpeta
                       </button>
                     </div>
                   </div>
@@ -800,15 +976,33 @@ block content %}
     let selectedUserId = null;
 
     window.openRenameModal = function (archivo, carpetaActual, usuarioId) {
-      document.getElementById("renameModal").classList.remove("hidden");
-      document.getElementById("renameArchivoNombreActual").value = archivo;
-      document.getElementById("renameCarpetaActual").value = carpetaActual;
-      document.getElementById("renameUsuarioId").value = usuarioId;
-      document.getElementById("nuevoNombre").value = archivo;
+      // Determinar si es archivo o carpeta basado en el contexto
+      // Si carpetaActual contiene el archivo, es un archivo
+      // Si no, es una carpeta
+      const isFolder = !carpetaActual.includes(archivo);
+
+      if (isFolder) {
+        // Renombrar carpeta
+        document.getElementById("renameFolderModal").classList.remove("hidden");
+        document.getElementById("renameCarpetaNombreActual").value = archivo;
+        document.getElementById("renameCarpetaPadre").value = carpetaActual;
+        document.getElementById("newFolderName").value = archivo;
+      } else {
+        // Renombrar archivo
+        document.getElementById("renameModal").classList.remove("hidden");
+        document.getElementById("renameArchivoNombreActual").value = archivo;
+        document.getElementById("renameCarpetaActual").value = carpetaActual;
+        document.getElementById("renameUsuarioId").value = usuarioId;
+        document.getElementById("nuevoNombre").value = archivo;
+      }
     };
 
     window.closeRenameModal = function () {
       document.getElementById("renameModal").classList.add("hidden");
+    };
+
+    window.closeRenameFolderModal = function () {
+      document.getElementById("renameFolderModal").classList.add("hidden");
     };
 
     document.getElementById("moveForm").onsubmit = function (e) {
@@ -988,35 +1182,236 @@ block content %}
     openMoveModal: typeof window.openMoveModal,
   });
 
-  // Función para verificar que todos los elementos necesarios estén presentes
-  window.verificarElementosModales = function () {
-    const elementos = [
-      "createFolderModal",
-      "uploadFileModal",
-      "renameModal",
-      "moveModal",
-      "createFolderParent",
-      "uploadFileFolder",
-      "renameArchivoNombreActual",
-      "renameCarpetaActual",
-      "renameUsuarioId",
-      "nuevoNombre",
-    ];
+  // Funciones para manejar menús
+  window.toggleFileMenu = function (menuId, event) {
+    event.stopPropagation();
+    const menu = document.getElementById(menuId);
+    if (menu) {
+      const isHidden = menu.classList.contains("hidden");
 
-    console.log("Verificando elementos de modales:");
-    elementos.forEach((id) => {
-      const elemento = document.getElementById(id);
-      if (elemento) {
-        console.log(`✅ ${id}: encontrado`);
-      } else {
-        console.error(`❌ ${id}: NO encontrado`);
+      // Ocultar todos los menús primero
+      document.querySelectorAll('[id^="file-menu-"]').forEach((m) => {
+        m.classList.add("hidden");
+      });
+
+      if (isHidden) {
+        menu.classList.remove("hidden");
+        // Posicionar el menú cerca del botón
+        const button = event.target.closest("button");
+        if (button) {
+          const rect = button.getBoundingClientRect();
+          menu.style.top = rect.bottom + 5 + "px";
+          menu.style.left = rect.left + "px";
+        }
       }
-    });
+    }
   };
 
-  // Ejecutar verificación cuando se carga la página
+  window.toggleFolderMenu = function (menuId, event) {
+    event.stopPropagation();
+    const menu = document.getElementById(menuId);
+    if (menu) {
+      const isHidden = menu.classList.contains("hidden");
+
+      // Ocultar todos los menús primero
+      document.querySelectorAll('[id^="folder-menu-"]').forEach((m) => {
+        m.classList.add("hidden");
+      });
+
+      if (isHidden) {
+        menu.classList.remove("hidden");
+        // Posicionar el menú cerca del botón
+        const button = event.target.closest("button");
+        if (button) {
+          const rect = button.getBoundingClientRect();
+          menu.style.top = rect.bottom + 5 + "px";
+          menu.style.left = rect.left + "px";
+        }
+      }
+    }
+  };
+
+  // Cerrar menús cuando se hace clic fuera
+  document.addEventListener("click", function () {
+    document
+      .querySelectorAll('[id^="file-menu-"], [id^="folder-menu-"]')
+      .forEach((menu) => {
+        menu.classList.add("hidden");
+      });
+  });
+
+  // Función para cerrar modales
+  window.closeModal = function (modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.add("hidden");
+    }
+  };
+
+  // Función para abrir modales
+  window.openModal = function (modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.remove("hidden");
+    }
+  };
+
+  // Función para confirmar eliminación de carpeta
+  window.confirmarEliminarCarpeta = function (
+    carpeta,
+    carpetaPadre,
+    usuarioId
+  ) {
+    if (
+      confirm(
+        `¿Estás seguro de que quieres eliminar la carpeta "${carpeta}"? Esta acción eliminará la carpeta y todo su contenido de forma permanente.`
+      )
+    ) {
+      // Crear formulario temporal para enviar la solicitud
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = '{{ url_for("listar_dropbox.eliminar_carpeta") }}';
+
+      // Agregar datos de la carpeta
+      const carpetaInput = document.createElement("input");
+      carpetaInput.type = "hidden";
+      carpetaInput.name = "carpeta_nombre";
+      carpetaInput.value = carpeta;
+      form.appendChild(carpetaInput);
+
+      const carpetaPadreInput = document.createElement("input");
+      carpetaPadreInput.type = "hidden";
+      carpetaPadreInput.name = "carpeta_padre";
+      carpetaPadreInput.value = carpetaPadre;
+      form.appendChild(carpetaPadreInput);
+
+      const redirectInput = document.createElement("input");
+      redirectInput.type = "hidden";
+      redirectInput.name = "redirect_url";
+      redirectInput.value = window.location.href;
+      form.appendChild(redirectInput);
+
+      // Enviar formulario
+      document.body.appendChild(form);
+      form.submit();
+    }
+  };
+
+  // Función para manejar la creación de carpetas y actualizar la estructura
+  window.handleCreateFolder = function (event) {
+    event.preventDefault();
+
+    const form = event.target;
+    const formData = new FormData(form);
+
+    // Mostrar indicador de carga
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    submitButton.textContent = "Creando...";
+    submitButton.disabled = true;
+
+    fetch(form.action, {
+      method: "POST",
+      body: formData,
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    })
+      .then((response) => {
+        if (response.redirected) {
+          // Si hay redirección, recargar la página completa
+          window.location.reload();
+          return;
+        }
+        return response.json();
+      })
+      .then((data) => {
+        // Cerrar el modal
+        closeModal("createFolderModal");
+
+        // Limpiar el formulario
+        form.reset();
+
+        if (data.success) {
+          // Mostrar mensaje de éxito
+          console.log("✅ Carpeta creada exitosamente:", data.message);
+          console.log("🔧 Ruta de la carpeta:", data.carpeta_path);
+          console.log("🔧 Carpeta padre:", data.parent_path);
+
+          // Redirigir a la página de carpetas del usuario
+          if (data.redirect_url) {
+            console.log("🔄 Redirigiendo a:", data.redirect_url);
+            window.location.href = data.redirect_url;
+          } else {
+            // Fallback: recargar la página actual
+            window.location.reload();
+          }
+        } else {
+          // Mostrar error
+          console.error("❌ Error creando carpeta:", data.error);
+          alert("Error al crear la carpeta: " + data.error);
+        }
+      })
+      .catch((error) => {
+        console.error("Error creando carpeta:", error);
+        alert("Error al crear la carpeta. Por favor, intenta de nuevo.");
+      })
+      .finally(() => {
+        // Restaurar el botón
+        submitButton.textContent = originalText;
+        submitButton.disabled = false;
+      });
+  };
+
+  // Función para actualizar la estructura de una carpeta específica
+  window.actualizarEstructuraCarpeta = function (carpetaPath) {
+    console.log("🔄 Actualizando estructura de carpeta:", carpetaPath);
+
+    // Encontrar el contenedor de la carpeta
+    const carpetaId = carpetaPath.replace(/\//g, "-").replace(/^-/, "");
+    const container = document.getElementById(`folder-${carpetaId}`);
+
+    if (container) {
+      // Mostrar indicador de carga
+      container.innerHTML =
+        '<div class="text-center py-4"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div><p class="text-sm text-gray-500 mt-2">Actualizando...</p></div>';
+
+      // Hacer petición AJAX para obtener el contenido actualizado
+      fetch(`/api/carpeta_contenido/${encodeURIComponent(carpetaPath)}`)
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            // Renderizar el contenido actualizado
+            container.innerHTML = renderTreeContent(
+              data.estructura,
+              carpetaPath,
+              data.usuario_id
+            );
+            console.log("✅ Estructura actualizada para:", carpetaPath);
+          } else {
+            console.error("Error actualizando estructura:", data.error);
+            container.innerHTML =
+              '<div class="text-center py-4 text-red-500">Error al actualizar la estructura</div>';
+          }
+        })
+        .catch((error) => {
+          console.error("Error en la petición:", error);
+          container.innerHTML =
+            '<div class="text-center py-4 text-red-500">Error de conexión</div>';
+        });
+    } else {
+      console.log("⚠️ Contenedor no encontrado para:", carpetaPath);
+      // Si no se encuentra el contenedor, recargar la página
+      window.location.reload();
+    }
+  };
+
+  // Agregar event listener al formulario de crear carpeta
   document.addEventListener("DOMContentLoaded", function () {
-    setTimeout(verificarElementosModales, 1000);
+    const createFolderForm = document.getElementById("createFolderForm");
+    if (createFolderForm) {
+      createFolderForm.addEventListener("submit", handleCreateFolder);
+    }
   });
 </script>
 

@@ -1,0 +1,523 @@
+{% extends "base.html" %} {% block title %}Búsqueda Avanzada de Archivos{%
+endblock %} {% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">🔍 Búsqueda Avanzada</h1>
+          <p class="mt-2 text-sm text-gray-600">
+            Encuentra archivos específicos usando múltiples filtros
+          </p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <a
+            href="{{ url_for('listar_dropbox.carpetas_dropbox') }}"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              ></path>
+            </svg>
+            Volver
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros de Búsqueda -->
+    <div
+      class="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden mb-8"
+    >
+      <div class="px-6 py-5 border-b border-gray-100">
+        <h2 class="text-xl font-semibold text-gray-900">Filtros de Búsqueda</h2>
+      </div>
+
+      <form id="searchForm" class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Búsqueda por texto -->
+          <div class="col-span-full">
+            <label
+              for="query"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              🔍 Buscar en nombre, descripción, categoría
+            </label>
+            <input
+              type="text"
+              id="query"
+              name="query"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Ej: documento, pasaporte, contrato..."
+            />
+          </div>
+
+          <!-- Usuario -->
+          <div>
+            <label
+              for="usuario_id"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              👤 Usuario
+            </label>
+            <select
+              id="usuario_id"
+              name="usuario_id"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Todos los usuarios</option>
+              <optgroup label="Titulares">
+                {% for usuario in usuarios %}
+                <option value="user-{{ usuario.id }}">
+                  {{ usuario.nombre_completo }} ({{ usuario.email }})
+                </option>
+                {% endfor %}
+              </optgroup>
+              <optgroup label="Beneficiarios">
+                {% for beneficiario in beneficiarios %}
+                <option value="beneficiario-{{ beneficiario.id }}">
+                  {{ beneficiario.nombre }} ({{ beneficiario.email }})
+                </option>
+                {% endfor %}
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Categoría -->
+          <div>
+            <label
+              for="categoria"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              📁 Categoría
+            </label>
+            <select
+              id="categoria"
+              name="categoria"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Todas las categorías</option>
+              {% for categoria in categorias %}
+              <option value="{{ categoria }}">{{ categoria }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Subcategoría -->
+          <div>
+            <label
+              for="subcategoria"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              📂 Subcategoría
+            </label>
+            <select
+              id="subcategoria"
+              name="subcategoria"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Todas las subcategorías</option>
+            </select>
+          </div>
+
+          <!-- Fecha desde -->
+          <div>
+            <label
+              for="fecha_desde"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              📅 Fecha desde
+            </label>
+            <input
+              type="date"
+              id="fecha_desde"
+              name="fecha_desde"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <!-- Fecha hasta -->
+          <div>
+            <label
+              for="fecha_hasta"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              📅 Fecha hasta
+            </label>
+            <input
+              type="date"
+              id="fecha_hasta"
+              name="fecha_hasta"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <!-- Extensión -->
+          <div>
+            <label
+              for="extension"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              📄 Extensión
+            </label>
+            <input
+              type="text"
+              id="extension"
+              name="extension"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Ej: pdf, jpg, doc..."
+            />
+          </div>
+
+          <!-- Tamaño mínimo -->
+          <div>
+            <label
+              for="tamano_min"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              📏 Tamaño mínimo (MB)
+            </label>
+            <input
+              type="number"
+              id="tamano_min"
+              name="tamano_min"
+              min="0"
+              step="0.1"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="0"
+            />
+          </div>
+
+          <!-- Tamaño máximo -->
+          <div>
+            <label
+              for="tamano_max"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              📏 Tamaño máximo (MB)
+            </label>
+            <input
+              type="number"
+              id="tamano_max"
+              name="tamano_max"
+              min="0"
+              step="0.1"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="100"
+            />
+          </div>
+        </div>
+
+        <!-- Botones -->
+        <div
+          class="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200"
+        >
+          <button
+            type="button"
+            id="limpiarFiltros"
+            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            🗑️ Limpiar filtros
+          </button>
+          <button
+            type="submit"
+            id="buscarBtn"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            🔍 Buscar archivos
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Resultados -->
+    <div id="resultadosContainer" class="hidden">
+      <div
+        class="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex items-center justify-between"
+        >
+          <h2 class="text-xl font-semibold text-gray-900">
+            📋 Resultados de la búsqueda
+          </h2>
+          <div class="flex items-center space-x-3">
+            <span id="resultadosCount" class="text-sm text-gray-600"
+              >0 archivos encontrados</span
+            >
+            <button
+              id="exportarBtn"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+            >
+              📊 Exportar
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Archivo
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Usuario
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Categoría
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Fecha
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Tamaño
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody
+              id="resultadosTable"
+              class="bg-white divide-y divide-gray-200"
+            >
+              <!-- Los resultados se cargarán aquí -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estado de carga -->
+    <div id="loadingState" class="hidden">
+      <div
+        class="bg-white shadow-sm rounded-xl border border-gray-100 p-12 text-center"
+      >
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"
+        ></div>
+        <p class="text-gray-600">Buscando archivos...</p>
+      </div>
+    </div>
+
+    <!-- Estado vacío -->
+    <div id="emptyState" class="hidden">
+      <div
+        class="bg-white shadow-sm rounded-xl border border-gray-100 p-12 text-center"
+      >
+        <svg
+          class="mx-auto h-12 w-12 text-gray-400 mb-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          ></path>
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+          No se encontraron archivos
+        </h3>
+        <p class="text-gray-600">Intenta ajustar los filtros de búsqueda</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const categorias = {{ categorias_json | safe }};
+
+  document.addEventListener('DOMContentLoaded', function() {
+      const searchForm = document.getElementById('searchForm');
+      const categoriaSelect = document.getElementById('categoria');
+      const subcategoriaSelect = document.getElementById('subcategoria');
+      const limpiarFiltrosBtn = document.getElementById('limpiarFiltros');
+      const buscarBtn = document.getElementById('buscarBtn');
+      const resultadosContainer = document.getElementById('resultadosContainer');
+      const loadingState = document.getElementById('loadingState');
+      const emptyState = document.getElementById('emptyState');
+      const resultadosTable = document.getElementById('resultadosTable');
+      const resultadosCount = document.getElementById('resultadosCount');
+
+      // Actualizar subcategorías cuando cambie la categoría
+      categoriaSelect.addEventListener('change', function() {
+          const categoria = this.value;
+          subcategoriaSelect.innerHTML = '<option value="">Todas las subcategorías</option>';
+
+          if (categoria && categorias[categoria]) {
+              categorias[categoria].forEach(function(subcat) {
+                  const option = document.createElement('option');
+                  option.value = subcat;
+                  option.textContent = subcat;
+                  subcategoriaSelect.appendChild(option);
+              });
+          }
+      });
+
+      // Limpiar filtros
+      limpiarFiltrosBtn.addEventListener('click', function() {
+          searchForm.reset();
+          subcategoriaSelect.innerHTML = '<option value="">Todas las subcategorías</option>';
+          resultadosContainer.classList.add('hidden');
+          emptyState.classList.add('hidden');
+      });
+
+      // Realizar búsqueda
+      searchForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          realizarBusqueda();
+      });
+
+      function realizarBusqueda() {
+          // Mostrar estado de carga
+          loadingState.classList.remove('hidden');
+          resultadosContainer.classList.add('hidden');
+          emptyState.classList.add('hidden');
+          buscarBtn.disabled = true;
+          buscarBtn.textContent = '🔍 Buscando...';
+
+          // Obtener datos del formulario
+          const formData = new FormData(searchForm);
+
+          // Realizar petición AJAX
+          fetch('{{ url_for("listar_dropbox.buscar_archivos_avanzada") }}', {
+              method: 'POST',
+              body: formData,
+              headers: {
+                  'X-Requested-With': 'XMLHttpRequest'
+              }
+          })
+          .then(response => response.json())
+          .then(data => {
+              loadingState.classList.add('hidden');
+              buscarBtn.disabled = false;
+              buscarBtn.textContent = '🔍 Buscar archivos';
+
+              if (data.success) {
+                  mostrarResultados(data.resultados);
+              } else {
+                  alert('Error en la búsqueda: ' + data.error);
+              }
+          })
+          .catch(error => {
+              loadingState.classList.add('hidden');
+              buscarBtn.disabled = false;
+              buscarBtn.textContent = '🔍 Buscar archivos';
+              alert('Error en la búsqueda: ' + error.message);
+          });
+      }
+
+      function mostrarResultados(resultados) {
+          if (resultados.length === 0) {
+              emptyState.classList.remove('hidden');
+              return;
+          }
+
+          // Actualizar contador
+          resultadosCount.textContent = `${resultados.length} archivo${resultados.length !== 1 ? 's' : ''} encontrado${resultados.length !== 1 ? 's' : ''}`;
+
+          // Limpiar tabla
+          resultadosTable.innerHTML = '';
+
+          // Agregar filas
+          resultados.forEach(function(archivo) {
+              const row = document.createElement('tr');
+              row.className = 'hover:bg-gray-50';
+
+              const tamanoFormateado = archivo.tamano ? formatFileSize(archivo.tamano) : 'N/A';
+
+              row.innerHTML = `
+                  <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                          <div class="flex-shrink-0 h-10 w-10">
+                              <div class="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                  <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                  </svg>
+                              </div>
+                          </div>
+                          <div class="ml-4">
+                              <div class="text-sm font-medium text-gray-900">${archivo.nombre}</div>
+                              <div class="text-sm text-gray-500">${archivo.extension || 'Sin extensión'}</div>
+                          </div>
+                      </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm text-gray-900">${archivo.usuario}</div>
+                      <div class="text-sm text-gray-500">${archivo.usuario_email}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm text-gray-900">${archivo.categoria}</div>
+                      <div class="text-sm text-gray-500">${archivo.subcategoria}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      ${archivo.fecha_subida}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      ${tamanoFormateado}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button onclick="verArchivo('${archivo.dropbox_path}')"
+                              class="text-blue-600 hover:text-blue-900 mr-3">
+                          👁️ Ver
+                      </button>
+                      <button onclick="descargarArchivo('${archivo.dropbox_path}')"
+                              class="text-green-600 hover:text-green-900">
+                          📥 Descargar
+                      </button>
+                  </td>
+              `;
+
+              resultadosTable.appendChild(row);
+          });
+
+          resultadosContainer.classList.remove('hidden');
+      }
+
+      function formatFileSize(bytes) {
+          if (bytes === 0) return '0 Bytes';
+          const k = 1024;
+          const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+  });
+
+  // Funciones globales para acciones
+  function verArchivo(path) {
+      // Implementar vista previa del archivo
+      alert('Función de vista previa en desarrollo para: ' + path);
+  }
+
+  function descargarArchivo(path) {
+      // Implementar descarga del archivo
+      alert('Función de descarga en desarrollo para: ' + path);
+  }
+</script>
+{% endblock %}

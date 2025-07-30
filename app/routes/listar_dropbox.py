@@ -3,9 +3,10 @@ import json
 from flask_login import current_user, login_required
 from app.categorias import CATEGORIAS
 import dropbox
-from app.models import Archivo, Beneficiario, Folder, User
+from app.models import Archivo, Beneficiario, Folder, User, Notification
 from app import db
 import unicodedata
+from datetime import datetime
 
 bp = Blueprint("listar_dropbox", __name__)
 
@@ -374,6 +375,8 @@ def obtener_contenido_carpeta(ruta):
 @bp.route("/crear_carpeta", methods=["POST"])
 @login_required
 def crear_carpeta():
+    # Verificar si es una petición AJAX
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
         flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
@@ -388,12 +391,87 @@ def crear_carpeta():
     padre = request.form.get("padre", "")
     es_publica = request.form.get("es_publica", "true").lower() == "true"  # Por defecto pública
     
+    # Obtener el usuario_id específico del formulario
+    usuario_id = request.form.get("usuario_id")
+    if usuario_id:
+        try:
+            usuario_id = int(usuario_id)
+            print(f"🔧 Usuario ID del formulario: {usuario_id}")
+        except ValueError:
+            print(f"❌ Error: usuario_id no es un número válido: {usuario_id}")
+            usuario_id = current_user.id
+    else:
+        print(f"⚠️ No se encontró usuario_id en el formulario, usando current_user.id: {current_user.id}")
+        usuario_id = current_user.id
+    
     if not nombre:
         flash("El nombre de la carpeta es obligatorio.", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
     
-    # Construir la ruta en Dropbox
-    ruta = padre.rstrip("/") + "/" + nombre if padre else "/" + nombre
+    # Construir la ruta en Dropbox correctamente
+    if padre:
+        # Buscar la carpeta padre en la base de datos para obtener la ruta completa
+        print(f"🔍 Buscando carpeta padre: '{padre}' para usuario {usuario_id}")
+        
+        # Intentar diferentes métodos de búsqueda
+        carpeta_padre = None
+        
+        # Método 1: Buscar por dropbox_path exacto
+        carpeta_padre = Folder.query.filter_by(
+            user_id=usuario_id, 
+            dropbox_path=padre
+        ).first()
+        
+        if carpeta_padre:
+            print(f"✅ Encontrada por dropbox_path exacto: {carpeta_padre.dropbox_path}")
+        else:
+            # Método 2: Buscar por nombre de carpeta
+            nombre_carpeta = padre.split("/")[-1]  # Obtener el último segmento
+            carpeta_padre = Folder.query.filter_by(
+                user_id=usuario_id, 
+                name=nombre_carpeta
+            ).first()
+            
+            if carpeta_padre:
+                print(f"✅ Encontrada por nombre: {carpeta_padre.name} -> {carpeta_padre.dropbox_path}")
+            else:
+                # Método 3: Buscar por dropbox_path que termine con el padre
+                carpeta_padre = Folder.query.filter_by(user_id=usuario_id).filter(
+                    Folder.dropbox_path.endswith(padre)
+                ).first()
+                
+                if carpeta_padre:
+                    print(f"✅ Encontrada por dropbox_path que termina con: {carpeta_padre.dropbox_path}")
+                else:
+                    # Método 4: Buscar por dropbox_path que contenga el padre
+                    carpeta_padre = Folder.query.filter_by(user_id=usuario_id).filter(
+                        Folder.dropbox_path.contains(padre)
+                    ).first()
+                    
+                    if carpeta_padre:
+                        print(f"✅ Encontrada por dropbox_path que contiene: {carpeta_padre.dropbox_path}")
+                    else:
+                        print(f"❌ No se encontró carpeta padre para: {padre}")
+        
+        if carpeta_padre:
+            # Usar la ruta completa de la carpeta padre
+            ruta = carpeta_padre.dropbox_path.rstrip("/") + "/" + nombre
+            print(f"🔧 Carpeta padre encontrada: {carpeta_padre.name} -> {carpeta_padre.dropbox_path}")
+        else:
+            # Si no se encuentra la carpeta padre, usar la ruta del padre directamente
+            if padre.startswith("/"):
+                # El padre ya es una ruta completa de Dropbox
+                ruta = padre.rstrip("/") + "/" + nombre
+                print(f"🔧 Usando ruta completa del padre: {padre} -> {ruta}")
+            else:
+                # Si no empieza con /, agregarlo
+                ruta = "/" + padre.rstrip("/") + "/" + nombre
+                print(f"🔧 Agregando / al padre: {padre} -> {ruta}")
+    else:
+        # Si no hay padre, crear en la carpeta raíz del usuario
+        ruta = "/" + nombre
+    
+    print(f"🔧 Creando carpeta: nombre='{nombre}', padre='{padre}', ruta='{ruta}'")
     
     try:
         dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
@@ -402,7 +480,7 @@ def crear_carpeta():
         # Guardar carpeta en la base de datos
         nueva_carpeta = Folder(
             name=nombre,
-            user_id=current_user.id,
+            user_id=usuario_id,
             dropbox_path=ruta,
             es_publica=es_publica
         )
@@ -414,12 +492,54 @@ def crear_carpeta():
         
         tipo_carpeta = "pública" if es_publica else "privada"
         flash(f"Carpeta '{ruta}' creada correctamente como {tipo_carpeta}.", "success")
-    except dropbox.exceptions.ApiError as e:
-        flash(f"Error creando carpeta: {e}", "error")
-    except Exception as e:
-        flash(f"Error guardando carpeta en base de datos: {e}", "error")
         
-    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        # Crear notificación para el usuario específico
+        crear_notificacion(
+            usuario_id,
+            "Carpeta Creada",
+            f"La carpeta '{nombre}' ha sido creada exitosamente en {ruta}",
+            "success"
+        )
+        
+        # Si es una petición AJAX, retornar JSON
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "message": f"Carpeta '{ruta}' creada correctamente como {tipo_carpeta}.",
+                "carpeta_path": ruta,
+                "parent_path": padre,
+                "redirect_url": url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id)
+            })
+        
+    except dropbox.exceptions.ApiError as e:
+        error_msg = f"Error creando carpeta: {e}"
+        flash(error_msg, "error")
+        # Crear notificación de error
+        crear_notificacion(
+            usuario_id,
+            "Error al Crear Carpeta",
+            f"Error creando carpeta '{nombre}': {e}",
+            "error"
+        )
+        
+        if is_ajax:
+            return jsonify({"success": False, "error": error_msg}), 400
+            
+    except Exception as e:
+        error_msg = f"Error guardando carpeta en base de datos: {e}"
+        flash(error_msg, "error")
+        # Crear notificación de error
+        crear_notificacion(
+            usuario_id,
+            "Error al Crear Carpeta",
+            f"Error guardando carpeta '{nombre}' en base de datos: {e}",
+            "error"
+        )
+        
+        if is_ajax:
+            return jsonify({"success": False, "error": error_msg}), 500
+        
+    return redirect(url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id))
 
 def normaliza(nombre):
     nfkd = unicodedata.normalize('NFKD', nombre or '')
@@ -2003,5 +2123,383 @@ def eliminar_archivo():
         return redirect(redirect_url)
     else:
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+@bp.route('/renombrar_carpeta', methods=['POST'])
+@login_required
+def renombrar_carpeta():
+    """Renombra una carpeta en Dropbox y actualiza la base de datos"""
+    from app.models import Folder
+    
+    # Verificar que el usuario esté autenticado
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+        return redirect(url_for("auth.login"))
+    
+    # Verificar permisos del lector
+    if current_user.rol == 'lector' and not current_user.puede_modificar_archivos():
+        flash("No tienes permisos para renombrar carpetas.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
+    print("🚩 ¡Llegué a la función renombrar_carpeta!")
+
+    carpeta_nombre_actual = request.form.get("carpeta_nombre_actual")
+    carpeta_padre = request.form.get("carpeta_padre")
+    usuario_id = request.form.get("usuario_id")
+    nuevo_nombre = request.form.get("nuevo_nombre")
+    redirect_url = request.form.get("redirect_url", "")
+
+    # --- Normalización robusta de path ---
+    def join_dropbox_path(parent, name):
+        if not parent or parent in ('/', '', None):
+            return f"/{name}"
+        return f"{parent.rstrip('/')}/{name}"
+
+    old_path = join_dropbox_path(carpeta_padre, carpeta_nombre_actual)
+    new_path = join_dropbox_path(carpeta_padre, nuevo_nombre)
+
+    # --- Log antes de buscar carpeta ---
+    print("DEBUG | carpeta_nombre_actual:", carpeta_nombre_actual)
+    print("DEBUG | carpeta_padre:", carpeta_padre)
+    print("DEBUG | usuario_id:", usuario_id)
+    print("DEBUG | nuevo_nombre:", nuevo_nombre)
+    print("DEBUG | old_path:", old_path)
+    print("DEBUG | new_path:", new_path)
+
+    if not (carpeta_nombre_actual and carpeta_padre and usuario_id and nuevo_nombre):
+        print("DEBUG | Faltan datos para renombrar carpeta")
+        flash("Faltan datos para renombrar la carpeta.", "error")
+        if redirect_url and "/usuario/" in redirect_url:
+            return redirect(redirect_url)
+        else:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    # Buscar carpeta en la base de datos
+    carpeta = Folder.query.filter_by(dropbox_path=old_path).first()
+    if not carpeta:
+        print(f"DEBUG | Carpeta no encontrada en la base para path: {old_path}")
+        flash("Carpeta no encontrada en la base de datos.", "error")
+        if redirect_url and "/usuario/" in redirect_url:
+            return redirect(redirect_url)
+        else:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    try:
+        print(f"DEBUG | Renombrando carpeta en Dropbox: {old_path} -> {new_path}")
+        dbx.files_move_v2(old_path, new_path, allow_shared_folder=True, autorename=True)
+    except Exception as e:
+        print(f"DEBUG | Error renombrando carpeta en Dropbox: {e}")
+        flash(f"Error renombrando carpeta en Dropbox: {e}", "error")
+        if redirect_url and "/usuario/" in redirect_url:
+            return redirect(redirect_url)
+        else:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    # Actualizar en la base de datos
+    carpeta.name = nuevo_nombre
+    carpeta.dropbox_path = new_path
+    db.session.commit()
+
+    # Registrar actividad
+    current_user.registrar_actividad('folder_renamed', f'Carpeta renombrada de "{carpeta_nombre_actual}" a "{nuevo_nombre}"')
+
+    print(f"DEBUG | Carpeta renombrada exitosamente: {old_path} -> {new_path}")
+    flash("Carpeta renombrada correctamente.", "success")
+    
+    if redirect_url and "/usuario/" in redirect_url:
+        return redirect(redirect_url)
+    else:
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+@bp.route('/eliminar_carpeta', methods=['POST'])
+@login_required
+def eliminar_carpeta():
+    """Elimina una carpeta de Dropbox y de la base de datos"""
+    from app.models import Folder, Archivo
+    
+    # Verificar que el usuario esté autenticado
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+        return redirect(url_for("auth.login"))
+    
+    # Verificar permisos del lector
+    if current_user.rol == 'lector' and not current_user.puede_eliminar_archivos():
+        flash("No tienes permisos para eliminar carpetas.", "error")
+        redirect_url = request.form.get("redirect_url", "")
+        if redirect_url and "/usuario/" in redirect_url:
+            return redirect(redirect_url)
+        else:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
+    try:
+        carpeta_nombre = request.form.get("carpeta_nombre")
+        carpeta_padre = request.form.get("carpeta_padre")
+        redirect_url = request.form.get("redirect_url", "")
+        
+        if not carpeta_nombre or not carpeta_padre:
+            flash("Faltan datos para eliminar la carpeta.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # Construir la ruta completa de la carpeta
+        carpeta_path = f"{carpeta_padre}/{carpeta_nombre}".replace('//', '/')
+        
+        print(f"DEBUG | Eliminando carpeta: {carpeta_path}")
+        
+        # Conectar a Dropbox
+        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        
+        # Eliminar carpeta de Dropbox (esto eliminará recursivamente todo el contenido)
+        try:
+            dbx.files_delete_v2(carpeta_path)
+            print(f"DEBUG | Carpeta eliminada de Dropbox: {carpeta_path}")
+        except dropbox.exceptions.ApiError as e:
+            if "not_found" in str(e):
+                print(f"DEBUG | Carpeta no encontrada en Dropbox: {carpeta_path}")
+            else:
+                raise e
+        
+        # Eliminar registros de la base de datos
+        # Primero eliminar archivos que estén en esta carpeta
+        archivos_eliminados = Archivo.query.filter(Archivo.dropbox_path.like(f"{carpeta_path}/%")).delete()
+        print(f"DEBUG | Archivos eliminados de BD: {archivos_eliminados}")
+        
+        # Luego eliminar la carpeta
+        carpeta_bd = Folder.query.filter_by(dropbox_path=carpeta_path).first()
+        if carpeta_bd:
+            db.session.delete(carpeta_bd)
+            print(f"DEBUG | Carpeta eliminada de BD: {carpeta_bd.name}")
+        
+        db.session.commit()
+        
+        # Registrar actividad
+        current_user.registrar_actividad('folder_deleted', f'Carpeta "{carpeta_nombre}" eliminada')
+        
+        flash("Carpeta eliminada correctamente.", "success")
+        
+    except Exception as e:
+        print(f"ERROR | Error eliminando carpeta: {e}")
+        flash(f"Error eliminando carpeta: {e}", "error")
+    
+    # Redirigir a la URL apropiada
+    if redirect_url and "/usuario/" in redirect_url:
+        return redirect(redirect_url)
+    else:
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+@bp.route("/buscar_archivos_avanzada", methods=["GET", "POST"])
+@login_required
+def buscar_archivos_avanzada():
+    """Búsqueda avanzada de archivos con múltiples filtros"""
+    from app.models import Archivo, User, Beneficiario
+    
+    if request.method == "GET":
+        # Obtener datos para los filtros
+        usuarios = User.query.filter_by(es_beneficiario=False).all()
+        beneficiarios = Beneficiario.query.all()
+        categorias = list(CATEGORIAS.keys())
+        
+        return render_template(
+            "busqueda_avanzada.html",
+            usuarios=usuarios,
+            beneficiarios=beneficiarios,
+            categorias=categorias,
+            categorias_json=json.dumps(CATEGORIAS)
+        )
+    
+    # POST: procesar búsqueda
+    try:
+        # Obtener parámetros de búsqueda
+        query = request.form.get("query", "").strip()
+        usuario_id = request.form.get("usuario_id", "")
+        categoria = request.form.get("categoria", "")
+        subcategoria = request.form.get("subcategoria", "")
+        fecha_desde = request.form.get("fecha_desde", "")
+        fecha_hasta = request.form.get("fecha_hasta", "")
+        extension = request.form.get("extension", "")
+        tamano_min = request.form.get("tamano_min", "")
+        tamano_max = request.form.get("tamano_max", "")
+        
+        # Construir consulta base
+        consulta = Archivo.query
+        
+        # Filtros
+        if query:
+            consulta = consulta.filter(
+                db.or_(
+                    Archivo.nombre.ilike(f"%{query}%"),
+                    Archivo.descripcion.ilike(f"%{query}%"),
+                    Archivo.categoria.ilike(f"%{query}%"),
+                    Archivo.subcategoria.ilike(f"%{query}%")
+                )
+            )
+        
+        if usuario_id:
+            if usuario_id.startswith("user-"):
+                real_id = int(usuario_id[5:])
+                consulta = consulta.filter(Archivo.usuario_id == real_id)
+            elif usuario_id.startswith("beneficiario-"):
+                # Para beneficiarios, buscar por el titular
+                real_id = int(usuario_id[13:])
+                beneficiario = Beneficiario.query.get(real_id)
+                if beneficiario and beneficiario.titular_id:
+                    consulta = consulta.filter(Archivo.usuario_id == beneficiario.titular_id)
+        
+        if categoria:
+            consulta = consulta.filter(Archivo.categoria == categoria)
+        
+        if subcategoria:
+            consulta = consulta.filter(Archivo.subcategoria == subcategoria)
+        
+        if fecha_desde:
+            try:
+                fecha_desde_obj = datetime.strptime(fecha_desde, "%Y-%m-%d")
+                consulta = consulta.filter(Archivo.fecha_subida >= fecha_desde_obj)
+            except ValueError:
+                pass
+        
+        if fecha_hasta:
+            try:
+                fecha_hasta_obj = datetime.strptime(fecha_hasta, "%Y-%m-%d")
+                consulta = consulta.filter(Archivo.fecha_subida <= fecha_hasta_obj)
+            except ValueError:
+                pass
+        
+        if extension:
+            consulta = consulta.filter(Archivo.nombre.ilike(f"%.{extension}"))
+        
+        if tamano_min:
+            try:
+                tamano_min_bytes = int(tamano_min) * 1024 * 1024  # Convertir MB a bytes
+                consulta = consulta.filter(Archivo.tamano >= tamano_min_bytes)
+            except ValueError:
+                pass
+        
+        if tamano_max:
+            try:
+                tamano_max_bytes = int(tamano_max) * 1024 * 1024  # Convertir MB a bytes
+                consulta = consulta.filter(Archivo.tamano <= tamano_max_bytes)
+            except ValueError:
+                pass
+        
+        # Ejecutar consulta
+        archivos = consulta.order_by(Archivo.fecha_subida.desc()).all()
+        
+        # Preparar resultados
+        resultados = []
+        for archivo in archivos:
+            usuario = User.query.get(archivo.usuario_id) if archivo.usuario_id else None
+            resultados.append({
+                'id': archivo.id,
+                'nombre': archivo.nombre,
+                'categoria': archivo.categoria,
+                'subcategoria': archivo.subcategoria,
+                'dropbox_path': archivo.dropbox_path,
+                'fecha_subida': archivo.fecha_subida.strftime("%d/%m/%Y %H:%M") if archivo.fecha_subida else "",
+                'tamano': archivo.tamano,
+                'extension': archivo.extension,
+                'descripcion': archivo.descripcion,
+                'usuario': usuario.nombre_completo if usuario else "Sin usuario",
+                'usuario_email': usuario.email if usuario else ""
+            })
+        
+        # Registrar actividad
+        current_user.registrar_actividad('advanced_search', f'Búsqueda avanzada realizada con {len(resultados)} resultados')
+        
+        return jsonify({
+            'success': True,
+            'resultados': resultados,
+            'total': len(resultados)
+        })
+        
+    except Exception as e:
+        print(f"Error en búsqueda avanzada: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bp.route("/notificaciones", methods=["GET"])
+@login_required
+def obtener_notificaciones():
+    """Obtiene las notificaciones del usuario actual"""
+    from app.models import Notification
+    
+    # Obtener notificaciones no leídas
+    notificaciones = Notification.query.filter_by(
+        user_id=current_user.id,
+        leida=False
+    ).order_by(Notification.fecha_creacion.desc()).limit(10).all()
+    
+    # Preparar datos para JSON
+    datos = []
+    for notif in notificaciones:
+        datos.append({
+            'id': notif.id,
+            'titulo': notif.titulo,
+            'mensaje': notif.mensaje,
+            'tipo': notif.tipo,
+            'fecha': notif.fecha_creacion.strftime("%d/%m/%Y %H:%M"),
+            'leida': notif.leida
+        })
+    
+    return jsonify({
+        'success': True,
+        'notificaciones': datos,
+        'total': len(datos)
+    })
+
+@bp.route("/notificaciones/marcar_leida/<int:notif_id>", methods=["POST"])
+@login_required
+def marcar_notificacion_leida(notif_id):
+    """Marca una notificación como leída"""
+    from app.models import Notification
+    
+    notificacion = Notification.query.filter_by(
+        id=notif_id,
+        user_id=current_user.id
+    ).first()
+    
+    if notificacion:
+        notificacion.marcar_como_leida()
+        db.session.commit()
+        return jsonify({'success': True})
+    
+    return jsonify({'success': False, 'error': 'Notificación no encontrada'}), 404
+
+@bp.route("/notificaciones/marcar_todas_leidas", methods=["POST"])
+@login_required
+def marcar_todas_notificaciones_leidas():
+    """Marca todas las notificaciones del usuario como leídas"""
+    from app.models import Notification
+    
+    notificaciones = Notification.query.filter_by(
+        user_id=current_user.id,
+        leida=False
+    ).all()
+    
+    for notif in notificaciones:
+        notif.marcar_como_leida()
+    
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+def crear_notificacion(usuario_id, titulo, mensaje, tipo='info'):
+    """Función helper para crear notificaciones"""
+    from app.models import Notification
+    
+    notificacion = Notification(
+        user_id=usuario_id,
+        titulo=titulo,
+        mensaje=mensaje,
+        tipo=tipo
+    )
+    db.session.add(notificacion)
+    db.session.commit()
+    
+    return notificacion
 
 

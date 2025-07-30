@@ -396,7 +396,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   </div>
 </div>
 
-<!-- Modal para renombrar -->
+<!-- Modal para renombrar archivo -->
 <div
   id="renameModal"
   class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
@@ -406,7 +406,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   >
     <div class="mt-3">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Renombrar</h3>
+        <h3 class="text-lg font-medium text-gray-900">Renombrar archivo</h3>
         <button
           onclick="closeModal('renameModal')"
           class="text-gray-400 hover:text-gray-600"
@@ -432,6 +432,12 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         method="post"
       >
         <input type="hidden" name="usuario_id" value="{{ usuario_id }}" />
+        <input
+          type="hidden"
+          name="archivo_nombre_actual"
+          id="renameArchivoNombreActual"
+        />
+        <input type="hidden" name="carpeta_actual" id="renameCarpetaActual" />
         <div class="mb-4">
           <label
             for="newName"
@@ -450,6 +456,83 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
           <button
             type="button"
             onclick="closeModal('renameModal')"
+            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Renombrar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para renombrar carpeta -->
+<div
+  id="renameFolderModal"
+  class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
+>
+  <div
+    class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
+  >
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Renombrar carpeta</h3>
+        <button
+          onclick="closeModal('renameFolderModal')"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+      </div>
+      <form
+        id="renameFolderForm"
+        action="{{ url_for('listar_dropbox.renombrar_carpeta') }}"
+        method="post"
+      >
+        <input type="hidden" name="usuario_id" value="{{ usuario_id }}" />
+        <input
+          type="hidden"
+          name="carpeta_nombre_actual"
+          id="renameCarpetaNombreActual"
+        />
+        <input type="hidden" name="carpeta_padre" id="renameCarpetaPadre" />
+        <input type="hidden" name="redirect_url" value="{{ request.url }}" />
+        <div class="mb-4">
+          <label
+            for="newFolderName"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Nuevo nombre</label
+          >
+          <input
+            type="text"
+            id="newFolderName"
+            name="nuevo_nombre"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button
+            type="button"
+            onclick="closeModal('renameFolderModal')"
             class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
           >
             Cancelar
@@ -827,23 +910,6 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 
   function closeModal(modalId) {
     document.getElementById(modalId).classList.add("hidden");
-  }
-
-  function openCreateFolderModal(parentPath) {
-    document.getElementById("createFolderParent").value = parentPath;
-    openModal("createFolderModal");
-  }
-
-  function openUploadModal(folderPath, userId) {
-    document.getElementById("uploadFileFolder").value = folderPath;
-    openModal("uploadFileModal");
-  }
-
-  function openRenameModal(name, path, type) {
-    document.getElementById("renameOldName").value = name;
-    document.getElementById("renamePath").value = path;
-    document.getElementById("newName").value = name;
-    openModal("renameModal");
   }
 
   function closeMoveModal() {

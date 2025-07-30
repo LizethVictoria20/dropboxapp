@@ -210,6 +210,7 @@ folders_por_ruta={}) %}
             style="position: fixed"
           >
             <div class="py-1">
+              {% if usuario_actual and usuario_actual.rol == 'admin' %}
               <button
                 onclick="openCreateFolderModal('{{ parent ~ '/' ~ carpeta }}', '{{ usuario_id }}')"
                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
@@ -248,6 +249,7 @@ folders_por_ruta={}) %}
                 </svg>
                 Subir archivo
               </button>
+              {% endif %}
               <button
                 onclick="openRenameModal('{{ carpeta }}', '{{ parent }}', '{{ usuario_id }}')"
                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
@@ -267,6 +269,29 @@ folders_por_ruta={}) %}
                 </svg>
                 Modificar nombre
               </button>
+              {% if usuario_actual.rol == 'admin' or usuario_actual.rol ==
+              'cliente' or (usuario_actual.rol == 'lector' and
+              usuario_actual.puede_eliminar_archivos()) %}
+              <button
+                onclick="confirmarEliminarCarpeta('{{ carpeta }}', '{{ parent }}', '{{ usuario_id }}')"
+                class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100 transition-colors duration-150"
+              >
+                <svg
+                  class="w-4 h-4 inline mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+                Eliminar carpeta
+              </button>
+              {% endif %}
             </div>
           </div>
         </div>

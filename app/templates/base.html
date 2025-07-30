@@ -23,6 +23,9 @@
     <meta name="apple-mobile-web-app-title" content="Dropbox App" />
     <meta name="msapplication-TileColor" content="#3B82F6" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
+    {% if current_user.is_authenticated %}
+    <meta name="user-role" content="{{ current_user.rol }}" />
+    {% endif %}
     <title>{% block title %}Inmigración OK{% endblock %}</title>
     <script>
       tailwind.config = {
@@ -534,59 +537,113 @@
         document.getElementById(modalId).classList.add("hidden");
       };
 
-      window.openCreateFolderModal = function (parentPath, userId) {
-        document.getElementById("createFolderParent").value = parentPath;
-        document.querySelector(
-          '#createFolderForm input[name="usuario_id"]'
-        ).value = userId;
-        openModal("createFolderModal");
-      };
-
-      window.openUploadModal = function (folderPath, userId) {
-        document.getElementById("uploadFileFolder").value = folderPath;
-        document.querySelector(
-          '#uploadFileForm input[name="usuario_id"]'
-        ).value = "user-" + userId;
-        openModal("uploadFileModal");
-      };
-
       window.openRenameModal = function (archivo, carpetaActual, usuarioId) {
         console.log("openRenameModal llamado con:", {
           archivo,
           carpetaActual,
           usuarioId,
         });
-        document.getElementById("renameModal").classList.remove("hidden");
-        document.getElementById("renameArchivoNombreActual").value = archivo;
-        document.getElementById("renameCarpetaActual").value = carpetaActual;
-        document.getElementById("renameUsuarioId").value = usuarioId;
-        document.getElementById("nuevoNombre").value = archivo;
+
+        // Determinar si es archivo o carpeta basado en el contexto
+        // Si carpetaActual contiene el archivo, es un archivo
+        // Si no, es una carpeta
+        const isFolder = !carpetaActual.includes(archivo);
+
+        if (isFolder) {
+          // Renombrar carpeta
+          document
+            .getElementById("renameFolderModal")
+            .classList.remove("hidden");
+          document.getElementById("renameCarpetaNombreActual").value = archivo;
+          document.getElementById("renameCarpetaPadre").value = carpetaActual;
+          document.getElementById("newFolderName").value = archivo;
+        } else {
+          // Renombrar archivo
+          document.getElementById("renameModal").classList.remove("hidden");
+          document.getElementById("renameArchivoNombreActual").value = archivo;
+          document.getElementById("renameCarpetaActual").value = carpetaActual;
+          document.getElementById("renameUsuarioId").value = usuarioId;
+          document.getElementById("nuevoNombre").value = archivo;
+        }
       };
 
       window.closeRenameModal = function () {
         document.getElementById("renameModal").classList.add("hidden");
       };
 
-      window.openCreateFolderModal = function (parentPath, userId) {
-        console.log("openCreateFolderModal llamado con:", {
-          parentPath,
-          userId,
-        });
-        document.getElementById("createFolderParent").value = parentPath;
-        document.querySelector(
-          '#createFolderForm input[name="usuario_id"]'
-        ).value = userId;
-        openModal("createFolderModal");
+      window.closeRenameFolderModal = function () {
+        document.getElementById("renameFolderModal").classList.add("hidden");
       };
 
-      window.openUploadModal = function (folderPath, userId) {
-        console.log("openUploadModal llamado con:", { folderPath, userId });
-        document.getElementById("uploadFileFolder").value = folderPath;
-        document.querySelector(
-          '#uploadFileForm input[name="usuario_id"]'
-        ).value = userId;
-        openModal("uploadFileModal");
+      // Función global para confirmar eliminación de carpeta
+      window.confirmarEliminarCarpeta = function (
+        carpeta,
+        carpetaPadre,
+        usuarioId
+      ) {
+        if (
+          confirm(
+            `¿Estás seguro de que quieres eliminar la carpeta "${carpeta}"? Esta acción eliminará la carpeta y todo su contenido de forma permanente.`
+          )
+        ) {
+          // Crear formulario temporal para enviar la solicitud
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = "/listar_dropbox/eliminar_carpeta";
+
+          // Agregar datos de la carpeta
+          const carpetaInput = document.createElement("input");
+          carpetaInput.type = "hidden";
+          carpetaInput.name = "carpeta_nombre";
+          carpetaInput.value = carpeta;
+          form.appendChild(carpetaInput);
+
+          const carpetaPadreInput = document.createElement("input");
+          carpetaPadreInput.type = "hidden";
+          carpetaPadreInput.name = "carpeta_padre";
+          carpetaPadreInput.value = carpetaPadre;
+          form.appendChild(carpetaPadreInput);
+
+          const redirectInput = document.createElement("input");
+          redirectInput.type = "hidden";
+          redirectInput.name = "redirect_url";
+          redirectInput.value = window.location.href;
+          form.appendChild(redirectInput);
+
+          // Enviar formulario
+          document.body.appendChild(form);
+          form.submit();
+        }
       };
+
+      // Función para verificar elementos necesarios
+      window.verificarElementosModales = function () {
+        const elementos = [
+          "createFolderModal",
+          "uploadFileModal",
+          "renameModal",
+          "renameFolderModal",
+          "createFolderParent",
+          "uploadFileFolder",
+          "createFolderUsuarioId",
+          "uploadFileUsuarioId",
+        ];
+
+        console.log("Verificando elementos de modales:");
+        elementos.forEach((id) => {
+          const elemento = document.getElementById(id);
+          if (elemento) {
+            console.log(`✅ ${id}: encontrado`);
+          } else {
+            console.warn(`⚠️ ${id}: NO encontrado`);
+          }
+        });
+      };
+
+      // Ejecutar verificación cuando se carga la página
+      document.addEventListener("DOMContentLoaded", function () {
+        setTimeout(verificarElementosModales, 1000);
+      });
 
       // Funciones para manejar los menús desplegables - disponibles globalmente
       window.toggleFileMenu = function (menuId, event) {
@@ -939,6 +996,614 @@
         openModal: typeof window.openModal,
         closeModal: typeof window.closeModal,
       });
+
+      // Funciones de modal para Dropbox - disponibles globalmente
+      window.openCreateFolderModal = function (parentPath, userId) {
+        console.log("🔧 openCreateFolderModal EJECUTÁNDOSE con:", {
+          parentPath,
+          userId,
+        });
+
+        // Verificar elementos paso a paso con logs detallados
+        console.log("🔧 Buscando modal createFolderModal...");
+        const modal = document.getElementById("createFolderModal");
+        console.log("🔧 Modal encontrado:", !!modal);
+
+        if (!modal) {
+          console.error("❌ Modal createFolderModal no encontrado");
+          return;
+        }
+
+        // Buscar elementos dentro del modal específicamente
+        console.log("🔧 Buscando elementos dentro del modal...");
+
+        // Intentar diferentes métodos de búsqueda
+        let parentInput = modal.querySelector("#createFolderParent");
+        let userIdInput = modal.querySelector("#createFolderUsuarioId");
+
+        console.log(
+          "🔧 Búsqueda con querySelector - Parent input encontrado:",
+          !!parentInput
+        );
+        console.log(
+          "🔧 Búsqueda con querySelector - User ID input encontrado:",
+          !!userIdInput
+        );
+
+        // Si no se encuentran, intentar con getElementById
+        if (!parentInput) {
+          console.log("🔧 Intentando con getElementById...");
+          parentInput = document.getElementById("createFolderParent");
+          console.log(
+            "🔧 getElementById - Parent input encontrado:",
+            !!parentInput
+          );
+        }
+
+        if (!userIdInput) {
+          console.log("🔧 Intentando con getElementById...");
+          userIdInput = document.getElementById("createFolderUsuarioId");
+          console.log(
+            "🔧 getElementById - User ID input encontrado:",
+            !!userIdInput
+          );
+        }
+
+        // Si aún no se encuentran, buscar por nombre
+        if (!parentInput) {
+          console.log("🔧 Intentando buscar por nombre 'padre'...");
+          parentInput = modal.querySelector('input[name="padre"]');
+          console.log(
+            "🔧 Búsqueda por nombre - Parent input encontrado:",
+            !!parentInput
+          );
+        }
+
+        if (!userIdInput) {
+          console.log("🔧 Intentando buscar por nombre 'usuario_id'...");
+          userIdInput = modal.querySelector('input[name="usuario_id"]');
+          console.log(
+            "🔧 Búsqueda por nombre - User ID input encontrado:",
+            !!userIdInput
+          );
+        }
+
+        // Si aún no se encuentran, buscar en todo el documento
+        if (!parentInput) {
+          console.log(
+            "🔧 Intentando buscar en todo el documento por nombre 'padre'..."
+          );
+          parentInput = document.querySelector('input[name="padre"]');
+          console.log(
+            "🔧 Búsqueda global por nombre - Parent input encontrado:",
+            !!parentInput
+          );
+        }
+
+        if (!userIdInput) {
+          console.log(
+            "🔧 Intentando buscar en todo el documento por nombre 'usuario_id'..."
+          );
+          userIdInput = document.querySelector('input[name="usuario_id"]');
+          console.log(
+            "🔧 Búsqueda global por nombre - User ID input encontrado:",
+            !!userIdInput
+          );
+        }
+
+        if (!parentInput) {
+          console.log(
+            "🔧 Creando elemento createFolderParent dinámicamente..."
+          );
+          // Buscar el formulario dentro del modal
+          const form = modal.querySelector("#createFolderForm");
+          if (form) {
+            parentInput = document.createElement("input");
+            parentInput.type = "hidden";
+            parentInput.id = "createFolderParent";
+            parentInput.name = "padre";
+            parentInput.value = "";
+            form.insertBefore(parentInput, form.firstChild);
+            console.log("🔧 Elemento createFolderParent creado dinámicamente");
+          } else {
+            console.error("❌ Formulario createFolderForm no encontrado");
+            return;
+          }
+        }
+
+        if (!userIdInput) {
+          console.log(
+            "🔧 Creando elemento createFolderUsuarioId dinámicamente..."
+          );
+          // Buscar el formulario dentro del modal
+          const form = modal.querySelector("#createFolderForm");
+          if (form) {
+            userIdInput = document.createElement("input");
+            userIdInput.type = "hidden";
+            userIdInput.id = "createFolderUsuarioId";
+            userIdInput.name = "usuario_id";
+            userIdInput.value = "";
+            form.insertBefore(userIdInput, form.firstChild);
+            console.log(
+              "🔧 Elemento createFolderUsuarioId creado dinámicamente"
+            );
+          } else {
+            console.error("❌ Formulario createFolderForm no encontrado");
+            return;
+          }
+        }
+
+        console.log(
+          "🔧 Todos los elementos encontrados, estableciendo valores..."
+        );
+        console.log("🔧 parentPath:", parentPath, "userId:", userId);
+
+        // Establecer valores con verificación adicional
+        try {
+          parentInput.value = parentPath;
+          console.log("🔧 Parent input value establecido correctamente");
+        } catch (error) {
+          console.error("❌ Error estableciendo parent input value:", error);
+          return;
+        }
+
+        try {
+          userIdInput.value = userId;
+          console.log("🔧 User ID input value establecido correctamente");
+        } catch (error) {
+          console.error("❌ Error estableciendo user ID input value:", error);
+          return;
+        }
+
+        // Mostrar el modal después de establecer los valores
+        console.log("🔧 Mostrando modal...");
+        modal.classList.remove("hidden");
+
+        // Verificar que los elementos estén realmente en el DOM después de mostrar el modal
+        setTimeout(() => {
+          console.log("🔧 Verificación final después de mostrar el modal:");
+          const finalParentInput =
+            document.getElementById("createFolderParent");
+          const finalUserIdInput = document.getElementById(
+            "createFolderUsuarioId"
+          );
+
+          console.log(
+            "🔧 Verificación final - Parent input:",
+            !!finalParentInput
+          );
+          console.log(
+            "🔧 Verificación final - User ID input:",
+            !!finalUserIdInput
+          );
+
+          if (finalParentInput && finalUserIdInput) {
+            console.log(
+              "🔧 Elementos encontrados en verificación final, estableciendo valores..."
+            );
+            try {
+              finalParentInput.value = parentPath;
+              finalUserIdInput.value = userId;
+              console.log("🔧 Valores establecidos en verificación final");
+            } catch (error) {
+              console.error("❌ Error en verificación final:", error);
+            }
+          }
+        }, 50);
+
+        console.log("🔧 Modal abierto correctamente");
+      };
+
+      window.openUploadModal = function (folderPath, userId) {
+        console.log("🔧 openUploadModal EJECUTÁNDOSE con:", {
+          folderPath,
+          userId,
+        });
+
+        // Verificar elementos paso a paso con logs detallados
+        console.log("🔧 Buscando modal uploadFileModal...");
+        const modal = document.getElementById("uploadFileModal");
+        console.log("🔧 Modal encontrado:", !!modal);
+
+        if (!modal) {
+          console.error("❌ Modal uploadFileModal no encontrado");
+          return;
+        }
+
+        // Buscar elementos dentro del modal específicamente
+        console.log("🔧 Buscando elementos dentro del modal...");
+
+        // Intentar diferentes métodos de búsqueda
+        let folderInput = modal.querySelector("#uploadFileFolder");
+        let userIdInput = modal.querySelector("#uploadFileUsuarioId");
+
+        console.log(
+          "🔧 Búsqueda con querySelector - Folder input encontrado:",
+          !!folderInput
+        );
+        console.log(
+          "🔧 Búsqueda con querySelector - User ID input encontrado:",
+          !!userIdInput
+        );
+
+        // Si no se encuentran, intentar con getElementById
+        if (!folderInput) {
+          console.log("🔧 Intentando con getElementById...");
+          folderInput = document.getElementById("uploadFileFolder");
+          console.log(
+            "🔧 getElementById - Folder input encontrado:",
+            !!folderInput
+          );
+        }
+
+        if (!userIdInput) {
+          console.log("🔧 Intentando con getElementById...");
+          userIdInput = document.getElementById("uploadFileUsuarioId");
+          console.log(
+            "🔧 getElementById - User ID input encontrado:",
+            !!userIdInput
+          );
+        }
+
+        // Si aún no se encuentran, buscar por nombre
+        if (!folderInput) {
+          console.log("🔧 Intentando buscar por nombre 'carpeta_destino'...");
+          folderInput = modal.querySelector('input[name="carpeta_destino"]');
+          console.log(
+            "🔧 Búsqueda por nombre - Folder input encontrado:",
+            !!folderInput
+          );
+        }
+
+        if (!userIdInput) {
+          console.log("🔧 Intentando buscar por nombre 'usuario_id'...");
+          userIdInput = modal.querySelector('input[name="usuario_id"]');
+          console.log(
+            "🔧 Búsqueda por nombre - User ID input encontrado:",
+            !!userIdInput
+          );
+        }
+
+        // Si aún no se encuentran, buscar en todo el documento
+        if (!folderInput) {
+          console.log(
+            "🔧 Intentando buscar en todo el documento por nombre 'carpeta_destino'..."
+          );
+          folderInput = document.querySelector('input[name="carpeta_destino"]');
+          console.log(
+            "🔧 Búsqueda global por nombre - Folder input encontrado:",
+            !!folderInput
+          );
+        }
+
+        if (!userIdInput) {
+          console.log(
+            "🔧 Intentando buscar en todo el documento por nombre 'usuario_id'..."
+          );
+          userIdInput = document.querySelector('input[name="usuario_id"]');
+          console.log(
+            "🔧 Búsqueda global por nombre - User ID input encontrado:",
+            !!userIdInput
+          );
+        }
+
+        if (!folderInput) {
+          console.log("🔧 Creando elemento uploadFileFolder dinámicamente...");
+          // Buscar el formulario dentro del modal
+          const form = modal.querySelector("#uploadFileForm");
+          if (form) {
+            folderInput = document.createElement("input");
+            folderInput.type = "hidden";
+            folderInput.id = "uploadFileFolder";
+            folderInput.name = "carpeta_destino";
+            folderInput.value = "";
+            form.insertBefore(folderInput, form.firstChild);
+            console.log("🔧 Elemento uploadFileFolder creado dinámicamente");
+          } else {
+            console.error("❌ Formulario uploadFileForm no encontrado");
+            return;
+          }
+        }
+
+        if (!userIdInput) {
+          console.log(
+            "🔧 Creando elemento uploadFileUsuarioId dinámicamente..."
+          );
+          // Buscar el formulario dentro del modal
+          const form = modal.querySelector("#uploadFileForm");
+          if (form) {
+            userIdInput = document.createElement("input");
+            userIdInput.type = "hidden";
+            userIdInput.id = "uploadFileUsuarioId";
+            userIdInput.name = "usuario_id";
+            userIdInput.value = "";
+            form.insertBefore(userIdInput, form.firstChild);
+            console.log("🔧 Elemento uploadFileUsuarioId creado dinámicamente");
+          } else {
+            console.error("❌ Formulario uploadFileForm no encontrado");
+            return;
+          }
+        }
+
+        console.log(
+          "🔧 Todos los elementos encontrados, estableciendo valores..."
+        );
+        console.log("🔧 folderPath:", folderPath, "userId:", userId);
+
+        // Establecer valores con verificación adicional
+        try {
+          folderInput.value = folderPath;
+          console.log("🔧 Folder input value establecido correctamente");
+        } catch (error) {
+          console.error("❌ Error estableciendo folder input value:", error);
+          return;
+        }
+
+        try {
+          userIdInput.value = userId;
+          console.log("🔧 User ID input value establecido correctamente");
+        } catch (error) {
+          console.error("❌ Error estableciendo user ID input value:", error);
+          return;
+        }
+
+        // Mostrar el modal después de establecer los valores
+        console.log("🔧 Mostrando modal...");
+        modal.classList.remove("hidden");
+
+        // Verificar que los elementos estén realmente en el DOM después de mostrar el modal
+        setTimeout(() => {
+          console.log("🔧 Verificación final después de mostrar el modal:");
+          const finalFolderInput = document.getElementById("uploadFileFolder");
+          const finalUserIdInput = document.getElementById(
+            "uploadFileUsuarioId"
+          );
+
+          console.log(
+            "🔧 Verificación final - Folder input:",
+            !!finalFolderInput
+          );
+          console.log(
+            "🔧 Verificación final - User ID input:",
+            !!finalUserIdInput
+          );
+
+          if (finalFolderInput && finalUserIdInput) {
+            console.log(
+              "🔧 Elementos encontrados en verificación final, estableciendo valores..."
+            );
+            try {
+              finalFolderInput.value = folderPath;
+              finalUserIdInput.value = userId;
+              console.log("🔧 Valores establecidos en verificación final");
+            } catch (error) {
+              console.error("❌ Error en verificación final:", error);
+            }
+          }
+        }, 50);
+
+        console.log("🔧 Modal abierto correctamente");
+      };
+
+      window.openMoveModal = function (archivo, carpetaActual, usuarioId) {
+        console.log("🔧 openMoveModal EJECUTÁNDOSE con:", {
+          archivo,
+          carpetaActual,
+          usuarioId,
+        });
+
+        // Verificar elementos paso a paso con logs detallados
+        console.log("🔧 Buscando modal moveModal...");
+        const modal = document.getElementById("moveModal");
+        console.log("🔧 Modal encontrado:", !!modal);
+
+        if (!modal) {
+          console.error("❌ Modal moveModal no encontrado");
+          return;
+        }
+
+        // Buscar elementos dentro del modal específicamente
+        console.log("🔧 Buscando elementos dentro del modal...");
+
+        // Intentar diferentes métodos de búsqueda
+        let archivoInput = modal.querySelector("#moveArchivoNombre");
+        let carpetaInput = modal.querySelector("#moveCarpetaActual");
+
+        console.log(
+          "🔧 Búsqueda con querySelector - Archivo input encontrado:",
+          !!archivoInput
+        );
+        console.log(
+          "🔧 Búsqueda con querySelector - Carpeta input encontrado:",
+          !!carpetaInput
+        );
+
+        // Si no se encuentran, intentar con getElementById
+        if (!archivoInput) {
+          console.log("🔧 Intentando con getElementById...");
+          archivoInput = document.getElementById("moveArchivoNombre");
+          console.log(
+            "🔧 getElementById - Archivo input encontrado:",
+            !!archivoInput
+          );
+        }
+
+        if (!carpetaInput) {
+          console.log("🔧 Intentando con getElementById...");
+          carpetaInput = document.getElementById("moveCarpetaActual");
+          console.log(
+            "🔧 getElementById - Carpeta input encontrado:",
+            !!carpetaInput
+          );
+        }
+
+        // Si aún no se encuentran, buscar por nombre
+        if (!archivoInput) {
+          console.log("🔧 Intentando buscar por nombre 'archivo_nombre'...");
+          archivoInput = modal.querySelector('input[name="archivo_nombre"]');
+          console.log(
+            "🔧 Búsqueda por nombre - Archivo input encontrado:",
+            !!archivoInput
+          );
+        }
+
+        if (!carpetaInput) {
+          console.log("🔧 Intentando buscar por nombre 'carpeta_actual'...");
+          carpetaInput = modal.querySelector('input[name="carpeta_actual"]');
+          console.log(
+            "🔧 Búsqueda por nombre - Carpeta input encontrado:",
+            !!carpetaInput
+          );
+        }
+
+        // Si aún no se encuentran, buscar en todo el documento
+        if (!archivoInput) {
+          console.log(
+            "🔧 Intentando buscar en todo el documento por nombre 'archivo_nombre'..."
+          );
+          archivoInput = document.querySelector('input[name="archivo_nombre"]');
+          console.log(
+            "🔧 Búsqueda global por nombre - Archivo input encontrado:",
+            !!archivoInput
+          );
+        }
+
+        if (!carpetaInput) {
+          console.log(
+            "🔧 Intentando buscar en todo el documento por nombre 'carpeta_actual'..."
+          );
+          carpetaInput = document.querySelector('input[name="carpeta_actual"]');
+          console.log(
+            "🔧 Búsqueda global por nombre - Carpeta input encontrado:",
+            !!carpetaInput
+          );
+        }
+
+        if (!archivoInput) {
+          console.log("🔧 Creando elemento moveArchivoNombre dinámicamente...");
+          // Buscar el formulario dentro del modal
+          const form = modal.querySelector("#moveForm");
+          if (form) {
+            archivoInput = document.createElement("input");
+            archivoInput.type = "hidden";
+            archivoInput.id = "moveArchivoNombre";
+            archivoInput.name = "archivo_nombre";
+            archivoInput.value = "";
+            form.insertBefore(archivoInput, form.firstChild);
+            console.log("🔧 Elemento moveArchivoNombre creado dinámicamente");
+          } else {
+            console.error("❌ Formulario moveForm no encontrado");
+            return;
+          }
+        }
+
+        if (!carpetaInput) {
+          console.log("🔧 Creando elemento moveCarpetaActual dinámicamente...");
+          // Buscar el formulario dentro del modal
+          const form = modal.querySelector("#moveForm");
+          if (form) {
+            carpetaInput = document.createElement("input");
+            carpetaInput.type = "hidden";
+            carpetaInput.id = "moveCarpetaActual";
+            carpetaInput.name = "carpeta_actual";
+            carpetaInput.value = "";
+            form.insertBefore(carpetaInput, form.firstChild);
+            console.log("🔧 Elemento moveCarpetaActual creado dinámicamente");
+          } else {
+            console.error("❌ Formulario moveForm no encontrado");
+            return;
+          }
+        }
+
+        console.log(
+          "🔧 Todos los elementos encontrados, estableciendo valores..."
+        );
+        console.log("🔧 archivo:", archivo, "carpetaActual:", carpetaActual);
+
+        // Establecer valores con verificación adicional
+        try {
+          archivoInput.value = archivo;
+          console.log("🔧 Archivo input value establecido correctamente");
+        } catch (error) {
+          console.error("❌ Error estableciendo archivo input value:", error);
+          return;
+        }
+
+        try {
+          carpetaInput.value = carpetaActual;
+          console.log("🔧 Carpeta input value establecido correctamente");
+        } catch (error) {
+          console.error("❌ Error estableciendo carpeta input value:", error);
+          return;
+        }
+
+        // Guardar el usuarioId en el modal para uso posterior
+        modal.dataset.usuarioId = usuarioId;
+
+        // Mostrar el modal después de establecer los valores
+        console.log("🔧 Mostrando modal...");
+        modal.classList.remove("hidden");
+
+        // Verificar que los elementos estén realmente en el DOM después de mostrar el modal
+        setTimeout(() => {
+          console.log("🔧 Verificación final después de mostrar el modal:");
+          const finalArchivoInput =
+            document.getElementById("moveArchivoNombre");
+          const finalCarpetaInput =
+            document.getElementById("moveCarpetaActual");
+
+          console.log(
+            "🔧 Verificación final - Archivo input:",
+            !!finalArchivoInput
+          );
+          console.log(
+            "🔧 Verificación final - Carpeta input:",
+            !!finalCarpetaInput
+          );
+
+          if (finalArchivoInput && finalCarpetaInput) {
+            console.log(
+              "🔧 Elementos encontrados en verificación final, estableciendo valores..."
+            );
+            try {
+              finalArchivoInput.value = archivo;
+              finalCarpetaInput.value = carpetaActual;
+              console.log("🔧 Valores establecidos en verificación final");
+            } catch (error) {
+              console.error("❌ Error en verificación final:", error);
+            }
+          }
+        }, 50);
+
+        console.log("🔧 Modal abierto correctamente");
+      };
+
+      // Actualizar verificación de funciones
+      console.log("Funciones de modal Dropbox cargadas:", {
+        openCreateFolderModal: typeof window.openCreateFolderModal,
+        openUploadModal: typeof window.openUploadModal,
+        openMoveModal: typeof window.openMoveModal,
+      });
+
+      // Verificación adicional para asegurar que las funciones estén disponibles
+      setTimeout(() => {
+        console.log("🔧 Verificación final de funciones de modal:", {
+          openCreateFolderModal: typeof window.openCreateFolderModal,
+          openUploadModal: typeof window.openUploadModal,
+          openMoveModal: typeof window.openMoveModal,
+        });
+
+        // Verificar que los elementos del modal de subir archivo existan
+        const uploadModal = document.getElementById("uploadFileModal");
+        const uploadFolder = document.getElementById("uploadFileFolder");
+        const uploadUserId = document.getElementById("uploadFileUsuarioId");
+
+        console.log("🔧 Elementos del modal de subir archivo:", {
+          modal: !!uploadModal,
+          folder: !!uploadFolder,
+          userId: !!uploadUserId,
+        });
+      }, 100);
     </script>
 
     {% block scripts %}{% endblock %}
