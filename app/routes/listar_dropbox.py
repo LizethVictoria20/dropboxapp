@@ -1199,7 +1199,7 @@ def mover_archivo_modal():
 @bp.route('/renombrar_archivo', methods=['POST'])
 @login_required
 def renombrar_archivo():
-    from app.models import Archivo
+    from app.models import Archivo, User, Beneficiario
     
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
@@ -1218,20 +1218,68 @@ def renombrar_archivo():
     usuario_id = request.form.get("usuario_id")
     nuevo_nombre = request.form.get("nuevo_nombre")
 
+    # Obtener el usuario para construir la ruta base
+    try:
+        usuario_id_int = int(usuario_id)
+        usuario = User.query.get(usuario_id_int)
+        if not usuario:
+            # Intentar buscar como beneficiario
+            usuario = Beneficiario.query.get(usuario_id_int)
+        
+        if not usuario:
+            print(f"DEBUG | Usuario no encontrado con ID: {usuario_id}")
+            flash("Usuario no encontrado.", "error")
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            
+    except (ValueError, TypeError):
+        print(f"DEBUG | usuario_id inválido: {usuario_id}")
+        flash("ID de usuario inválido.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+    # Construir la ruta base del usuario
+    if hasattr(usuario, 'dropbox_folder_path') and usuario.dropbox_folder_path:
+        # Si es un User, usar su dropbox_folder_path
+        ruta_base = usuario.dropbox_folder_path
+    elif hasattr(usuario, 'titular') and usuario.titular and usuario.titular.dropbox_folder_path:
+        # Si es un Beneficiario, usar el dropbox_folder_path de su titular
+        ruta_base = usuario.titular.dropbox_folder_path
+    else:
+        # Fallback: usar el email del usuario
+        if hasattr(usuario, 'email'):
+            ruta_base = f"/{usuario.email}"
+        else:
+            ruta_base = f"/{usuario.titular.email}" if hasattr(usuario, 'titular') else f"/usuario_{usuario.id}"
+
     # --- Normalización robusta de path ---
     def join_dropbox_path(parent, name):
         if not parent or parent in ('/', '', None):
             return f"/{name}"
         return f"{parent.rstrip('/')}/{name}"
 
-    old_path = join_dropbox_path(carpeta_actual, archivo_nombre_actual)
-    new_path = join_dropbox_path(carpeta_actual, nuevo_nombre)
+    # Construir rutas completas incluyendo la ruta base del usuario
+    if carpeta_actual.startswith("/"):
+        # Si la carpeta actual ya empieza con /, verificar si incluye la ruta base
+        if carpeta_actual.startswith(ruta_base):
+            # Ya incluye la ruta base, usar directamente
+            old_path = join_dropbox_path(carpeta_actual, archivo_nombre_actual)
+            new_path = join_dropbox_path(carpeta_actual, nuevo_nombre)
+        else:
+            # No incluye la ruta base, agregarla
+            carpeta_actual_completa = f"{ruta_base}{carpeta_actual}"
+            old_path = join_dropbox_path(carpeta_actual_completa, archivo_nombre_actual)
+            new_path = join_dropbox_path(carpeta_actual_completa, nuevo_nombre)
+    else:
+        # Si no empieza con /, construir la ruta completa
+        carpeta_actual_completa = f"{ruta_base}/{carpeta_actual}"
+        old_path = join_dropbox_path(carpeta_actual_completa, archivo_nombre_actual)
+        new_path = join_dropbox_path(carpeta_actual_completa, nuevo_nombre)
 
     # --- Log antes de buscar archivo ---
     print("DEBUG | archivo_nombre_actual:", archivo_nombre_actual)
     print("DEBUG | carpeta_actual:", carpeta_actual)
     print("DEBUG | usuario_id:", usuario_id)
     print("DEBUG | nuevo_nombre:", nuevo_nombre)
+    print("DEBUG | ruta_base:", ruta_base)
     print("DEBUG | old_path:", old_path)
     print("DEBUG | new_path:", new_path)
     all_paths = [a.dropbox_path for a in Archivo.query.all()]
@@ -2234,7 +2282,7 @@ def renombrar_carpeta():
     print("DEBUG | old_path:", old_path)
     print("DEBUG | new_path:", new_path)
 
-    if not (carpeta_nombre_actual and carpeta_padre and usuario_id and nuevo_nombre):
+    if not (carpeta_nombre_actual and usuario_id and nuevo_nombre):
         print("DEBUG | Faltan datos para renombrar carpeta")
         flash("Faltan datos para renombrar la carpeta.", "error")
         if redirect_url and "/usuario/" in redirect_url:
@@ -2244,6 +2292,64 @@ def renombrar_carpeta():
 
     # Buscar carpeta en la base de datos
     carpeta = Folder.query.filter_by(dropbox_path=old_path).first()
+    
+    # Si no se encuentra la carpeta exacta, puede ser una carpeta virtual
+    if not carpeta and carpeta_padre == "":
+        print(f"DEBUG | Carpeta virtual detectada: {carpeta_nombre_actual}")
+        print(f"DEBUG | Buscando carpetas que empiecen con /{carpeta_nombre_actual}/")
+        
+        # Buscar todas las carpetas que empiecen con la ruta de la carpeta virtual
+        carpetas_hijas = Folder.query.filter(
+            Folder.dropbox_path.startswith(f"/{carpeta_nombre_actual}/")
+        ).all()
+        
+        if not carpetas_hijas:
+            print(f"DEBUG | No se encontraron carpetas hijas para: /{carpeta_nombre_actual}/")
+            flash("Carpeta no encontrada en la base de datos.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        print(f"DEBUG | Encontradas {len(carpetas_hijas)} carpetas hijas para renombrar")
+        
+        # Renombrar todas las carpetas hijas
+        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        try:
+            for carpeta_hija in carpetas_hijas:
+                old_path_hija = carpeta_hija.dropbox_path
+                new_path_hija = old_path_hija.replace(f"/{carpeta_nombre_actual}/", f"/{nuevo_nombre}/", 1)
+                
+                print(f"DEBUG | Renombrando carpeta hija: {old_path_hija} -> {new_path_hija}")
+                
+                # Renombrar en Dropbox
+                dbx.files_move_v2(old_path_hija, new_path_hija, allow_shared_folder=True, autorename=True)
+                
+                # Actualizar en la base de datos
+                carpeta_hija.dropbox_path = new_path_hija
+                carpeta_hija.name = carpeta_hija.name  # Mantener el nombre original de la carpeta hija
+            
+            db.session.commit()
+            
+            # Registrar actividad
+            current_user.registrar_actividad('folder_renamed', f'Carpeta virtual "{carpeta_nombre_actual}" renombrada a "{nuevo_nombre}"')
+            
+            print(f"DEBUG | Carpeta virtual renombrada exitosamente: {carpeta_nombre_actual} -> {nuevo_nombre}")
+            flash("Carpeta renombrada correctamente.", "success")
+            
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+                
+        except Exception as e:
+            print(f"DEBUG | Error renombrando carpeta virtual en Dropbox: {e}")
+            flash(f"Error renombrando carpeta en Dropbox: {e}", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
     if not carpeta:
         print(f"DEBUG | Carpeta no encontrada en la base para path: {old_path}")
         flash("Carpeta no encontrada en la base de datos.", "error")

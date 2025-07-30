@@ -544,10 +544,8 @@
           usuarioId,
         });
 
-        // Determinar si es archivo o carpeta basado en el contexto
-        // Si carpetaActual contiene el archivo, es un archivo
-        // Si no, es una carpeta
-        const isFolder = !carpetaActual.includes(archivo);
+        const hasExtension = archivo.includes(".") && !archivo.startsWith(".");
+        const isFolder = !hasExtension;
 
         if (isFolder) {
           // Renombrar carpeta
