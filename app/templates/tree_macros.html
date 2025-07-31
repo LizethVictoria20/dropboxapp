@@ -1,6 +1,6 @@
 {# Macros para renderizar estructuras de carpetas en formato árbol #} {% macro
 render_tree(tree, parent="", usuario_id="", usuario_actual=none,
-folders_por_ruta={}) %}
+folders_por_ruta={}, usuario_email="") %}
 <div class="ml-6 space-y-2">
   {# Archivos de la carpeta actual #} {% if tree._archivos %} {% for archivo in
   tree._archivos %}
@@ -55,6 +55,32 @@ folders_por_ruta={}) %}
         style="position: fixed"
       >
         <div class="py-1">
+          <button
+            onclick="openPreviewModal('/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', '{{ archivo.split('.')[-1] if '.' in archivo else '' }}', '{{ archivo }}')"
+            data-debug="usuario_email: {{ usuario_email }}, parent: {{ parent }}, archivo: {{ archivo }}"
+            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+          >
+            <svg
+              class="w-4 h-4 inline mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+            Ver archivo
+          </button>
           <button
             onclick="openMoveModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
@@ -302,7 +328,7 @@ folders_por_ruta={}) %}
 
     <div id="folder-{{ parent ~ '/' ~ carpeta }}" class="hidden p-4">
       {{ render_tree(data, parent ~ '/' ~ carpeta, usuario_id, usuario_actual,
-      folders_por_ruta) }}
+      folders_por_ruta, usuario_email) }}
     </div>
   </div>
   {% endif %} {% endfor %}

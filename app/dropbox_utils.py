@@ -3,6 +3,8 @@ from flask import current_app
 from app.models import User, Archivo, Folder
 from app import db
 import logging
+from datetime import datetime
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -258,3 +260,61 @@ def get_dropbox_client():
         raise ValueError(f"No se pudo conectar a Dropbox: {config_status['connection']['error']}")
     
     return get_dbx()
+
+def descargar_desde_dropbox(path):
+    path = os.path.normpath(path).replace("\\", "/")
+    try:
+        dbx = get_dbx()
+        metadata, response = dbx.files_download(path)
+        return response.content
+    except dropbox.exceptions.ApiError as e:
+        logger.error(f"Error descargando archivo {path}: {e}")
+        
+        # Manejar errores específicos de Dropbox
+        if "not_found" in str(e):
+            raise Exception(f"El archivo no existe en Dropbox: {path}")
+        elif "insufficient_scope" in str(e):
+            raise Exception(f"No tienes permisos para acceder al archivo: {path}")
+        elif "invalid_access_token" in str(e):
+            raise Exception("Token de acceso de Dropbox inválido o expirado")
+        elif "rate_limit" in str(e):
+            raise Exception("Límite de velocidad excedido. Intenta de nuevo en unos minutos")
+        else:
+            raise Exception(f"Error de Dropbox: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error inesperado descargando archivo {path}: {e}")
+        raise Exception(f"Error inesperado al descargar el archivo: {e}")
+
+def generar_enlace_dropbox_temporal(path, duracion_horas=4):
+    try:
+        dbx = get_dbx()
+        
+        # Crear enlace temporal sin configuración de expiración específica
+        # Dropbox manejará la expiración automáticamente
+        shared_link = dbx.sharing_create_shared_link(path)
+        
+        # Convertir a enlace directo de descarga
+        direct_link = shared_link.url.replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+        
+        logger.info(f"Enlace temporal generado para {path}: {direct_link}")
+        return direct_link
+        
+    except dropbox.exceptions.ApiError as e:
+        logger.error(f"Error generando enlace temporal para {path}: {e}")
+        
+        # Manejar errores específicos de Dropbox
+        if "shared_link_already_exists" in str(e):
+            # Si el enlace ya existe, intentar obtenerlo
+            try:
+                shared_links = dbx.sharing_list_shared_links(path)
+                if shared_links.links:
+                    direct_link = shared_links.links[0].url.replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+                    logger.info(f"Enlace existente recuperado para {path}: {direct_link}")
+                    return direct_link
+            except Exception as get_error:
+                logger.error(f"Error obteniendo enlace existente para {path}: {get_error}")
+        
+        raise Exception(f"No se pudo generar el enlace temporal: {e}")
+    except Exception as e:
+        logger.error(f"Error inesperado generando enlace temporal para {path}: {e}")
+        raise Exception(f"Error inesperado al generar el enlace temporal: {e}")

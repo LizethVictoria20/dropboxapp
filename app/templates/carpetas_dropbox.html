@@ -219,7 +219,7 @@ block content %}
           {% if estructura._subcarpetas or estructura._archivos %} {% import
           "tree_macros.html" as macros with context %} {{
           macros.render_tree(estructura, '', usuario_id|string, usuario_actual,
-          folders_por_ruta) }} {% else %}
+          folders_por_ruta, usuario.email) }} {% else %}
           <div class="text-center py-8">
             <svg
               class="w-12 h-12 text-gray-400 mx-auto mb-4"
@@ -738,6 +738,79 @@ block content %}
   </div>
 </div>
 
+<!-- Modal para visualización de archivos -->
+<div
+  id="viewerModal"
+  class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center"
+>
+  <div
+    class="bg-white rounded-xl shadow-2xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden"
+  >
+    <div class="flex items-center justify-between p-6 border-b border-gray-200">
+      <div class="flex items-center space-x-3">
+        <div
+          class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"
+        >
+          <svg
+            class="w-5 h-5 text-blue-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+            />
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">
+            Vista previa del archivo
+          </h3>
+          <p class="text-sm text-gray-500">
+            Archivo: <span id="viewerFileName" class="font-medium"></span>
+          </p>
+        </div>
+      </div>
+      <button
+        onclick="closePreviewModal()"
+        class="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+      >
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-hidden">
+      <div
+        id="viewerContent"
+        class="w-full h-full flex items-center justify-center bg-gray-50"
+      >
+        <!-- El contenido del archivo se cargará aquí -->
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal para renombrar carpeta -->
 <div
   id="renameFolderModal"
@@ -964,12 +1037,54 @@ block content %}
       }
     };
 
+    // Función auxiliar para limpiar rutas
+    function limpiarRuta(ruta) {
+      return ruta.replace(/\/+/g, '/');
+    }
+
     window.renderTreeContent = function (estructura, parent, usuarioId) {
       console.log("renderTreeContent llamado con:", {
         estructura,
         parent,
         usuarioId,
       });
+
+      // Obtener el email del usuario
+      let usuarioEmail = "";
+      try {
+        const usuariosEmailsData = document.getElementById("usuarios-emails-data");
+        if (usuariosEmailsData && usuariosEmailsData.textContent) {
+          const usuariosEmails = JSON.parse(usuariosEmailsData.textContent);
+          usuarioEmail = usuariosEmails[usuarioId] || "";
+        }
+      } catch (e) {
+        console.error("Error obteniendo email del usuario:", e);
+      }
+
+      console.log("Email del usuario:", usuarioEmail);
+      console.log("Parent recibido:", parent);
+      console.log("¿Parent empieza con email?", parent && parent.startsWith(usuarioEmail + "/"));
+
+      // Verificar si parent ya incluye el email del usuario
+      let rutaBase = "";
+      if (parent && parent.startsWith(usuarioEmail + "/")) {
+        // Parent ya incluye el email del usuario
+        rutaBase = parent;
+        console.log("Parent ya incluye email del usuario, usando como está");
+      } else {
+        // Parent no incluye el email del usuario, agregarlo
+        if (parent) {
+          rutaBase = usuarioEmail + "/" + parent;
+        } else {
+          rutaBase = usuarioEmail;
+        }
+        console.log("Parent no incluye email del usuario, agregando:", rutaBase);
+      }
+
+      // Limpiar la ruta base para evitar doble slash
+      rutaBase = limpiarRuta(rutaBase);
+      console.log("Ruta base limpia:", rutaBase);
+
       let html = '<div class="ml-6 space-y-2">';
 
       // Renderizar archivos
@@ -1011,6 +1126,14 @@ block content %}
             "-"
           )}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed;">
                 <div class="py-1">
+                  <button onclick="openPreviewModal('/${limpiarRuta(rutaBase)}/${archivo}', '${archivo.split('.').pop() || ''}', '${archivo}')"
+                          class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Ver archivo
+                  </button>
                   <button onclick="openMoveModal('${archivo}', '${parent}', '${usuarioId}')"
                           class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1642,6 +1765,139 @@ block content %}
       modal.classList.add("hidden");
       console.log("🔧 Modal de eliminación cerrado");
     }
+  }
+
+  // ========================
+  // FUNCIONES DE VISUALIZACIÓN DE ARCHIVOS
+  // ========================
+
+  function openPreviewModal(fileId, extension, filename = "") {
+    const modal = document.getElementById("viewerModal");
+    const content = document.getElementById("viewerContent");
+    const fileNameSpan = document.getElementById("viewerFileName");
+
+    // Mostrar nombre del archivo
+    if (fileNameSpan) {
+      fileNameSpan.textContent = filename || `Archivo ${fileId}`;
+    }
+
+    content.innerHTML = `
+      <div class="text-center p-6">
+        <div class="inline-block w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-2"></div>
+        <p class="text-gray-500">Cargando vista previa...</p>
+      </div>
+    `;
+
+    modal.classList.remove("hidden");
+
+    // Verificar si es un ID numérico (archivo local) o una ruta (archivo Dropbox)
+    const isLocalFile = !isNaN(fileId);
+    const ext = extension.toLowerCase();
+    console.log("Mostrando modal de vista previa para:", fileId, "Tipo:", ext);
+    console.log("Ruta completa recibida:", fileId);
+
+    if (isLocalFile) {
+      // Para archivos locales, usar la ruta /admin/preview_file/{id}
+      fetch(`/admin/preview_file/${fileId}`)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+          }
+
+          // Verificar el tipo de contenido
+          const contentType = response.headers.get("content-type");
+
+          if (contentType && contentType.includes("application/pdf")) {
+            // Para PDF, crear blob y mostrar en iframe
+            return response.blob().then((blob) => {
+              const url = URL.createObjectURL(blob);
+              content.innerHTML = `
+                <iframe src="${url}" frameborder="0" class="w-full h-[80vh]"></iframe>
+              `;
+            });
+          } else if (contentType && contentType.includes("image/")) {
+            // Para imágenes, crear blob y mostrar
+            return response.blob().then((blob) => {
+              const url = URL.createObjectURL(blob);
+              content.innerHTML = `
+                <img src="${url}" class="max-w-full max-h-[80vh] mx-auto" />
+              `;
+            });
+          } else {
+            // Para HTML (documentos Word), mostrar directamente
+            return response.text().then((html) => {
+              content.innerHTML = html;
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error al cargar la vista previa:", error);
+          content.innerHTML = `
+            <div class="text-center p-6">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
+                <i class="fas fa-exclamation-triangle text-2xl"></i>
+              </div>
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Error al cargar la vista previa</h3>
+              <p class="text-gray-600">${error.message}</p>
+            </div>
+          `;
+        });
+    } else {
+      // Para archivos de Dropbox, usar el endpoint POST
+      fetch("/admin/preview_file", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ path: fileId, extension: ext }),
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+
+          // Verificar el tipo de contenido
+          const contentType = response.headers.get("content-type");
+
+          if (contentType && contentType.includes("application/pdf")) {
+            // Para PDF, crear blob y mostrar en iframe
+            return response.blob().then((blob) => {
+              const url = URL.createObjectURL(blob);
+              content.innerHTML = `
+                <iframe src="${url}" frameborder="0" class="w-full h-[80vh]"></iframe>
+              `;
+            });
+          } else if (contentType && contentType.includes("image/")) {
+            // Para imágenes, crear blob y mostrar
+            return response.blob().then((blob) => {
+              const url = URL.createObjectURL(blob);
+              content.innerHTML = `
+                <img src="${url}" class="max-w-full max-h-[80vh] mx-auto" />
+              `;
+            });
+          } else {
+            // Para HTML (documentos Word), mostrar directamente
+            return response.text().then((html) => {
+              content.innerHTML = html;
+            });
+          }
+        })
+        .catch((err) => {
+          console.error("Vista previa falló:", err);
+          content.innerHTML = `
+            <div class="text-center p-6">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
+                <i class="fas fa-exclamation-triangle text-2xl"></i>
+              </div>
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Error al cargar la vista previa</h3>
+              <p class="text-gray-600">${err.message}</p>
+            </div>
+          `;
+        });
+    }
+  }
+
+  function closePreviewModal() {
+    const modal = document.getElementById("viewerModal");
+    modal.classList.add("hidden");
   }
 </script>
 
