@@ -164,3 +164,44 @@ def admin_preview_file_dropbox():
     except Exception as e:
         logger.error(f"Error en admin_preview_file_dropbox: {e}")
         return jsonify({"error": str(e)}), 500 
+    
+@admin_bp.route("/descargar_archivo", methods=["GET"])
+@login_required
+def descargar_archivo():
+    from flask import send_file
+    import io
+    archivo_id = request.args.get("archivo_id")
+    dropbox_path = request.args.get("path")
+    nombre_archivo = request.args.get("nombre", "documento.pdf")
+
+    try:
+        if archivo_id:
+            archivo = Archivo.query.get(int(archivo_id))
+            if not archivo:
+                return "Archivo no encontrado", 404
+            if not archivo.dropbox_path:
+                return "Archivo sin ruta Dropbox", 400
+
+            contenido = descargar_desde_dropbox(archivo.dropbox_path)
+            extension = archivo.nombre.split('.')[-1].lower()
+            mimetype = "application/octet-stream"
+            if extension in ["pdf", "jpg", "jpeg", "png"]:
+                mimetype = f"image/{extension}" if extension != "jpg" else "image/jpeg"
+            elif extension == "pdf":
+                mimetype = "application/pdf"
+
+            return send_file(io.BytesIO(contenido),
+                            mimetype=mimetype,
+                            as_attachment=True,
+                            download_name=archivo.nombre)
+        elif dropbox_path:
+            contenido = descargar_desde_dropbox(dropbox_path)
+            return send_file(io.BytesIO(contenido),
+                            mimetype="application/octet-stream",
+                            as_attachment=True,
+                            download_name=nombre_archivo)
+        else:
+            return "Falta archivo_id o path", 400
+    except Exception as e:
+        logger.error(f"Error descargando archivo: {e}")
+        return f"Error: {e}", 500

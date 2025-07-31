@@ -1606,6 +1606,28 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
     modal.classList.add("hidden");
   }
 </script>
+<script>
+function descargarArchivo(archivoId = "", path = "", nombre = "documento.pdf") {
+  let url = "/admin/descargar_archivo?";
+  if (archivoId) {
+    url += `archivo_id=${archivoId}`;
+  } else if (path) {
+    const rutaLimpia = path.replace(/\/+/g, '/');
+    url += `path=${encodeURIComponent(rutaLimpia)}&nombre=${encodeURIComponent(nombre)}`;
+  } else {
+    alert("No se puede descargar: faltan datos.");
+    return;
+  }
+
+  console.log("Iniciando descarga:", url);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+</script>
 
 <!-- Modal para Agregar Beneficiario -->
 <div
