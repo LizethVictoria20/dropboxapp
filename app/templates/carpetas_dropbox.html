@@ -219,7 +219,7 @@ block content %}
           {% if estructura._subcarpetas or estructura._archivos %} {% import
           "tree_macros.html" as macros with context %} {{
           macros.render_tree(estructura, '', usuario_id|string, usuario_actual,
-          folders_por_ruta, usuario.email) }} {% else %}
+          folders_por_ruta, usuarios[usuario_id].email) }} {% else %}
           <div class="text-center py-8">
             <svg
               class="w-12 h-12 text-gray-400 mx-auto mb-4"
@@ -1124,7 +1124,7 @@ block content %}
               )}-${archivo.replace(
             /[^a-zA-Z0-9]/g,
             "-"
-          )}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed;">
+          )}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed">
                 <div class="py-1">
                   <button onclick="openPreviewModal('/${limpiarRuta(rutaBase)}/${archivo}', '${archivo.split('.').pop() || ''}', '${archivo}')"
                           class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
@@ -1133,6 +1133,13 @@ block content %}
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                     </svg>
                     Ver archivo
+                  </button>
+                  <button onclick="descargarArchivo('', '/${limpiarRuta(rutaBase)}/${archivo}', '${archivo}')"
+                          class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v16h16V4H4zm4 8l4 4 4-4m-4-4v8"/>
+                    </svg>
+                    Descargar
                   </button>
                   <button onclick="openMoveModal('${archivo}', '${parent}', '${usuarioId}')"
                           class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
@@ -1198,7 +1205,7 @@ block content %}
                   )}-${carpeta.replace(
             /[^a-zA-Z0-9]/g,
             "-"
-          )}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed;">
+          )}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed">
                     <div class="py-1">
                       <button onclick="openCreateFolderModal('${parent}/${carpeta}', '${usuarioId}')"
                               class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
@@ -1476,38 +1483,45 @@ block content %}
 
   // Funciones para manejar menús
   window.toggleFileMenu = function (menuId, event) {
-    event.stopPropagation();
     const menu = document.getElementById(menuId);
     if (menu) {
-      const isHidden = menu.classList.contains("hidden");
-
-      // Ocultar todos los menús primero
-      document.querySelectorAll('[id^="file-menu-"]').forEach((m) => {
-        m.classList.add("hidden");
-      });
-
-      if (isHidden) {
-        menu.classList.remove("hidden");
+      if (menu.classList.contains("hidden")) {
         // Posicionar el menú cerca del botón
-        const button = event.target.closest("button");
-        if (button) {
-          const rect = button.getBoundingClientRect();
-          menu.style.top = rect.bottom + 5 + "px";
-          menu.style.left = rect.left + "px";
-        }
+        const button = event.currentTarget;
+        const rect = button.getBoundingClientRect();
+        menu.style.top = rect.bottom + 5 + "px";
+        menu.style.left = rect.right - menu.offsetWidth + "px";
+        menu.classList.remove("hidden");
+      } else {
+        menu.classList.add("hidden");
       }
     }
   };
 
   // Función toggleFolderMenu eliminada - se usa la de base.html
 
-  // Cerrar menús cuando se hace clic fuera
-  document.addEventListener("click", function () {
-    document
-      .querySelectorAll('[id^="file-menu-"], [id^="folder-menu-"]')
-      .forEach((menu) => {
+  // Cerrar todos los menús al hacer clic fuera de ellos
+  document.addEventListener("click", function (event) {
+    const menus = document.querySelectorAll(
+      '[id^="file-menu-"], [id^="folder-menu-"]'
+    );
+    menus.forEach((menu) => {
+      if (!menu.contains(event.target) && !event.target.closest("button")) {
         menu.classList.add("hidden");
-      });
+      }
+    });
+  });
+
+  // Cerrar menús al hacer scroll
+  window.addEventListener("scroll", function () {
+    const menus = document.querySelectorAll(
+      '[id^="file-menu-"], [id^="folder-menu-"]'
+    );
+    menus.forEach((menu) => {
+      if (!menu.classList.contains("hidden")) {
+        menu.classList.add("hidden");
+      }
+    });
   });
 
   // Función para cerrar modales
@@ -1898,6 +1912,117 @@ block content %}
   function closePreviewModal() {
     const modal = document.getElementById("viewerModal");
     modal.classList.add("hidden");
+  }
+
+  // Función para descargar archivos
+  function descargarArchivo(fileId, filePath, filename) {
+    console.log("Descargando archivo:", filePath, "Nombre:", filename);
+
+    // Mostrar indicador de carga
+    const loadingOverlay = createLoadingOverlay("Descargando archivo...");
+    document.body.appendChild(loadingOverlay);
+
+    // Verificar si es un ID numérico (archivo local) o una ruta (archivo Dropbox)
+    const isLocalFile = !isNaN(filePath);
+
+    if (isLocalFile) {
+      // Para archivos locales, usar la ruta /admin/preview_file/{id}
+      fetch(`/admin/preview_file/${filePath}`)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+          }
+          return response.blob();
+        })
+        .then((blob) => {
+          // Crear enlace de descarga
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          // Quitar indicador de carga
+          document.body.removeChild(loadingOverlay);
+
+          // Mostrar mensaje de éxito
+          Swal.fire({
+            icon: "success",
+            title: "¡Descarga completada!",
+            text: `El archivo "${filename}" se ha descargado correctamente.`,
+            confirmButtonColor: "#0076a8",
+            timer: 3000,
+            timerProgressBar: true,
+          });
+        })
+        .catch((error) => {
+          console.error("Error al descargar archivo:", error);
+          document.body.removeChild(loadingOverlay);
+
+          Swal.fire({
+            icon: "error",
+            title: "Error al descargar",
+            text: `No se pudo descargar el archivo: ${error.message}`,
+            confirmButtonColor: "#0076a8",
+          });
+        });
+    } else {
+      // Para archivos de Dropbox, usar el endpoint POST
+      fetch("/admin/preview_file", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          path: filePath,
+          extension: filename.split(".").pop() || "",
+        }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+          }
+          return response.blob();
+        })
+        .then((blob) => {
+          // Crear enlace de descarga
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          // Quitar indicador de carga
+          document.body.removeChild(loadingOverlay);
+
+          // Mostrar mensaje de éxito
+          Swal.fire({
+            icon: "success",
+            title: "¡Descarga completada!",
+            text: `El archivo "${filename}" se ha descargado correctamente.`,
+            confirmButtonColor: "#0076a8",
+            timer: 3000,
+            timerProgressBar: true,
+          });
+        })
+        .catch((error) => {
+          console.error("Error al descargar archivo:", error);
+          document.body.removeChild(loadingOverlay);
+
+          Swal.fire({
+            icon: "error",
+            title: "Error al descargar",
+            text: `No se pudo descargar el archivo: ${error.message}`,
+            confirmButtonColor: "#0076a8",
+          });
+        });
+    }
   }
 </script>
 
