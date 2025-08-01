@@ -298,12 +298,17 @@ def carpetas_dropbox():
                 # Para beneficiarios, usar el email del titular
                 usuarios_emails[user.id] = user.titular.email if hasattr(user, 'titular') else str(user.id)
         
+        # Asegurar que las claves de estructuras_usuarios sean strings para JSON
+        estructuras_usuarios_json = json.dumps({
+            str(uid): estructura for uid, estructura in estructuras_usuarios.items()
+        })
+        
         return render_template(
             "carpetas_dropbox.html",
             estructuras_usuarios=estructuras_usuarios,
             usuarios=usuarios_dict,
             usuario_actual=current_user,
-            estructuras_usuarios_json=json.dumps(estructuras_usuarios),
+            estructuras_usuarios_json=estructuras_usuarios_json,
             usuarios_emails_json=json.dumps(usuarios_emails),
             folders_por_ruta=folders_por_ruta,
         )
@@ -963,6 +968,44 @@ def mover_archivo_modal():
         
         print(f"DEBUG | Nueva carpeta normalizada: '{nueva_carpeta}'")
         
+        # VALIDACIÓN: Verificar que el usuario solo pueda mover archivos entre sus propias carpetas
+        usuario_email = current_user.email
+        print(f"DEBUG | Validación de permisos:")
+        print(f"  Usuario email: {usuario_email}")
+        print(f"  Carpeta actual: '{carpeta_actual}'")
+        print(f"  Nueva carpeta: '{nueva_carpeta}'")
+        print(f"  ¿Carpeta actual empieza con /{usuario_email}?: {carpeta_actual.startswith(f'/{usuario_email}') if carpeta_actual else 'None'}")
+        print(f"  ¿Nueva carpeta empieza con /{usuario_email}?: {nueva_carpeta.startswith(f'/{usuario_email}')}")
+        
+        if usuario_email:
+            # Verificar que la carpeta destino pertenece al usuario actual
+            if not nueva_carpeta.startswith(f"/{usuario_email}"):
+                flash(f"No puedes mover archivos a carpetas de otros usuarios. Solo puedes mover archivos entre tus propias carpetas.", "error")
+                if redirect_url and "/usuario/" in redirect_url:
+                    return redirect(redirect_url)
+                else:
+                    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            
+            # Verificar que la carpeta origen también pertenece al usuario actual
+            # Si la carpeta actual no empieza con el email del usuario, intentar construir la ruta completa
+            carpeta_actual_completa = carpeta_actual
+            if carpeta_actual and not carpeta_actual.startswith(f"/{usuario_email}"):
+                # Si la carpeta actual es relativa, construir la ruta completa
+                if carpeta_actual.startswith("/"):
+                    carpeta_actual_completa = f"/{usuario_email}{carpeta_actual}"
+                else:
+                    carpeta_actual_completa = f"/{usuario_email}/{carpeta_actual}"
+                
+                print(f"DEBUG | Carpeta actual reconstruida: '{carpeta_actual_completa}'")
+            
+            # Verificar con la ruta completa
+            if carpeta_actual and not carpeta_actual_completa.startswith(f"/{usuario_email}"):
+                flash(f"No puedes mover archivos desde carpetas de otros usuarios.", "error")
+                if redirect_url and "/usuario/" in redirect_url:
+                    return redirect(redirect_url)
+                else:
+                    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
         # Buscar archivo en Dropbox directamente (fuente de verdad)
         dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
         
@@ -1197,6 +1240,8 @@ def mover_archivo_modal():
             # Registrar actividad
             current_user.registrar_actividad('file_moved', f'Archivo "{archivo_nombre}" movido de {archivo_path} a {result_path}')
             
+            # Mostrar mensaje de éxito
+            flash(f"Archivo '{archivo_nombre}' movido exitosamente a '{nueva_carpeta}'", "success")
             
             # Redirigir a la URL apropiada
             if redirect_url and "/usuario/" in redirect_url:

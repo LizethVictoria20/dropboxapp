@@ -1634,6 +1634,166 @@
         }, 50);
 
         console.log("🔧 Modal abierto correctamente");
+
+        // Renderizar el árbol de carpetas después de abrir el modal
+        console.log("🔧 Iniciando renderizado del árbol de carpetas...");
+
+        // Función para renderizar el árbol cuando las variables estén disponibles
+        const renderizarArbol = () => {
+          // Obtener las estructuras de carpetas del usuario actual
+          const estructurasUsuarios = window.ESTRUCTURAS_USUARIOS;
+          const usuarioActual = window.CURRENT_USER_ID;
+          const usuarioEmail = window.CURRENT_USER_EMAIL;
+
+          console.log(
+            "🔧 DEBUG - Estructuras disponibles:",
+            estructurasUsuarios
+          );
+          console.log("🔧 DEBUG - Usuario actual:", usuarioActual);
+          console.log("🔧 DEBUG - Email del usuario:", usuarioEmail);
+
+          if (estructurasUsuarios && usuarioActual) {
+            // Obtener la estructura del usuario actual (manejar tanto string como número)
+            let estructuraUsuario = null;
+            if (estructurasUsuarios[usuarioActual]) {
+              estructuraUsuario = estructurasUsuarios[usuarioActual];
+              console.log("✅ Estructura encontrada con clave numérica");
+            } else if (estructurasUsuarios[String(usuarioActual)]) {
+              estructuraUsuario = estructurasUsuarios[String(usuarioActual)];
+              console.log("✅ Estructura encontrada con clave string");
+            } else {
+              console.log("❌ No se encontró estructura para el usuario");
+            }
+
+            // Renderizar el árbol de carpetas destino
+            const destinoTree = document.getElementById("destinoTree");
+            console.log("🔧 Elemento destinoTree encontrado:", !!destinoTree);
+
+            if (
+              destinoTree &&
+              estructuraUsuario &&
+              estructuraUsuario._subcarpetas
+            ) {
+              console.log(
+                "✅ Estructura del usuario encontrada, renderizando árbol..."
+              );
+
+              // Limpiar el estado de carpetas expandidas
+              if (window.expandedFolders) {
+                window.expandedFolders.clear();
+              }
+
+              // Renderizar el árbol con la función mejorada
+              if (typeof window.renderDestinoTree === "function") {
+                console.log("✅ renderDestinoTree está disponible");
+
+                try {
+                  const html = window.renderDestinoTree(
+                    estructuraUsuario,
+                    `/${usuarioEmail || "usuario"}`,
+                    0,
+                    true
+                  );
+                  console.log("🔍 HTML generado:", html);
+
+                  if (html && html.trim().length > 0) {
+                    destinoTree.innerHTML = `
+                    <div class="folder-tree-container">
+                      <style>
+                        .folder-tree-container .tree-content { transition: all 0.3s ease-in-out; }
+                        .folder-tree-container .group:hover { transform: translateX(2px); }
+                        .folder-tree-container .carpeta-destino { position: relative; }
+                        .folder-tree-container .carpeta-destino::before {
+                          content: ''; position: absolute; left: -8px; top: 0; bottom: 0; width: 2px;
+                          background: linear-gradient(to bottom, #e5e7eb 0%, transparent 100%); opacity: 0.5;
+                        }
+                      </style>
+                      ${html}
+                    </div>
+                  `;
+                    console.log(
+                      "✅ HTML insertado en destinoTree con estilos mejorados"
+                    );
+                  } else {
+                    throw new Error("HTML vacío generado");
+                  }
+                } catch (error) {
+                  console.error("❌ Error renderizando árbol:", error);
+                  destinoTree.innerHTML = `
+                  <div class="text-center py-8">
+                    <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                    <p class="text-red-500 text-sm font-medium">Error de renderizado</p>
+                    <p class="text-xs text-gray-400 mt-2">${error.message}</p>
+                  </div>
+                `;
+                }
+              } else {
+                console.error("❌ renderDestinoTree no está disponible");
+                destinoTree.innerHTML = `
+                <div class="text-center py-8">
+                  <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                  </svg>
+                  <p class="text-red-500 text-sm font-medium">Función no disponible</p>
+                  <p class="text-xs text-gray-400 mt-2">renderDestinoTree no está definida</p>
+                </div>
+              `;
+              }
+            } else {
+              console.log(
+                "❌ No se encontró estructura para el usuario actual"
+              );
+              if (destinoTree) {
+                destinoTree.innerHTML = `
+                <div class="text-center py-8">
+                  <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                  </svg>
+                  <p class="text-red-500 text-sm font-medium">Error: No se encontraron carpetas</p>
+                  <p class="text-xs text-gray-400 mt-2">Usuario ID: ${usuarioActual}</p>
+                  <p class="text-xs text-gray-400">Email: ${usuarioEmail}</p>
+                </div>
+              `;
+              }
+            }
+          } else {
+            console.error("❌ Variables globales no disponibles");
+            console.error("❌ estructurasUsuarios:", !!estructurasUsuarios);
+            console.error("❌ usuarioActual:", !!usuarioActual);
+          }
+        };
+
+        // Intentar renderizar inmediatamente
+        renderizarArbol();
+
+        // Si las variables no están disponibles, esperar y reintentar
+        if (!window.ESTRUCTURAS_USUARIOS || !window.CURRENT_USER_ID) {
+          console.log("🔧 Variables no disponibles, esperando...");
+
+          // Reintentar después de un breve delay
+          setTimeout(() => {
+            console.log("🔧 Reintentando renderizado después de delay...");
+            renderizarArbol();
+          }, 100);
+
+          // Reintentar después de un delay más largo
+          setTimeout(() => {
+            console.log(
+              "🔧 Reintentando renderizado después de delay largo..."
+            );
+            renderizarArbol();
+          }, 500);
+
+          // Reintentar después de un delay muy largo
+          setTimeout(() => {
+            console.log(
+              "🔧 Reintentando renderizado después de delay muy largo..."
+            );
+            renderizarArbol();
+          }, 1000);
+        }
       };
 
       // Actualizar verificación de funciones

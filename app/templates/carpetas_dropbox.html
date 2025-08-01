@@ -31,6 +31,28 @@ block content %}
               />
             </svg>
           </div>
+          <!-- Botón de prueba temporal -->
+          <button
+            onclick="testMoveModal()"
+            class="px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 shadow-md"
+            title="Probar modal de mover archivo"
+          >
+            🧪 Probar Modal de Mover
+          </button>
+          <button
+            onclick="openMoveModal('archivo_test.txt', '/test/carpeta', 1)"
+            class="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-md"
+            title="Abrir modal directamente"
+          >
+            🚀 Abrir Modal Directo
+          </button>
+          <button
+            onclick="openMoveModal('archivo_test.txt', '/test/carpeta', CURRENT_USER_ID)"
+            class="px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 shadow-md"
+            title="Probar modal con estructura real"
+          >
+            🌳 Probar Modal Real
+          </button>
         </div>
       </div>
     </div>
@@ -287,6 +309,22 @@ block content %}
           <p class="text-sm text-gray-500">
             Archivo: <span id="moveFileName" class="font-medium"></span>
           </p>
+          <p class="text-xs text-blue-600 mt-1">
+            <svg
+              class="w-3 h-3 inline mr-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Solo puedes mover archivos entre tus propias carpetas
+          </p>
         </div>
       </div>
       <button
@@ -323,11 +361,68 @@ block content %}
           <label class="block text-sm font-medium text-gray-700 mb-3"
             >Selecciona carpeta destino</label
           >
+
+          <!-- Campo de búsqueda de carpetas -->
+          <div class="mb-3">
+            <div class="relative">
+              <input
+                type="text"
+                id="searchFolders"
+                placeholder="Buscar carpetas..."
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                onkeyup="filterFolders(this.value)"
+              />
+              <div
+                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+              >
+                <svg
+                  class="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <button
+                type="button"
+                id="clearSearchBtn"
+                onclick="clearFolderSearch()"
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 hidden"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
           <div
             id="destinoTree"
             class="border border-gray-300 rounded-lg bg-gray-50 p-4 max-h-64 overflow-y-auto"
           >
             <!-- Aquí se renderiza el árbol de carpetas destino vía JS -->
+            <div class="text-center py-8">
+              <div
+                class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"
+              ></div>
+              <p class="text-sm text-gray-500">Cargando carpetas...</p>
+            </div>
           </div>
           <input
             type="hidden"
@@ -371,7 +466,9 @@ block content %}
         </button>
         <button
           type="submit"
-          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          id="moveSubmitButton"
+          disabled
+          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Mover archivo
         </button>
@@ -866,6 +963,27 @@ block content %}
 </div>
 
 <script>
+  // Variables globales desde el backend
+  window.ESTRUCTURAS_USUARIOS = {{ estructuras_usuarios_json|safe }};
+  window.CURRENT_USER_EMAIL = {{ current_user.email|tojson|safe }};
+  window.CURRENT_USER_ID = {{ current_user.id|tojson|safe }};
+  window.USUARIOS_EMAILS = {{ usuarios_emails_json|safe }};
+
+  // También mantener las variables locales para compatibilidad
+  const ESTRUCTURAS_USUARIOS = window.ESTRUCTURAS_USUARIOS;
+  const CURRENT_USER_EMAIL = window.CURRENT_USER_EMAIL;
+  const CURRENT_USER_ID = window.CURRENT_USER_ID;
+  const USUARIOS_EMAILS = window.USUARIOS_EMAILS;
+
+  // Debug: Verificar que las variables se cargaron correctamente
+  console.log("🔍 DEBUG - Variables cargadas:");
+  console.log("- ESTRUCTURAS_USUARIOS:", ESTRUCTURAS_USUARIOS);
+  console.log("- CURRENT_USER_EMAIL:", CURRENT_USER_EMAIL);
+  console.log("- CURRENT_USER_ID:", CURRENT_USER_ID);
+  console.log("- USUARIOS_EMAILS:", USUARIOS_EMAILS);
+  console.log("- Tipo de ESTRUCTURAS_USUARIOS:", typeof ESTRUCTURAS_USUARIOS);
+  console.log("- Tipo de CURRENT_USER_ID:", typeof CURRENT_USER_ID);
+
   // Función para verificar si un archivo tiene extensión
   window.hasExtension = function(filename) {
     return filename.includes('.') && filename.split('.').length > 1;
@@ -924,7 +1042,7 @@ block content %}
 
       // Usar los datos que ya están disponibles en el template
       try {
-        const estructurasUsuarios = {{ estructuras_usuarios_json|safe }};
+        const estructurasUsuarios = ESTRUCTURAS_USUARIOS;
         console.log("Estructuras disponibles:", estructurasUsuarios);
 
         // Buscar la carpeta en las estructuras disponibles
@@ -1281,15 +1399,41 @@ block content %}
 
     document.getElementById("moveForm").onsubmit = function (e) {
       const dest = document.getElementById("nuevaCarpetaSeleccionada").value;
+      const selectedFolder = document.getElementById("selectedFolder");
+
       if (!dest || dest.trim() === "") {
-        document.getElementById("selectedFolder").classList.remove("hidden");
-        document
-          .getElementById("selectedFolder")
-          .querySelector("span").innerText =
-          "⚠️ Selecciona una carpeta de destino.";
+        selectedFolder.classList.remove("hidden");
+        selectedFolder.classList.remove("bg-green-50", "border-green-200");
+        selectedFolder.classList.add("bg-red-50", "border-red-200");
+        selectedFolder.querySelector("span").innerText = "⚠️ Selecciona una carpeta de destino.";
+        selectedFolder.querySelector("svg").innerHTML = `
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        `;
         e.preventDefault();
         return false;
       }
+
+      // Validar que no se esté moviendo a la misma carpeta
+      const carpetaActual = document.getElementById("moveCarpetaActual").value;
+      if (dest === carpetaActual) {
+        selectedFolder.classList.remove("hidden");
+        selectedFolder.classList.remove("bg-green-50", "border-green-200");
+        selectedFolder.classList.add("bg-red-50", "border-red-200");
+        selectedFolder.querySelector("span").innerText = "⚠️ No puedes mover el archivo a la misma carpeta.";
+        selectedFolder.querySelector("svg").innerHTML = `
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        `;
+        e.preventDefault();
+        return false;
+      }
+
+      // Mostrar indicador de carga
+      const submitButton = document.getElementById("moveSubmitButton");
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Moviendo...";
+      }
+
       return true;
     };
 
@@ -1358,66 +1502,508 @@ block content %}
       console.error("Error verificando estructuras de usuarios:", e);
     }
   });
-</script>
 
-<!-- Elemento oculto para almacenar datos de estructuras de usuarios -->
-<script id="estructuras-usuarios-data" type="application/json">
-  {{ estructuras_usuarios_json|safe }}
-</script>
+  // Función para renderizar el árbol de carpetas destino
+  window.renderDestinoTree = function(estructura, rutaBase = "", nivel = 0) {
+    console.log("🔍 renderDestinoTree llamado con:", { estructura, rutaBase, nivel });
+    let html = "";
 
-<!-- Elemento oculto para almacenar emails de usuarios -->
-<script id="usuarios-emails-data" type="application/json">
-  {{ usuarios_emails_json|safe }}
-</script>
+    // Renderizar subcarpetas
+    if (estructura._subcarpetas) {
+      console.log("🔍 _subcarpetas encontradas:", Object.keys(estructura._subcarpetas));
 
-<!-- Script de respaldo para asegurar que las funciones estén disponibles -->
-<script>
-  // Verificar si toggleFolder está disponible, si no, definirlo
-  if (typeof window.toggleFolder === "undefined") {
-    console.log("toggleFolder no encontrado, definiendo...");
-    window.toggleFolder = function (folderId) {
-      console.log("toggleFolder (respaldo) llamado con:", folderId);
-      const div = document.getElementById("folder-" + folderId);
-      const icon = document.getElementById("icon-" + folderId);
-      if (!div) {
-        console.log("No se encontró el elemento folder-" + folderId);
-        return;
-      }
+      Object.entries(estructura._subcarpetas).forEach(([carpeta, datos]) => {
+        const rutaCompleta = rutaBase ? `${rutaBase}/${carpeta}` : carpeta;
+        console.log("🔍 Procesando carpeta:", { carpeta, rutaCompleta, nivel });
 
-      if (div.classList.contains("hidden")) {
-        // Expandir la carpeta
-        div.classList.remove("hidden");
-        if (icon) {
-          icon.style.transform = "rotate(90deg)";
+        html += `
+          <div class="carpeta-destino" style="margin-left: ${nivel * 16}px;">
+            <div class="flex items-center p-2 hover:bg-blue-50 rounded cursor-pointer border border-transparent hover:border-blue-200 transition-all duration-200"
+                 onclick="selectDestino('${rutaCompleta}')">
+              <svg class="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+              </svg>
+              <span class="text-sm text-gray-700 font-medium">${carpeta}</span>
+            </div>
+            ${window.renderDestinoTree(datos, rutaCompleta, nivel + 1)}
+          </div>
+        `;
+      });
+    } else {
+      console.log("🔍 No hay _subcarpetas en esta estructura");
+    }
+
+    console.log("🔍 HTML generado para nivel", nivel, ":", html.substring(0, 100) + "...");
+    return html;
+  };
+
+  // Función para seleccionar destino mejorada
+  window.selectDestino = function(ruta) {
+    console.log("selectDestino llamado con:", ruta);
+
+    // Obtener el email del usuario actual
+    const usuarioActual = CURRENT_USER_EMAIL;
+    let rutaCompleta = ruta;
+
+    // Si el path no empieza con /, agregarlo
+    if (!rutaCompleta.startsWith("/")) {
+      rutaCompleta = "/" + rutaCompleta;
+    }
+
+    // Normalizar la ruta para evitar duplicados
+    if (usuarioActual && !rutaCompleta.startsWith("/" + usuarioActual)) {
+      rutaCompleta = "/" + usuarioActual + rutaCompleta;
+    }
+
+    console.log("Ruta final seleccionada:", {
+      pathOriginal: ruta,
+      usuarioActual: usuarioActual,
+      rutaCompleta: rutaCompleta,
+    });
+
+    // Actualizar el campo oculto
+    document.getElementById("nuevaCarpetaSeleccionada").value = rutaCompleta;
+
+    // Limpiar selecciones previas
+    document.querySelectorAll('.carpeta-destino .flex, .carpeta-destino > div').forEach(el => {
+      el.classList.remove('bg-blue-100', 'border-blue-300', 'ring-2', 'ring-blue-400', 'shadow-md');
+      el.classList.add('border-transparent');
+    });
+
+    // Resaltar la carpeta seleccionada con mejor efecto visual
+    const selectedElement = event.currentTarget;
+    if (selectedElement) {
+      selectedElement.classList.remove('border-transparent', 'hover:bg-blue-50');
+      selectedElement.classList.add('bg-blue-100', 'border-blue-300', 'ring-2', 'ring-blue-400', 'shadow-md');
+
+      // Scroll suave para asegurar que el elemento esté visible
+      selectedElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest'
+      });
+    }
+
+    // Mostrar la selección con animación mejorada
+    const selectedDiv = document.getElementById("selectedFolder");
+    const rutaDisplayName = rutaCompleta.replace(`/${usuarioActual}`, '').replace(/^\//, '') || 'Carpeta raíz';
+
+    selectedDiv.classList.remove("hidden");
+    selectedDiv.querySelector("span").innerHTML = `
+      <span class="flex items-center">
+        <svg class="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+        </svg>
+        <strong>Destino:</strong>&nbsp;${rutaDisplayName}
+      </span>
+    `;
+
+    // Animación de entrada
+    selectedDiv.style.transform = 'scale(0.95)';
+    selectedDiv.style.opacity = '0';
+    setTimeout(() => {
+      selectedDiv.style.transition = 'all 0.3s ease-out';
+      selectedDiv.style.transform = 'scale(1)';
+      selectedDiv.style.opacity = '1';
+    }, 10);
+
+    // Habilitar el botón de submit con animación
+    const submitButton = document.getElementById("moveSubmitButton");
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.classList.add('animate-pulse');
+      setTimeout(() => {
+        submitButton.classList.remove('animate-pulse');
+      }, 1000);
+    }
+
+    // Mostrar mensaje de confirmación temporal
+    const confirmMsg = document.createElement('div');
+    confirmMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300';
+    confirmMsg.innerHTML = `
+      <div class="flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Carpeta seleccionada
+      </div>
+    `;
+
+    document.body.appendChild(confirmMsg);
+
+    // Remover el mensaje después de 2 segundos
+    setTimeout(() => {
+      confirmMsg.style.opacity = '0';
+      confirmMsg.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        document.body.removeChild(confirmMsg);
+      }, 300);
+    }, 2000);
+
+    console.log("✅ Carpeta destino seleccionada:", rutaCompleta);
+  };
+
+  // Función para cerrar modal de mover mejorada
+  window.closeMoveModal = function() {
+    console.log("Cerrando modal de mover archivo...");
+
+    // Cerrar modal con animación
+    const modal = document.getElementById("moveModal");
+    modal.style.transition = 'opacity 0.2s ease-out';
+    modal.style.opacity = '0';
+
+    setTimeout(() => {
+      modal.classList.add("hidden");
+      modal.style.opacity = '1';
+    }, 200);
+
+    // Limpiar campos
+    document.getElementById("nuevaCarpetaSeleccionada").value = "";
+    document.getElementById("selectedFolder").classList.add("hidden");
+
+    // Limpiar campo de búsqueda
+    const searchInput = document.getElementById("searchFolders");
+    if (searchInput) {
+      searchInput.value = "";
+      document.getElementById("clearSearchBtn").classList.add("hidden");
+    }
+
+    // Reset del botón de submit
+    const submitButton = document.getElementById("moveSubmitButton");
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Mover archivo";
+      submitButton.classList.remove('animate-pulse');
+    }
+
+    // Limpiar estado del árbol de carpetas
+    if (window.expandedFolders) {
+      window.expandedFolders.clear();
+    }
+
+    // Limpiar selecciones visuales
+    document.querySelectorAll('.carpeta-destino .flex, .carpeta-destino > div').forEach(el => {
+      el.classList.remove('bg-blue-100', 'border-blue-300', 'ring-2', 'ring-blue-400', 'shadow-md');
+      el.classList.add('border-transparent');
+    });
+
+    console.log("✅ Modal cerrado y estado limpiado");
+  };
+
+  // Función para filtrar carpetas en el modal
+  window.filterFolders = function(searchTerm) {
+    console.log("Filtrando carpetas con término:", searchTerm);
+
+    const clearBtn = document.getElementById("clearSearchBtn");
+    const allFolders = document.querySelectorAll('.carpeta-destino');
+
+    // Mostrar/ocultar botón de limpiar búsqueda
+    if (searchTerm.trim().length > 0) {
+      clearBtn.classList.remove('hidden');
+    } else {
+      clearBtn.classList.add('hidden');
+    }
+
+    // Si no hay término de búsqueda, mostrar todas las carpetas
+    if (searchTerm.trim().length === 0) {
+      allFolders.forEach(folder => {
+        folder.style.display = '';
+        // Restaurar estado de expansión original
+        const treeContent = folder.querySelector('.tree-content');
+        if (treeContent && !window.expandedFolders.has(folder.dataset.path)) {
+          treeContent.classList.add('hidden');
+        }
+      });
+      return;
+    }
+
+    const term = searchTerm.toLowerCase().trim();
+    let hasVisibleResults = false;
+
+    allFolders.forEach(folder => {
+      const folderNameElement = folder.querySelector('span.text-gray-700');
+      const folderName = folderNameElement ? folderNameElement.textContent.toLowerCase() : '';
+
+      if (folderName.includes(term)) {
+        // Mostrar carpeta que coincide
+        folder.style.display = '';
+        hasVisibleResults = true;
+
+        // Expandir automáticamente las carpetas padre para mostrar coincidencias
+        let parent = folder.parentElement;
+        while (parent && parent.classList.contains('tree-content')) {
+          parent.classList.remove('hidden');
+          parent = parent.parentElement?.parentElement?.querySelector('.tree-content');
         }
 
-        // Verificar si el contenido ya está cargado
-        const contenido = div.querySelector(".ml-6");
-        if (!contenido || contenido.children.length === 0) {
-          // Si no hay contenido, cargarlo dinámicamente
-          console.log("Cargando contenido dinámico para:", folderId);
-          if (typeof window.cargarContenidoCarpeta !== "undefined") {
-            cargarContenidoCarpeta(folderId, div);
-          }
+        // Resaltar el texto que coincide
+        if (folderNameElement) {
+          const originalText = folderNameElement.dataset.originalText || folderNameElement.textContent;
+          folderNameElement.dataset.originalText = originalText;
+
+          const regex = new RegExp(`(${term})`, 'gi');
+          const highlightedText = originalText.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
+          folderNameElement.innerHTML = highlightedText;
         }
       } else {
-        // Contraer la carpeta
-        div.classList.add("hidden");
-        if (icon) {
-          icon.style.transform = "rotate(0deg)";
+        // Ocultar carpeta que no coincide
+        folder.style.display = 'none';
+
+        // Restaurar texto original
+        if (folderNameElement && folderNameElement.dataset.originalText) {
+          folderNameElement.textContent = folderNameElement.dataset.originalText;
         }
       }
-    };
-  }
+    });
 
-  // Verificar si openMoveModal está disponible
-  if (typeof window.openMoveModal === "undefined") {
-    console.log("openMoveModal no encontrado, definiendo...");
-    window.openMoveModal = function (archivo, carpetaActual, usuarioId) {
-      console.log("openMoveModal (respaldo) llamado");
-      // Implementación básica de respaldo
-    };
-  }
+    // Mostrar mensaje si no hay resultados
+    const destinoTree = document.getElementById('destinoTree');
+    let noResultsMsg = destinoTree.querySelector('.no-results-message');
+
+    if (!hasVisibleResults) {
+      if (!noResultsMsg) {
+        noResultsMsg = document.createElement('div');
+        noResultsMsg.className = 'no-results-message text-center py-8';
+        noResultsMsg.innerHTML = `
+          <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <p class="text-sm text-gray-500 font-medium">No se encontraron carpetas</p>
+          <p class="text-xs text-gray-400 mt-1">Intenta con un término diferente</p>
+        `;
+        destinoTree.appendChild(noResultsMsg);
+      }
+      noResultsMsg.style.display = 'block';
+    } else {
+      if (noResultsMsg) {
+        noResultsMsg.style.display = 'none';
+      }
+    }
+  };
+
+  // Función para limpiar la búsqueda de carpetas
+  window.clearFolderSearch = function() {
+    console.log("Limpiando búsqueda de carpetas");
+
+    const searchInput = document.getElementById("searchFolders");
+    const clearBtn = document.getElementById("clearSearchBtn");
+
+    searchInput.value = '';
+    clearBtn.classList.add('hidden');
+
+    // Restaurar todas las carpetas
+    const allFolders = document.querySelectorAll('.carpeta-destino');
+    allFolders.forEach(folder => {
+      folder.style.display = '';
+
+      // Restaurar texto original sin resaltado
+      const folderNameElement = folder.querySelector('span.text-gray-700');
+      if (folderNameElement && folderNameElement.dataset.originalText) {
+        folderNameElement.textContent = folderNameElement.dataset.originalText;
+        delete folderNameElement.dataset.originalText;
+      }
+    });
+
+    // Ocultar mensaje de "no resultados"
+    const noResultsMsg = document.getElementById('destinoTree').querySelector('.no-results-message');
+    if (noResultsMsg) {
+      noResultsMsg.style.display = 'none';
+    }
+
+    // Restaurar estados de expansión
+    document.querySelectorAll('.tree-content').forEach(content => {
+      const parentFolder = content.closest('.carpeta-destino');
+      const rutaCarpeta = parentFolder?.dataset?.path;
+
+      if (rutaCarpeta && !window.expandedFolders.has(rutaCarpeta)) {
+        content.classList.add('hidden');
+      }
+    });
+
+    searchInput.focus();
+  };
+
+  // Función para restaurar el estado del botón después del envío
+  window.restoreMoveButton = function() {
+    const submitButton = document.getElementById("moveSubmitButton");
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = "Mover archivo";
+    }
+  };
+
+    // Función para abrir el modal de mover archivo usando estructura real
+  window.openMoveModal = function (archivo, carpetaActual, usuarioId) {
+    console.log("🚀 openMoveModal llamado con:", { archivo, carpetaActual, usuarioId });
+
+    // Abrir el modal
+    document.getElementById("moveModal").classList.remove("hidden");
+    document.getElementById("moveArchivoNombre").value = archivo;
+    document.getElementById("moveCarpetaActual").value = carpetaActual;
+    document.getElementById("moveFileName").innerText = archivo;
+    document.getElementById("nuevaCarpetaSeleccionada").value = "";
+    document.getElementById("selectedFolder").classList.add("hidden");
+
+    const submitButton = document.getElementById("moveSubmitButton");
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+
+    console.log("🔧 DEBUG - Modal abierto, obteniendo datos...");
+
+    // Obtener las estructuras de carpetas del usuario actual
+    const estructurasUsuarios = ESTRUCTURAS_USUARIOS;
+    const usuarioActual = CURRENT_USER_ID;
+    const usuarioEmail = CURRENT_USER_EMAIL;
+
+    console.log("🔍 DEBUG - Estructuras disponibles:", estructurasUsuarios);
+    console.log("🔍 DEBUG - Usuario actual:", usuarioActual);
+    console.log("🔍 DEBUG - Email del usuario:", usuarioEmail);
+    console.log("🔍 DEBUG - Claves de estructuras:", Object.keys(estructurasUsuarios));
+    console.log("🔍 DEBUG - Tipo de usuario actual:", typeof usuarioActual);
+
+    // Obtener la estructura del usuario actual (manejar tanto string como número)
+    let estructuraUsuario = null;
+    if (estructurasUsuarios[usuarioActual]) {
+      estructuraUsuario = estructurasUsuarios[usuarioActual];
+      console.log("✅ Estructura encontrada con clave numérica");
+    } else if (estructurasUsuarios[String(usuarioActual)]) {
+      estructuraUsuario = estructurasUsuarios[String(usuarioActual)];
+      console.log("✅ Estructura encontrada con clave string");
+    } else {
+      console.log("❌ No se encontró estructura para el usuario");
+    }
+
+    console.log("🔍 DEBUG - Estructura encontrada para usuario", usuarioActual, ":", estructuraUsuario);
+
+    // Renderizar el árbol de carpetas destino
+    const destinoTree = document.getElementById("destinoTree");
+    console.log("🔍 Elemento destinoTree encontrado:", !!destinoTree);
+    console.log("🔧 DEBUG - Buscando elemento destinoTree...");
+
+    if (!destinoTree) {
+      console.error("❌ ERROR: Elemento destinoTree no encontrado");
+      return;
+    }
+
+    console.log("🔧 DEBUG - Elemento destinoTree encontrado, limpiando estado...");
+
+    // Limpiar el estado de carpetas expandidas
+    window.expandedFolders.clear();
+
+    console.log("🔧 DEBUG - Verificando estructura del usuario...");
+    console.log("🔧 DEBUG - ¿estructuraUsuario existe?:", !!estructuraUsuario);
+    console.log("🔧 DEBUG - ¿tiene _subcarpetas?:", !!(estructuraUsuario && estructuraUsuario._subcarpetas));
+
+    if (estructuraUsuario && estructuraUsuario._subcarpetas) {
+      console.log("✅ Estructura del usuario encontrada:", estructuraUsuario);
+      console.log("🔧 DEBUG - Iniciando renderizado del árbol...");
+
+      // Renderizar el árbol con la función mejorada
+      console.log("🔧 DEBUG - Verificando si renderDestinoTree está disponible...");
+      console.log("🔧 DEBUG - Tipo de renderDestinoTree:", typeof window.renderDestinoTree);
+
+      if (typeof window.renderDestinoTree === "function") {
+        console.log("✅ renderDestinoTree está disponible");
+        console.log("🔧 DEBUG - Llamando a renderDestinoTree...");
+
+        try {
+          console.log("🔧 DEBUG - Parámetros para renderDestinoTree:");
+          console.log("  - estructuraUsuario:", estructuraUsuario);
+          console.log("  - rutaBase:", `/${usuarioEmail || 'usuario'}`);
+          console.log("  - nivel: 0");
+          console.log("  - mostrarRaiz: true");
+
+          const html = window.renderDestinoTree(estructuraUsuario, `/${usuarioEmail || 'usuario'}`, 0, true);
+          console.log("🔍 HTML generado:", html);
+
+          if (html && html.trim().length > 0) {
+            // Agregar estilos adicionales al contenedor
+            destinoTree.innerHTML = `
+              <div class="folder-tree-container">
+                <style>
+                  .folder-tree-container .tree-content {
+                    transition: all 0.3s ease-in-out;
+                  }
+                  .folder-tree-container .group:hover {
+                    transform: translateX(2px);
+                  }
+                  .folder-tree-container .carpeta-destino {
+                    position: relative;
+                  }
+                  .folder-tree-container .carpeta-destino::before {
+                    content: '';
+                    position: absolute;
+                    left: -8px;
+                    top: 0;
+                    bottom: 0;
+                    width: 2px;
+                    background: linear-gradient(to bottom, #e5e7eb 0%, transparent 100%);
+                    opacity: 0.5;
+                  }
+                </style>
+                ${html}
+              </div>
+            `;
+            console.log("✅ HTML insertado en destinoTree con estilos mejorados");
+          } else {
+            throw new Error("HTML vacío generado");
+          }
+        } catch (error) {
+          console.error("❌ Error renderizando árbol:", error);
+          destinoTree.innerHTML = `
+            <div class="text-center py-8">
+              <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+              </svg>
+              <p class="text-red-500 text-sm font-medium">Error de renderizado</p>
+              <p class="text-xs text-gray-400 mt-2">${error.message}</p>
+              <button onclick="testSimpleTree()" class="mt-4 px-4 py-2 bg-green-500 text-white rounded text-sm">
+                🌳 Probar Árbol Simple
+              </button>
+            </div>
+          `;
+        }
+      } else {
+        console.error("❌ renderDestinoTree no está disponible");
+        destinoTree.innerHTML = `
+          <div class="text-center py-8">
+            <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+            </svg>
+            <p class="text-red-500 text-sm font-medium">Función no disponible</p>
+            <p class="text-xs text-gray-400 mt-2">renderDestinoTree no está definida</p>
+            <button onclick="testSimpleTree()" class="mt-4 px-4 py-2 bg-green-500 text-white rounded text-sm">
+              🌳 Probar Árbol Simple
+            </button>
+          </div>
+        `;
+      }
+    } else {
+      console.log("❌ No se encontró estructura para el usuario actual");
+      console.log("❌ estructuraUsuario:", estructuraUsuario);
+      console.log("❌ ¿estructuraUsuario existe?:", !!estructuraUsuario);
+      console.log("❌ ¿tiene _subcarpetas?:", estructuraUsuario && !!estructuraUsuario._subcarpetas);
+      console.log("❌ Estructuras disponibles:", Object.keys(estructurasUsuarios || {}));
+      console.log("❌ Usuario actual buscado:", usuarioActual);
+
+      // Mostrar información de debug en el modal
+      destinoTree.innerHTML = `
+        <div class="text-center py-8">
+          <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+          </svg>
+          <p class="text-red-500 text-sm font-medium">Error: No se encontraron carpetas</p>
+          <p class="text-xs text-gray-400 mt-2">Usuario ID: ${usuarioActual}</p>
+          <p class="text-xs text-gray-400">Email: ${usuarioEmail}</p>
+          <p class="text-xs text-gray-400">Estructuras disponibles: ${Object.keys(estructurasUsuarios || {}).join(', ')}</p>
+          <button onclick="testMoveModal()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded text-sm">
+            🧪 Probar Modal
+          </button>
+        </div>
+      `;
+    }
+  };
 
   console.log("Script de respaldo ejecutado");
 
@@ -1431,7 +2017,159 @@ block content %}
     openUploadModal: typeof window.openUploadModal,
     openRenameModal: typeof window.openRenameModal,
     openMoveModal: typeof window.openMoveModal,
+    renderDestinoTree: typeof window.renderDestinoTree,
   });
+
+  // Estado global para carpetas expandidas en el modal
+  window.expandedFolders = new Set();
+
+  // Función simplificada para renderizar el árbol de carpetas destino
+  window.renderDestinoTree = function(estructura, rutaBase = "", nivel = 0, mostrarRaiz = true) {
+    console.log("🌳 renderDestinoTree llamado con:", { estructura, rutaBase, nivel, mostrarRaiz });
+    console.log("🔧 DEBUG - Iniciando renderDestinoTree...");
+    let html = "";
+
+    // Verificar que la estructura sea válida
+    if (!estructura) {
+      console.error("❌ Estructura es null o undefined");
+      return html;
+    }
+
+    console.log("🔧 DEBUG - Estructura válida, continuando...");
+
+    // Si es el nivel raíz, agregar una opción para la carpeta raíz del usuario
+    if (nivel === 0 && mostrarRaiz) {
+      const usuarioEmail = CURRENT_USER_EMAIL || "usuario";
+      const rutaRaiz = `/${usuarioEmail}`;
+
+      html += `
+        <div class="carpeta-destino mb-2">
+          <div class="flex items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg cursor-pointer hover:from-blue-100 hover:to-indigo-100 transition-all duration-200"
+               onclick="selectDestino('${rutaRaiz}')">
+            <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <span class="text-sm font-semibold text-gray-800">📁 Carpeta raíz (${usuarioEmail})</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Renderizar subcarpetas
+    console.log("🔧 DEBUG - Verificando _subcarpetas...");
+    console.log("🔧 DEBUG - ¿estructura._subcarpetas existe?:", !!estructura._subcarpetas);
+    console.log("🔧 DEBUG - Tipo de _subcarpetas:", typeof estructura._subcarpetas);
+
+    if (estructura._subcarpetas && typeof estructura._subcarpetas === 'object') {
+      console.log("🔍 _subcarpetas encontradas:", Object.keys(estructura._subcarpetas));
+      console.log("🔧 DEBUG - Iniciando procesamiento de carpetas...");
+
+      Object.entries(estructura._subcarpetas).forEach(([carpeta, datos]) => {
+        console.log("🔍 Procesando carpeta:", carpeta);
+        console.log("🔧 DEBUG - Datos de la carpeta:", datos);
+
+        const rutaCompleta = rutaBase ? `${rutaBase}/${carpeta}` : carpeta;
+        const folderId = `folder-tree-${rutaCompleta.replace(/[^a-zA-Z0-9]/g, '-')}`;
+        const hasSubcarpetas = datos && datos._subcarpetas && Object.keys(datos._subcarpetas).length > 0;
+        const isExpanded = window.expandedFolders && window.expandedFolders.has(rutaCompleta);
+
+        // Calcular indentación
+        const indentacion = nivel * 20;
+
+        html += `
+          <div class="carpeta-destino" data-path="${rutaCompleta}" style="margin-left: ${indentacion}px;">
+            <div class="flex items-center group">
+              ${hasSubcarpetas ? `
+                <button
+                  onclick="toggleTreeFolder('${rutaCompleta}', '${folderId}')"
+                  class="flex items-center justify-center w-6 h-6 mr-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  type="button">
+                  <svg class="w-4 h-4 transform transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}"
+                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </button>
+              ` : `
+                <div class="w-6 h-6 mr-1"></div>
+              `}
+
+              <div class="flex items-center flex-1 p-2 rounded-lg cursor-pointer border border-transparent hover:bg-blue-50 hover:border-blue-200 group-hover:shadow-sm transition-all duration-200"
+                   onclick="selectDestino('${rutaCompleta}')">
+
+                ${hasSubcarpetas ? `
+                  <svg class="w-4 h-4 text-amber-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
+                  </svg>
+                ` : `
+                  <svg class="w-4 h-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                  </svg>
+                `}
+
+                <span class="text-sm text-gray-700 font-medium group-hover:text-gray-900">${carpeta}</span>
+
+                <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            ${hasSubcarpetas ? `
+              <div id="${folderId}" class="tree-content ${isExpanded ? '' : 'hidden'} mt-1">
+                ${window.renderDestinoTree(datos, rutaCompleta, nivel + 1, false)}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+    } else {
+      if (nivel === 0) {
+        html += `
+          <div class="text-center py-8">
+            <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <p class="text-sm text-gray-500">No hay subcarpetas disponibles</p>
+            <p class="text-xs text-gray-400 mt-1">Puedes crear nuevas carpetas en el panel principal</p>
+          </div>
+        `;
+      }
+      console.log("🔍 No hay _subcarpetas en esta estructura");
+    }
+
+    console.log("🔍 HTML generado para nivel", nivel, ":", html.substring(0, 100) + "...");
+    return html;
+  };
+
+  // Función para expandir/contraer carpetas en el árbol
+  window.toggleTreeFolder = function(rutaCarpeta, folderId) {
+    console.log("toggleTreeFolder llamado:", { rutaCarpeta, folderId });
+
+    const elemento = document.getElementById(folderId);
+    const boton = event.currentTarget;
+    const icono = boton.querySelector('svg');
+
+    if (!elemento) {
+      console.error("No se encontró el elemento:", folderId);
+      return;
+    }
+
+    if (elemento.classList.contains('hidden')) {
+      // Expandir
+      elemento.classList.remove('hidden');
+      icono.classList.add('rotate-90');
+      window.expandedFolders.add(rutaCarpeta);
+      console.log("Carpeta expandida:", rutaCarpeta);
+    } else {
+      // Contraer
+      elemento.classList.add('hidden');
+      icono.classList.remove('rotate-90');
+      window.expandedFolders.delete(rutaCarpeta);
+      console.log("Carpeta contraída:", rutaCarpeta);
+    }
+  };
 
   // Funciones para manejar menús
   window.toggleFileMenu = function (menuId, event) {
@@ -1541,7 +2279,7 @@ block content %}
 
     // Mostrar el modal
     modal.classList.remove("hidden");
-    console.log("🔧 Modal de eliminación de carpeta abierto");
+    console.log("�� Modal de eliminación de carpeta abierto");
   };
 
   // Función para manejar la creación de carpetas y actualizar la estructura
@@ -1672,6 +2410,27 @@ block content %}
         this.appendChild(redirectInput);
 
         console.log("🔧 Formulario de eliminación enviado");
+      });
+    }
+
+    // Configurar el formulario de mover archivo para manejar errores
+    const moveForm = document.getElementById("moveForm");
+    if (moveForm) {
+      moveForm.addEventListener("submit", function (e) {
+        // Agregar redirect_url al formulario antes de enviarlo
+        const redirectInput = document.createElement("input");
+        redirectInput.type = "hidden";
+        redirectInput.name = "redirect_url";
+        redirectInput.value = window.location.href;
+        this.appendChild(redirectInput);
+
+        console.log("🔧 Formulario de mover archivo enviado");
+      });
+
+      // Manejar errores de envío
+      moveForm.addEventListener("error", function (e) {
+        console.error("Error enviando formulario de mover archivo:", e);
+        restoreMoveButton();
       });
     }
   });
@@ -1976,6 +2735,165 @@ block content %}
         });
     }
   }
+
+  // Inicialización final para asegurar que todo esté disponible
+  document.addEventListener("DOMContentLoaded", function() {
+    console.log("🚀 Inicialización final de carpetas_dropbox.html");
+
+    // Verificar que todas las funciones necesarias estén disponibles
+    const funcionesRequeridas = [
+      'renderDestinoTree',
+      'selectDestino',
+      'openMoveModal',
+      'closeMoveModal',
+      'openRenameModal',
+      'openCreateFolderModal',
+      'openUploadModal'
+    ];
+
+    funcionesRequeridas.forEach(funcion => {
+      if (typeof window[funcion] === "function") {
+        console.log(`✅ ${funcion} está disponible`);
+      } else {
+        console.error(`❌ ${funcion} NO está disponible`);
+      }
+    });
+
+    // Verificar que los datos de estructuras estén disponibles
+    try {
+      const estructurasUsuarios = ESTRUCTURAS_USUARIOS;
+      console.log("📊 Estructuras de usuarios cargadas:", Object.keys(estructurasUsuarios));
+
+      const usuarioActual = CURRENT_USER_ID;
+      console.log("👤 Usuario actual:", usuarioActual);
+
+      if (estructurasUsuarios[usuarioActual]) {
+        console.log("✅ Estructura del usuario actual encontrada");
+        console.log("📁 Subcarpetas disponibles:", Object.keys(estructurasUsuarios[usuarioActual]._subcarpetas || {}));
+      } else {
+        console.warn("⚠️ No se encontró estructura para el usuario actual");
+      }
+    } catch (error) {
+      console.error("❌ Error verificando estructuras:", error);
+    }
+
+    console.log("🎉 Inicialización completada");
+  });
+
+  // Función de prueba para el modal de mover archivo
+  window.testMoveModal = function() {
+    console.log("🧪 Probando modal de mover archivo...");
+
+    // Verificar que las funciones estén disponibles
+    console.log("🔍 Verificando funciones:");
+    console.log("- renderDestinoTree:", typeof window.renderDestinoTree);
+    console.log("- selectDestino:", typeof window.selectDestino);
+    console.log("- openMoveModal:", typeof window.openMoveModal);
+
+    // Verificar que los datos estén disponibles
+    try {
+      const estructurasUsuarios = ESTRUCTURAS_USUARIOS;
+      const usuarioActual = CURRENT_USER_ID;
+
+      console.log("📊 Datos disponibles:");
+      console.log("- Estructuras:", Object.keys(estructurasUsuarios || {}));
+      console.log("- Usuario actual:", usuarioActual);
+      console.log("- Tipo de usuario actual:", typeof usuarioActual);
+
+      // Verificar estructura con diferentes tipos de clave
+      const estructuraNum = estructurasUsuarios[usuarioActual];
+      const estructuraStr = estructurasUsuarios[String(usuarioActual)];
+      console.log("- Estructura con clave numérica:", !!estructuraNum);
+      console.log("- Estructura con clave string:", !!estructuraStr);
+
+      // Mostrar información detallada en consola
+      console.log("🔍 DEBUG COMPLETO:");
+      console.log("- ESTRUCTURAS_USUARIOS:", ESTRUCTURAS_USUARIOS);
+      console.log("- CURRENT_USER_ID:", CURRENT_USER_ID);
+      console.log("- CURRENT_USER_EMAIL:", CURRENT_USER_EMAIL);
+      console.log("- USUARIOS_EMAILS:", USUARIOS_EMAILS);
+
+      // Verificar que las variables globales estén definidas
+      console.log("🔍 Variables definidas:");
+      console.log("- ESTRUCTURAS_USUARIOS:", typeof ESTRUCTURAS_USUARIOS !== 'undefined');
+      console.log("- CURRENT_USER_ID:", typeof CURRENT_USER_ID !== 'undefined');
+      console.log("- CURRENT_USER_EMAIL:", typeof CURRENT_USER_EMAIL !== 'undefined');
+
+      // Crear un árbol de prueba simple
+      const destinoTree = document.getElementById("destinoTree");
+      if (destinoTree) {
+        destinoTree.innerHTML = `
+          <div class="text-center py-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">🧪 Prueba de Modal</h3>
+            <div class="space-y-2 text-left">
+              <p><strong>Usuario ID:</strong> ${usuarioActual}</p>
+              <p><strong>Usuario Email:</strong> ${CURRENT_USER_EMAIL}</p>
+              <p><strong>Estructuras disponibles:</strong> ${Object.keys(estructurasUsuarios || {}).join(', ')}</p>
+              <p><strong>Estructura con clave numérica:</strong> ${estructuraNum ? 'SÍ' : 'NO'}</p>
+              <p><strong>Estructura con clave string:</strong> ${estructuraStr ? 'SÍ' : 'NO'}</p>
+              <p><strong>Subcarpetas:</strong> ${(estructuraNum || estructuraStr) && (estructuraNum || estructuraStr)._subcarpetas ? Object.keys((estructuraNum || estructuraStr)._subcarpetas).join(', ') : 'NO'}</p>
+            </div>
+            <button onclick="testSimpleTree()" class="mt-4 px-4 py-2 bg-green-500 text-white rounded text-sm">
+              🌳 Probar Árbol Simple
+            </button>
+          </div>
+        `;
+      }
+
+      // Usar la estructura que esté disponible
+      const estructuraUsuario = estructuraNum || estructuraStr;
+
+      if (estructuraUsuario && estructuraUsuario._subcarpetas) {
+        console.log("✅ Datos válidos encontrados, abriendo modal...");
+        window.openMoveModal("archivo_prueba.txt", "/test/carpeta", usuarioActual);
+      } else {
+        console.error("❌ No hay datos válidos para el usuario actual");
+        console.error("❌ estructurasUsuarios existe:", !!estructurasUsuarios);
+        console.error("❌ usuarioActual existe:", !!usuarioActual);
+        console.error("❌ estructura del usuario existe:", !!estructuraUsuario);
+
+        alert(`No hay carpetas disponibles para el usuario actual (ID: ${usuarioActual})\n\nEstructuras disponibles: ${Object.keys(estructurasUsuarios || {}).join(', ')}\n\nVariables definidas:\nESTRUCTURAS_USUARIOS: ${typeof ESTRUCTURAS_USUARIOS !== 'undefined'}\nCURRENT_USER_ID: ${typeof CURRENT_USER_ID !== 'undefined'}\nCURRENT_USER_EMAIL: ${typeof CURRENT_USER_EMAIL !== 'undefined'}`);
+      }
+    } catch (error) {
+      console.error("❌ Error en testMoveModal:", error);
+      alert("Error al probar el modal: " + error.message);
+    }
+  };
+
+  // Función para probar un árbol simple
+  window.testSimpleTree = function() {
+    console.log("🌳 Probando árbol simple...");
+
+    const destinoTree = document.getElementById("destinoTree");
+    if (destinoTree) {
+      destinoTree.innerHTML = `
+        <div class="folder-tree-container">
+          <div class="carpeta-destino mb-2">
+            <div class="flex items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg cursor-pointer hover:from-blue-100 hover:to-indigo-100 transition-all duration-200"
+                 onclick="selectDestino('/test/usuario')">
+              <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+              </svg>
+              <span class="text-sm font-semibold text-gray-800">📁 Carpeta de Prueba</span>
+            </div>
+          </div>
+          <div class="carpeta-destino" style="margin-left: 20px;">
+            <div class="flex items-center group">
+              <div class="w-6 h-6 mr-1"></div>
+              <div class="flex items-center flex-1 p-2 rounded-lg cursor-pointer border border-transparent hover:bg-blue-50 hover:border-blue-200 group-hover:shadow-sm transition-all duration-200"
+                   onclick="selectDestino('/test/usuario/subcarpeta')">
+                <svg class="w-4 h-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                </svg>
+                <span class="text-sm text-gray-700 font-medium group-hover:text-gray-900">Subcarpeta de Prueba</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      console.log("✅ Árbol simple renderizado");
+    }
+  };
 </script>
 
 {% endblock %}
