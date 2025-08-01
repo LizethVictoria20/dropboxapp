@@ -666,7 +666,10 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       action="{{ url_for('listar_dropbox.mover_archivo_modal') }}"
       class="flex flex-col h-full"
     >
+      <input type="hidden" name="archivo_nombre" id="moveArchivoNombre" />
+      <input type="hidden" name="carpeta_actual" id="moveCarpetaActual" />
       <input type="hidden" name="usuario_id" value="{{ usuario.id }}" />
+      <input type="hidden" name="redirect_url" value="{{ request.url }}" />
 
       <div class="flex-1 p-6 overflow-y-auto">
         <div class="mb-4">
@@ -812,6 +815,503 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 
 <!-- Script para definir las funciones necesarias ANTES de openMoveModal -->
 <script>
+  // Variables globales necesarias para openMoveModal
+  window.ESTRUCTURAS_USUARIOS = {{ estructuras_usuarios_json|safe }};
+  window.CURRENT_USER_EMAIL = {{ usuario_actual.email|tojson|safe }};
+  window.CURRENT_USER_ID = {{ usuario_actual.id|tojson|safe }};
+  window.USUARIOS_EMAILS = {}; // Variable vacía por defecto
+
+  // También mantener las variables locales para compatibilidad
+  const ESTRUCTURAS_USUARIOS = window.ESTRUCTURAS_USUARIOS;
+  const CURRENT_USER_EMAIL = window.CURRENT_USER_EMAIL;
+  const CURRENT_USER_ID = window.CURRENT_USER_ID;
+  const USUARIOS_EMAILS = window.USUARIOS_EMAILS;
+
+  console.log("🔧 Variables globales cargadas en usuario_carpetas.html:");
+  console.log("  ESTRUCTURAS_USUARIOS:", window.ESTRUCTURAS_USUARIOS);
+  console.log("  CURRENT_USER_EMAIL:", window.CURRENT_USER_EMAIL);
+  console.log("  CURRENT_USER_ID:", window.CURRENT_USER_ID);
+  console.log("  USUARIOS_EMAILS:", window.USUARIOS_EMAILS);
+
+  // Función simple de renderizado como fallback
+  function renderizarArbolSimple(estructura, usuarioEmail) {
+    console.log("🔧 renderizarArbolSimple llamado con:", { estructura, usuarioEmail });
+
+    if (!estructura || !estructura._subcarpetas) {
+      return '<div class="text-center py-4 text-gray-500">No hay carpetas disponibles.</div>';
+    }
+
+    const subcarpetas = Object.keys(estructura._subcarpetas);
+    if (subcarpetas.length === 0) {
+      return '<div class="text-center py-4 text-gray-500">No hay carpetas disponibles.</div>';
+    }
+
+    let html = '<div class="space-y-2">';
+    for (const [carpeta, data] of Object.entries(estructura._subcarpetas)) {
+      // Construir el path completo
+      const fullPath = `/${usuarioEmail}/${carpeta}`;
+      const hasSub = data._subcarpetas && Object.keys(data._subcarpetas).length > 0;
+
+      html += `
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <div class="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
+            <div class="flex items-center space-x-3">
+              <div class="w-6 h-6 bg-indigo-100 rounded flex items-center justify-center">
+                <svg class="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                </svg>
+              </div>
+              <span class="text-indigo-700 font-medium cursor-pointer hover:underline" onclick="selectDestino('${fullPath}')">${carpeta}</span>
+            </div>
+            ${hasSub ? '<span class="text-gray-400 text-xs">+</span>' : ''}
+          </div>
+        </div>
+      `;
+    }
+    html += '</div>';
+
+    console.log("✅ HTML generado por renderizarArbolSimple");
+    return html;
+  }
+
+  // Definir openMoveModal aquí para asegurar que esté disponible
+  window.openMoveModal = function (archivo, carpetaActual, usuarioId) {
+    console.log("🔧 openMoveModal EJECUTÁNDOSE con:", {
+      archivo,
+      carpetaActual,
+      usuarioId,
+    });
+
+    // Verificar elementos paso a paso con logs detallados
+    console.log("🔧 Buscando modal moveModal...");
+    const modal = document.getElementById("moveModal");
+    console.log("🔧 Modal encontrado:", !!modal);
+
+    if (!modal) {
+      console.error("❌ Modal moveModal no encontrado");
+      return;
+    }
+
+    // Buscar elementos dentro del modal específicamente
+    console.log("🔧 Buscando elementos dentro del modal...");
+
+    // Intentar diferentes métodos de búsqueda
+    let archivoInput = modal.querySelector("#moveArchivoNombre");
+    let carpetaInput = modal.querySelector("#moveCarpetaActual");
+
+    console.log(
+      "🔧 Búsqueda con querySelector - Archivo input encontrado:",
+      !!archivoInput
+    );
+    console.log(
+      "🔧 Búsqueda con querySelector - Carpeta input encontrado:",
+      !!carpetaInput
+    );
+
+    // Si no se encuentran, intentar con getElementById
+    if (!archivoInput) {
+      console.log("🔧 Intentando con getElementById...");
+      archivoInput = document.getElementById("moveArchivoNombre");
+      console.log(
+        "🔧 getElementById - Archivo input encontrado:",
+        !!archivoInput
+      );
+    }
+
+    if (!carpetaInput) {
+      console.log("🔧 Intentando con getElementById...");
+      carpetaInput = document.getElementById("moveCarpetaActual");
+      console.log(
+        "🔧 getElementById - Carpeta input encontrado:",
+        !!carpetaInput
+      );
+    }
+
+    // Si aún no se encuentran, buscar por nombre
+    if (!archivoInput) {
+      console.log("🔧 Intentando buscar por nombre 'archivo_nombre'...");
+      archivoInput = modal.querySelector('input[name="archivo_nombre"]');
+      console.log(
+        "🔧 Búsqueda por nombre - Archivo input encontrado:",
+        !!archivoInput
+      );
+    }
+
+    if (!carpetaInput) {
+      console.log("🔧 Intentando buscar por nombre 'carpeta_actual'...");
+      carpetaInput = modal.querySelector('input[name="carpeta_actual"]');
+      console.log(
+        "🔧 Búsqueda por nombre - Carpeta input encontrado:",
+        !!carpetaInput
+      );
+    }
+
+    // Si aún no se encuentran, buscar en todo el documento
+    if (!archivoInput) {
+      console.log(
+        "🔧 Intentando buscar en todo el documento por nombre 'archivo_nombre'..."
+      );
+      archivoInput = document.querySelector('input[name="archivo_nombre"]');
+      console.log(
+        "🔧 Búsqueda global por nombre - Archivo input encontrado:",
+        !!archivoInput
+      );
+    }
+
+    if (!carpetaInput) {
+      console.log(
+        "🔧 Intentando buscar en todo el documento por nombre 'carpeta_actual'..."
+      );
+      carpetaInput = document.querySelector('input[name="carpeta_actual"]');
+      console.log(
+        "🔧 Búsqueda global por nombre - Carpeta input encontrado:",
+        !!carpetaInput
+      );
+    }
+
+    if (!archivoInput) {
+      console.log("🔧 Creando elemento moveArchivoNombre dinámicamente...");
+      // Buscar el formulario dentro del modal
+      const form = modal.querySelector("#moveForm");
+      if (form) {
+        archivoInput = document.createElement("input");
+        archivoInput.type = "hidden";
+        archivoInput.id = "moveArchivoNombre";
+        archivoInput.name = "archivo_nombre";
+        archivoInput.value = "";
+        form.insertBefore(archivoInput, form.firstChild);
+        console.log("🔧 Elemento moveArchivoNombre creado dinámicamente");
+      } else {
+        console.error("❌ Formulario moveForm no encontrado");
+        return;
+      }
+    }
+
+    if (!carpetaInput) {
+      console.log("🔧 Creando elemento moveCarpetaActual dinámicamente...");
+      // Buscar el formulario dentro del modal
+      const form = modal.querySelector("#moveForm");
+      if (form) {
+        carpetaInput = document.createElement("input");
+        carpetaInput.type = "hidden";
+        carpetaInput.id = "moveCarpetaActual";
+        carpetaInput.name = "carpeta_actual";
+        carpetaInput.value = "";
+        form.insertBefore(carpetaInput, form.firstChild);
+        console.log("🔧 Elemento moveCarpetaActual creado dinámicamente");
+      } else {
+        console.error("❌ Formulario moveForm no encontrado");
+        return;
+      }
+    }
+
+    console.log(
+      "🔧 Todos los elementos encontrados, estableciendo valores..."
+    );
+    console.log("🔧 archivo:", archivo, "carpetaActual:", carpetaActual);
+
+    // Establecer valores con verificación adicional
+    try {
+      archivoInput.value = archivo;
+      console.log("🔧 Archivo input value establecido correctamente");
+    } catch (error) {
+      console.error("❌ Error estableciendo archivo input value:", error);
+      return;
+    }
+
+    try {
+      carpetaInput.value = carpetaActual;
+      console.log("🔧 Carpeta input value establecido correctamente");
+    } catch (error) {
+      console.error("❌ Error estableciendo carpeta input value:", error);
+      return;
+    }
+
+    // Guardar el usuarioId en el modal para uso posterior
+    modal.dataset.usuarioId = usuarioId;
+
+    // Ocultar todos los menús antes de mostrar el modal
+    if (window.hideAllMenus) {
+      window.hideAllMenus();
+    }
+
+    // Mostrar el modal después de establecer los valores
+    console.log("🔧 Mostrando modal...");
+    modal.classList.remove("hidden");
+
+    // Verificar que los elementos estén realmente en el DOM después de mostrar el modal
+    setTimeout(() => {
+      console.log("🔧 Verificación final después de mostrar el modal:");
+      const finalArchivoInput =
+        document.getElementById("moveArchivoNombre");
+      const finalCarpetaInput =
+        document.getElementById("moveCarpetaActual");
+
+      console.log(
+        "🔧 Verificación final - Archivo input:",
+        !!finalArchivoInput
+      );
+      console.log(
+        "🔧 Verificación final - Carpeta input:",
+        !!finalCarpetaInput
+      );
+
+      if (finalArchivoInput && finalCarpetaInput) {
+        console.log(
+          "🔧 Elementos encontrados en verificación final, estableciendo valores..."
+        );
+        try {
+          finalArchivoInput.value = archivo;
+          finalCarpetaInput.value = carpetaActual;
+          console.log("🔧 Valores establecidos en verificación final");
+        } catch (error) {
+          console.error("❌ Error en verificación final:", error);
+        }
+      }
+    }, 50);
+
+    console.log("🔧 Modal abierto correctamente");
+
+    // Renderizar el árbol de carpetas después de abrir el modal
+    console.log("🔧 Iniciando renderizado del árbol de carpetas...");
+
+    // Función para renderizar el árbol cuando las variables estén disponibles
+    const renderizarArbol = () => {
+      // Obtener las estructuras de carpetas
+      const estructurasUsuarios = window.ESTRUCTURAS_USUARIOS;
+
+      // DETERMINAR EL USUARIO CORRECTO
+      // Si estamos en /usuario/id/carpetas, usar el usuario específico de la página
+      // Si no, usar el usuario actual
+      let usuarioObjetivo = window.CURRENT_USER_ID;
+      let usuarioEmail = window.CURRENT_USER_EMAIL;
+
+      // Verificar si estamos en una página de usuario específico
+      const urlPath = window.location.pathname;
+      const usuarioMatch = urlPath.match(/\/usuario\/(\d+)\/carpetas/);
+
+      if (usuarioMatch) {
+        // Estamos en /usuario/id/carpetas, usar el usuario específico
+        const usuarioEspecificoId = usuarioMatch[1];
+        console.log("🔧 Detectado en página de usuario específico:", {
+          urlPath: urlPath,
+          usuarioEspecificoId: usuarioEspecificoId,
+          usuarioActual: window.CURRENT_USER_ID,
+        });
+
+        // Buscar la estructura del usuario específico
+        if (
+          estructurasUsuarios &&
+          estructurasUsuarios[usuarioEspecificoId]
+        ) {
+          usuarioObjetivo = usuarioEspecificoId;
+          console.log(
+            "✅ Usando usuario específico de la página:",
+            usuarioObjetivo
+          );
+        } else if (
+          estructurasUsuarios &&
+          estructurasUsuarios[String(usuarioEspecificoId)]
+        ) {
+          usuarioObjetivo = String(usuarioEspecificoId);
+          console.log(
+            "✅ Usando usuario específico de la página (string):",
+            usuarioObjetivo
+          );
+        } else {
+          console.log(
+            "⚠️ Usuario específico no encontrado en estructuras, usando usuario actual"
+          );
+        }
+      } else {
+        console.log(
+          "🔧 Usando usuario actual (no en página de usuario específico):",
+          usuarioObjetivo
+        );
+      }
+
+      console.log(
+        "🔧 DEBUG - Estructuras disponibles:",
+        estructurasUsuarios
+      );
+      console.log("🔧 DEBUG - Usuario objetivo:", usuarioObjetivo);
+      console.log("🔧 DEBUG - Email del usuario:", usuarioEmail);
+
+      if (estructurasUsuarios && usuarioObjetivo) {
+        // Obtener la estructura del usuario objetivo (manejar tanto string como número)
+        let estructuraUsuario = null;
+        if (estructurasUsuarios[usuarioObjetivo]) {
+          estructuraUsuario = estructurasUsuarios[usuarioObjetivo];
+          console.log(
+            "✅ Estructura encontrada con clave:",
+            usuarioObjetivo
+          );
+        } else if (estructurasUsuarios[String(usuarioObjetivo)]) {
+          estructuraUsuario = estructurasUsuarios[String(usuarioObjetivo)];
+          console.log(
+            "✅ Estructura encontrada con clave string:",
+            String(usuarioObjetivo)
+          );
+        } else {
+          console.log(
+            "❌ No se encontró estructura para el usuario objetivo:",
+            usuarioObjetivo
+          );
+        }
+
+        // Renderizar el árbol de carpetas destino
+        const destinoTree = document.getElementById("destinoTree");
+        console.log("🔧 Elemento destinoTree encontrado:", !!destinoTree);
+
+        if (
+          destinoTree &&
+          estructuraUsuario &&
+          estructuraUsuario._subcarpetas
+        ) {
+          console.log(
+            "✅ Estructura del usuario encontrada, renderizando árbol..."
+          );
+
+          // Limpiar el estado de carpetas expandidas
+          if (window.expandedFolders) {
+            window.expandedFolders.clear();
+          }
+
+          // Renderizar el árbol con la función disponible
+          if (typeof window.renderDestinoTreeExpandible === "function") {
+            console.log("✅ renderDestinoTreeExpandible está disponible");
+
+            try {
+              const html = window.renderDestinoTreeExpandible(estructuraUsuario, "");
+              console.log("🔍 HTML generado:", html);
+
+              if (html && html.trim().length > 0) {
+                destinoTree.innerHTML = html;
+                console.log("✅ HTML insertado en destinoTree exitosamente");
+              } else {
+                throw new Error("HTML vacío generado");
+              }
+            } catch (error) {
+              console.error("❌ Error renderizando árbol:", error);
+              destinoTree.innerHTML = `
+              <div class="text-center py-8">
+                <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+                <p class="text-red-500 text-sm font-medium">Error de renderizado</p>
+                <p class="text-xs text-gray-400 mt-2">${error.message}</p>
+              </div>
+            `;
+            }
+          } else if (typeof window.renderDestinoTree === "function") {
+            console.log("✅ renderDestinoTree está disponible");
+
+            try {
+              const html = window.renderDestinoTree(
+                estructuraUsuario,
+                `/${usuarioEmail || "usuario"}`,
+                0,
+                true
+              );
+              console.log("🔍 HTML generado:", html);
+
+              if (html && html.trim().length > 0) {
+                destinoTree.innerHTML = `
+                <div class="folder-tree-container">
+                  <style>
+                    .folder-tree-container .tree-content { transition: all 0.3s ease-in-out; }
+                    .folder-tree-container .group:hover { transform: translateX(2px); }
+                    .folder-tree-container .carpeta-destino { position: relative; }
+                    .folder-tree-container .carpeta-destino::before {
+                      content: ''; position: absolute; left: -8px; top: 0; bottom: 0; width: 2px;
+                      background: linear-gradient(to bottom, #e5e7eb 0%, transparent 100%); opacity: 0.5;
+                    }
+                  </style>
+                  ${html}
+                </div>
+              `;
+                console.log(
+                  "✅ HTML insertado en destinoTree con estilos mejorados"
+                );
+              } else {
+                throw new Error("HTML vacío generado");
+              }
+            } catch (error) {
+              console.error("❌ Error renderizando árbol:", error);
+              destinoTree.innerHTML = `
+              <div class="text-center py-8">
+                <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+                <p class="text-red-500 text-sm font-medium">Error de renderizado</p>
+                <p class="text-xs text-gray-400 mt-2">${error.message}</p>
+              </div>
+            `;
+            }
+          } else {
+            console.error("❌ Ninguna función de renderizado está disponible");
+            // Crear una función simple de renderizado como fallback
+            try {
+              const html = renderizarArbolSimple(estructuraUsuario, usuarioEmail);
+              destinoTree.innerHTML = html;
+              console.log("✅ Árbol renderizado con función simple");
+            } catch (error) {
+              console.error("❌ Error con función simple:", error);
+              destinoTree.innerHTML = `
+              <div class="text-center py-8">
+                <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+                <p class="text-red-500 text-sm font-medium">Función no disponible</p>
+                <p class="text-xs text-gray-400 mt-2">Ninguna función de renderizado está definida</p>
+              </div>
+            `;
+            }
+          }
+        } else {
+          console.log("❌ No se encontró estructura para el usuario actual");
+          destinoTree.innerHTML = `
+          <div class="text-center py-8">
+            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <p class="text-gray-500 text-sm font-medium">No se encontraron carpetas</p>
+            <p class="text-xs text-gray-400 mt-2">Usuario ID: ${usuarioObjetivo}</p>
+            <p class="text-xs text-gray-400">Email: ${usuarioEmail}</p>
+          </div>
+        `;
+        }
+      } else {
+        console.log("❌ Variables no disponibles");
+        destinoTree.innerHTML = `
+        <div class="text-center py-8">
+          <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+          </svg>
+          <p class="text-red-500 text-sm font-medium">Variables no disponibles</p>
+          <p class="text-xs text-gray-400 mt-2">estructurasUsuarios: ${!!estructurasUsuarios}</p>
+          <p class="text-xs text-gray-400">usuarioObjetivo: ${!!usuarioObjetivo}</p>
+        </div>
+      `;
+      }
+    };
+
+    // Attempt to render immediately
+    renderizarArbol();
+
+    // If variables are not available, wait and retry
+    if (!window.ESTRUCTURAS_USUARIOS || !window.CURRENT_USER_ID) {
+      console.log("🔧 Variables no disponibles, esperando...");
+      setTimeout(() => renderizarArbol(), 100);
+      setTimeout(() => renderizarArbol(), 500);
+      setTimeout(() => renderizarArbol(), 1000);
+    }
+
+    document.querySelector('#moveForm button[type="submit"]').disabled = true;
+  };
+
+  console.log("✅ openMoveModal definida en usuario_carpetas.html");
+
   // Definir renderDestinoTreeExpandible primero
   window.renderDestinoTreeExpandible = function (tree, path) {
     console.log("=== renderDestinoTreeExpandible ===");
@@ -908,110 +1408,11 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   );
 </script>
 
-<!-- Script que se ejecuta inmediatamente para sobrescribir openMoveModal -->
+<!-- Script para comentar que usamos la función de base.html -->
 <script>
-  // Sobrescribir openMoveModal inmediatamente para evitar conflictos
-  window.openMoveModal = function(fileName, currentPath, usuarioId) {
-    console.log("openMoveModal (sobrescrita inmediatamente) llamado con:", {
-      fileName,
-      currentPath,
-      usuarioId
-    });
-
-    document.getElementById("moveModal").classList.remove("hidden");
-    document.getElementById("moveArchivoNombre").value = fileName;
-    document.getElementById("moveCarpetaActual").value = currentPath;
-    document.getElementById("moveFileName").innerText = fileName;
-    document.getElementById("nuevaCarpetaSeleccionada").value = "";
-    document.getElementById("selectedFolder").classList.add("hidden");
-
-    // IGNORAR el usuarioId que viene del macro y usar siempre el usuario de la vista actual
-    const usuarioIdLocal = "{{ usuario.id }}";
-    const usuarioEmail = "{{ usuario.email }}";
-
-    console.log("Usuario de la vista actual (ignorando parámetro):", {
-      id: usuarioIdLocal,
-      email: usuarioEmail
-    });
-
-    // Almacenar el usuarioId en el modal
-    document.getElementById("moveModal").dataset.usuarioId = usuarioIdLocal;
-    document.getElementById("moveModal").dataset.usuarioEmail = usuarioEmail;
-
-    // Renderizar el árbol de carpetas destino
-    const destinoTree = document.getElementById("destinoTree");
-    console.log("¿destinoTree existe?:", destinoTree);
-
-    if (destinoTree) {
-      try {
-        // Usar la estructura del usuario específico desde el elemento de datos
-        const estructurasUsuarios = {{ estructuras_usuarios_json|safe }};
-        const estructuraUsuario = estructurasUsuarios["{{ usuario.id }}"];
-
-        console.log("=== DEBUG MODAL MOVE (USUARIO ESPECÍFICO) ===");
-        console.log("Usuario ID:", "{{ usuario.id }}");
-        console.log("Usuario Email:", "{{ usuario.email }}");
-        console.log("Estructura completa:", estructurasUsuarios);
-        console.log("Estructura del usuario:", estructuraUsuario);
-        console.log("¿EstructuraUsuario es null/undefined?:", estructuraUsuario == null);
-        console.log("¿Tiene _subcarpetas?:", estructuraUsuario && estructuraUsuario._subcarpetas);
-        console.log("¿Cuántas subcarpetas?:", estructuraUsuario && estructuraUsuario._subcarpetas ? Object.keys(estructuraUsuario._subcarpetas).length : 0);
-        console.log("¿renderDestinoTreeExpandible existe?:", typeof window.renderDestinoTreeExpandible);
-
-        // Verificar si la estructura tiene datos reales
-        const tieneCarpetas = estructuraUsuario &&
-                             estructuraUsuario._subcarpetas &&
-                             Object.keys(estructuraUsuario._subcarpetas).length > 0;
-
-        console.log("¿Tiene carpetas reales?:", tieneCarpetas);
-
-        // Usar la función renderDestinoTreeExpandible si está disponible
-        if (typeof window.renderDestinoTreeExpandible === 'function') {
-          if (tieneCarpetas) {
-            console.log("✅ Renderizando árbol de carpetas del usuario...");
-            destinoTree.innerHTML = window.renderDestinoTreeExpandible(estructuraUsuario, "");
-            console.log("Árbol renderizado exitosamente");
-          } else {
-            console.log("❌ No hay carpetas disponibles para mostrar");
-            destinoTree.innerHTML = `
-              <div class="text-center py-4 text-gray-500">
-                <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-                </svg>
-                <p class="text-sm">No hay carpetas disponibles para mover archivos</p>
-                <p class="text-xs text-gray-400 mt-1">en las carpetas de {{ usuario.email }}</p>
-                <p class="text-xs text-gray-400 mt-1">Carpetas encontradas: ${Object.keys(estructuraUsuario._subcarpetas || {}).length}</p>
-              </div>`;
-          }
-        } else {
-          console.error("renderDestinoTreeExpandible no está disponible aún");
-          destinoTree.innerHTML = `
-            <div class="text-center py-4 text-red-500">
-              <svg class="w-12 h-12 mx-auto mb-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-              </svg>
-              <p class="text-sm">Error: Función de renderizado no disponible</p>
-            </div>`;
-        }
-      } catch (e) {
-        console.error("Error renderizando árbol de carpetas:", e);
-        destinoTree.innerHTML = `
-          <div class="text-center py-4 text-red-500">
-            <svg class="w-12 h-12 mx-auto mb-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-            </svg>
-            <p class="text-sm">Error cargando carpetas</p>
-            <p class="text-xs text-red-400 mt-1">${e.message}</p>
-          </div>`;
-      }
-    } else {
-      console.error("destinoTree no encontrado");
-    }
-
-    document.querySelector('#moveForm button[type="submit"]').disabled = true;
-  };
-
-  console.log("openMoveModal sobrescrita inmediatamente");
+  // NOTA: Usamos la función openMoveModal de base.html que ya tiene
+  // la lógica correcta para detectar el usuario específico de la página
+  console.log("usuario_carpetas.html: Usando openMoveModal de base.html");
 </script>
 
 <script>
@@ -1607,26 +2008,32 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   }
 </script>
 <script>
-function descargarArchivo(archivoId = "", path = "", nombre = "documento.pdf") {
-  let url = "/admin/descargar_archivo?";
-  if (archivoId) {
-    url += `archivo_id=${archivoId}`;
-  } else if (path) {
-    const rutaLimpia = path.replace(/\/+/g, '/');
-    url += `path=${encodeURIComponent(rutaLimpia)}&nombre=${encodeURIComponent(nombre)}`;
-  } else {
-    alert("No se puede descargar: faltan datos.");
-    return;
-  }
+  function descargarArchivo(
+    archivoId = "",
+    path = "",
+    nombre = "documento.pdf"
+  ) {
+    let url = "/admin/descargar_archivo?";
+    if (archivoId) {
+      url += `archivo_id=${archivoId}`;
+    } else if (path) {
+      const rutaLimpia = path.replace(/\/+/g, "/");
+      url += `path=${encodeURIComponent(
+        rutaLimpia
+      )}&nombre=${encodeURIComponent(nombre)}`;
+    } else {
+      alert("No se puede descargar: faltan datos.");
+      return;
+    }
 
-  console.log("Iniciando descarga:", url);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = nombre;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
+    console.log("Iniciando descarga:", url);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
 </script>
 
 <!-- Modal para Agregar Beneficiario -->

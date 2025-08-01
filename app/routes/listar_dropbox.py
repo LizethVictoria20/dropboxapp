@@ -943,11 +943,13 @@ def mover_archivo_modal():
         archivo_nombre = request.form.get("archivo_nombre")
         carpeta_actual = request.form.get("carpeta_actual")
         nueva_carpeta = request.form.get("nueva_carpeta")
+        usuario_id_form = request.form.get("usuario_id")  # Nuevo: obtener usuario_id del formulario
         
         print(f"DEBUG | Movimiento solicitado:")
         print(f"  Archivo: {archivo_nombre}")
         print(f"  Carpeta actual: {carpeta_actual}")
         print(f"  Nueva carpeta: {nueva_carpeta}")
+        print(f"  Usuario ID del formulario: {usuario_id_form}")
         print(f"  Tipo nueva_carpeta: {type(nueva_carpeta)}")
         print(f"  Longitud nueva_carpeta: {len(nueva_carpeta) if nueva_carpeta else 'None'}")
         
@@ -968,8 +970,32 @@ def mover_archivo_modal():
         
         print(f"DEBUG | Nueva carpeta normalizada: '{nueva_carpeta}'")
         
+        # DETERMINAR EL USUARIO CORRECTO PARA VALIDACIONES
+        # Si viene de la ruta /usuario/id/carpetas, usar ese usuario específico
+        # Si no, usar el usuario actual
+        usuario_objetivo = None
+        usuario_email_objetivo = None
+        
+        if usuario_id_form:
+            try:
+                usuario_objetivo = User.query.get(int(usuario_id_form))
+                if usuario_objetivo:
+                    usuario_email_objetivo = usuario_objetivo.email
+                    print(f"DEBUG | Usando usuario específico del formulario:")
+                    print(f"  Usuario ID: {usuario_objetivo.id}")
+                    print(f"  Usuario email: {usuario_email_objetivo}")
+                else:
+                    print(f"DEBUG | Usuario ID {usuario_id_form} no encontrado, usando usuario actual")
+                    usuario_email_objetivo = current_user.email
+            except (ValueError, TypeError):
+                print(f"DEBUG | Error al convertir usuario_id_form '{usuario_id_form}', usando usuario actual")
+                usuario_email_objetivo = current_user.email
+        else:
+            usuario_email_objetivo = current_user.email
+            print(f"DEBUG | No hay usuario_id_form, usando usuario actual: {usuario_email_objetivo}")
+        
         # VALIDACIÓN: Verificar que el usuario solo pueda mover archivos entre sus propias carpetas
-        usuario_email = current_user.email
+        usuario_email = usuario_email_objetivo
         print(f"DEBUG | Validación de permisos:")
         print(f"  Usuario email: {usuario_email}")
         print(f"  Carpeta actual: '{carpeta_actual}'")

@@ -819,6 +819,47 @@
         });
       });
 
+      // Función simple de renderizado como fallback
+      function renderizarArbolSimple(estructura, usuarioEmail) {
+        console.log("🔧 renderizarArbolSimple llamado con:", { estructura, usuarioEmail });
+
+        if (!estructura || !estructura._subcarpetas) {
+          return '<div class="text-center py-4 text-gray-500">No hay carpetas disponibles.</div>';
+        }
+
+        const subcarpetas = Object.keys(estructura._subcarpetas);
+        if (subcarpetas.length === 0) {
+          return '<div class="text-center py-4 text-gray-500">No hay carpetas disponibles.</div>';
+        }
+
+        let html = '<div class="space-y-2">';
+        for (const [carpeta, data] of Object.entries(estructura._subcarpetas)) {
+          // Construir el path completo
+          const fullPath = `/${usuarioEmail}/${carpeta}`;
+          const hasSub = data._subcarpetas && Object.keys(data._subcarpetas).length > 0;
+
+          html += `
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <div class="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
+                <div class="flex items-center space-x-3">
+                  <div class="w-6 h-6 bg-indigo-100 rounded flex items-center justify-center">
+                    <svg class="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                  </div>
+                  <span class="text-indigo-700 font-medium cursor-pointer hover:underline" onclick="selectDestino('${fullPath}')">${carpeta}</span>
+                </div>
+                ${hasSub ? '<span class="text-gray-400 text-xs">+</span>' : ''}
+              </div>
+            </div>
+          `;
+        }
+        html += '</div>';
+
+        console.log("✅ HTML generado por renderizarArbolSimple");
+        return html;
+      }
+
       // Funciones adicionales necesarias para el contenido dinámico
       window.openMoveModal = function (archivo, carpetaActual, usuarioId) {
         console.log("openMoveModal llamado con:", {
@@ -1640,29 +1681,86 @@
 
         // Función para renderizar el árbol cuando las variables estén disponibles
         const renderizarArbol = () => {
-          // Obtener las estructuras de carpetas del usuario actual
+          // Obtener las estructuras de carpetas
           const estructurasUsuarios = window.ESTRUCTURAS_USUARIOS;
-          const usuarioActual = window.CURRENT_USER_ID;
-          const usuarioEmail = window.CURRENT_USER_EMAIL;
+
+          // DETERMINAR EL USUARIO CORRECTO
+          // Si estamos en /usuario/id/carpetas, usar el usuario específico de la página
+          // Si no, usar el usuario actual
+          let usuarioObjetivo = window.CURRENT_USER_ID;
+          let usuarioEmail = window.CURRENT_USER_EMAIL;
+
+          // Verificar si estamos en una página de usuario específico
+          const urlPath = window.location.pathname;
+          const usuarioMatch = urlPath.match(/\/usuario\/(\d+)\/carpetas/);
+
+          if (usuarioMatch) {
+            // Estamos en /usuario/id/carpetas, usar el usuario específico
+            const usuarioEspecificoId = usuarioMatch[1];
+            console.log("🔧 Detectado en página de usuario específico:", {
+              urlPath: urlPath,
+              usuarioEspecificoId: usuarioEspecificoId,
+              usuarioActual: window.CURRENT_USER_ID,
+            });
+
+            // Buscar la estructura del usuario específico
+            if (
+              estructurasUsuarios &&
+              estructurasUsuarios[usuarioEspecificoId]
+            ) {
+              usuarioObjetivo = usuarioEspecificoId;
+              console.log(
+                "✅ Usando usuario específico de la página:",
+                usuarioObjetivo
+              );
+            } else if (
+              estructurasUsuarios &&
+              estructurasUsuarios[String(usuarioEspecificoId)]
+            ) {
+              usuarioObjetivo = String(usuarioEspecificoId);
+              console.log(
+                "✅ Usando usuario específico de la página (string):",
+                usuarioObjetivo
+              );
+            } else {
+              console.log(
+                "⚠️ Usuario específico no encontrado en estructuras, usando usuario actual"
+              );
+            }
+          } else {
+            console.log(
+              "🔧 Usando usuario actual (no en página de usuario específico):",
+              usuarioObjetivo
+            );
+          }
 
           console.log(
             "🔧 DEBUG - Estructuras disponibles:",
             estructurasUsuarios
           );
-          console.log("🔧 DEBUG - Usuario actual:", usuarioActual);
+          console.log("🔧 DEBUG - Usuario objetivo:", usuarioObjetivo);
           console.log("🔧 DEBUG - Email del usuario:", usuarioEmail);
 
-          if (estructurasUsuarios && usuarioActual) {
-            // Obtener la estructura del usuario actual (manejar tanto string como número)
+          if (estructurasUsuarios && usuarioObjetivo) {
+            // Obtener la estructura del usuario objetivo (manejar tanto string como número)
             let estructuraUsuario = null;
-            if (estructurasUsuarios[usuarioActual]) {
-              estructuraUsuario = estructurasUsuarios[usuarioActual];
-              console.log("✅ Estructura encontrada con clave numérica");
-            } else if (estructurasUsuarios[String(usuarioActual)]) {
-              estructuraUsuario = estructurasUsuarios[String(usuarioActual)];
-              console.log("✅ Estructura encontrada con clave string");
+            if (estructurasUsuarios[usuarioObjetivo]) {
+              estructuraUsuario = estructurasUsuarios[usuarioObjetivo];
+              console.log(
+                "✅ Estructura encontrada con clave:",
+                usuarioObjetivo
+              );
+            } else if (estructurasUsuarios[String(usuarioObjetivo)]) {
+              estructuraUsuario = estructurasUsuarios[String(usuarioObjetivo)];
+              console.log(
+                "✅ Estructura encontrada con clave string:",
+                String(usuarioObjetivo)
+              );
             } else {
-              console.log("❌ No se encontró estructura para el usuario");
+              console.log(
+                "❌ No se encontró estructura para el usuario objetivo:",
+                usuarioObjetivo
+              );
             }
 
             // Renderizar el árbol de carpetas destino
@@ -1683,8 +1781,33 @@
                 window.expandedFolders.clear();
               }
 
-              // Renderizar el árbol con la función mejorada
-              if (typeof window.renderDestinoTree === "function") {
+              // Renderizar el árbol con la función disponible
+              if (typeof window.renderDestinoTreeExpandible === "function") {
+                console.log("✅ renderDestinoTreeExpandible está disponible");
+
+                try {
+                  const html = window.renderDestinoTreeExpandible(estructuraUsuario, "");
+                  console.log("🔍 HTML generado:", html);
+
+                  if (html && html.trim().length > 0) {
+                    destinoTree.innerHTML = html;
+                    console.log("✅ HTML insertado en destinoTree exitosamente");
+                  } else {
+                    throw new Error("HTML vacío generado");
+                  }
+                } catch (error) {
+                  console.error("❌ Error renderizando árbol:", error);
+                  destinoTree.innerHTML = `
+                  <div class="text-center py-8">
+                    <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                    <p class="text-red-500 text-sm font-medium">Error de renderizado</p>
+                    <p class="text-xs text-gray-400 mt-2">${error.message}</p>
+                  </div>
+                `;
+                }
+              } else if (typeof window.renderDestinoTree === "function") {
                 console.log("✅ renderDestinoTree está disponible");
 
                 try {
@@ -1730,16 +1853,25 @@
                 `;
                 }
               } else {
-                console.error("❌ renderDestinoTree no está disponible");
-                destinoTree.innerHTML = `
-                <div class="text-center py-8">
-                  <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-                  </svg>
-                  <p class="text-red-500 text-sm font-medium">Función no disponible</p>
-                  <p class="text-xs text-gray-400 mt-2">renderDestinoTree no está definida</p>
-                </div>
-              `;
+                console.error("❌ Ninguna función de renderizado está disponible");
+                // Crear una función simple de renderizado como fallback
+                try {
+                  const html = renderizarArbolSimple(estructuraUsuario, usuarioEmail);
+                  destinoTree.innerHTML = html;
+                  console.log("✅ Árbol renderizado con función simple");
+                } catch (error) {
+                  console.error("❌ Error con función simple:", error);
+                  destinoTree.innerHTML = `
+                  <div class="text-center py-8">
+                    <svg class="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                    <p class="text-red-500 text-sm font-medium">Función no disponible</p>
+                    <p class="text-xs text-gray-400 mt-2">Ninguna función de renderizado está definida</p>
+                  </div>
+                `;
+                }
+              }
               }
             } else {
               console.log(
