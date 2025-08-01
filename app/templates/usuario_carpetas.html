@@ -815,6 +815,194 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 
 <!-- Script para definir las funciones necesarias ANTES de openMoveModal -->
 <script>
+  // Definir toggleFolderMenu inmediatamente para que esté disponible
+  window.toggleFolderMenu = function (menuId, event) {
+    console.log("🔧 toggleFolderMenu (USUARIO_CARPETAS) llamado con:", {
+      menuId,
+      event,
+    });
+    event.stopPropagation();
+
+    const menu = document.getElementById(menuId);
+    console.log("🔧 Elemento del menú de carpeta encontrado:", menu);
+
+    if (menu) {
+      // Ocultar todos los menús primero
+      document.querySelectorAll('[id^="folder-menu-"]').forEach((m) => {
+        m.classList.add("hidden");
+      });
+
+      if (menu.classList.contains("hidden")) {
+        // Posicionar el menú cerca del botón
+        const button = event.currentTarget;
+        const rect = button.getBoundingClientRect();
+        console.log("🔧 Posición del botón de carpeta:", rect);
+
+        // Calcular posición del menú
+        const menuWidth = 192; // w-48 = 12rem = 192px
+        const menuHeight = menu.offsetHeight;
+
+        // Posicionar el menú a la derecha del botón
+        let left = rect.right - menuWidth;
+        let top = rect.bottom + 5;
+
+        // Asegurar que el menú no se salga de la pantalla
+        if (left < 0) left = 0;
+        if (top + menuHeight > window.innerHeight) {
+          top = rect.top - menuHeight - 5;
+        }
+
+        menu.style.position = "fixed";
+        menu.style.top = top + "px";
+        menu.style.left = left + "px";
+        menu.style.zIndex = "99999";
+
+        menu.classList.remove("hidden");
+        console.log("🔧 Menú de carpeta abierto:", menuId, "en posición:", {
+          top,
+          left,
+        });
+      } else {
+        menu.classList.add("hidden");
+        console.log("🔧 Menú de carpeta cerrado:", menuId);
+      }
+    } else {
+      console.error("❌ Menú de carpeta no encontrado:", menuId);
+      console.log("🔧 Elementos con 'folder-menu' en el DOM:");
+      document.querySelectorAll('[id^="folder-menu"]').forEach((el) => {
+        console.log("-", el.id);
+      });
+    }
+  };
+
+  console.log("✅ toggleFolderMenu definida globalmente en usuario_carpetas.html");
+
+  // Definir hideAllMenus localmente para asegurar disponibilidad
+  window.hideAllMenus = function () {
+    console.log("🔧 hideAllMenus (usuario_carpetas) ejecutándose...");
+    // Ocultar todos los menús de carpetas
+    document.querySelectorAll('[id^="folder-menu-"]').forEach((menu) => {
+      menu.classList.add("hidden");
+    });
+    // Ocultar todos los menús de archivos
+    document.querySelectorAll('[id^="file-menu-"]').forEach((menu) => {
+      menu.classList.add("hidden");
+    });
+    console.log("🔧 Todos los menús ocultados desde usuario_carpetas.html");
+  };
+
+  // Definir openRenameModal para que esté disponible
+  window.openRenameModal = function (
+    archivo,
+    carpetaActual,
+    usuarioId,
+    tipo
+  ) {
+    console.log("openRenameModal (usuario_carpetas) llamado con:", {
+      archivo,
+      carpetaActual,
+      usuarioId,
+      tipo,
+    });
+
+    // Usar el tipo pasado como parámetro en lugar de adivinar
+    const isFolder = tipo === "carpeta";
+
+    console.log("Análisis:", {
+      archivo,
+      isFolder,
+    });
+
+    if (isFolder) {
+      // Renombrar carpeta
+      console.log("Abriendo modal de carpeta");
+      document.getElementById("renameFolderModal").classList.remove("hidden");
+      document.getElementById("renameCarpetaNombreActual").value = archivo;
+      document.getElementById("renameCarpetaPadre").value = carpetaActual;
+      document.getElementById("newFolderName").value = archivo;
+    } else {
+      // Renombrar archivo
+      console.log("Abriendo modal de archivo");
+      document.getElementById("renameModal").classList.remove("hidden");
+      document.getElementById("renameArchivoNombreActual").value = archivo;
+      document.getElementById("renameCarpetaActual").value = carpetaActual;
+
+      // Intentar establecer usuario_id si el elemento existe
+      const renameUsuarioIdElement =
+        document.getElementById("renameUsuarioId");
+      if (renameUsuarioIdElement) {
+        renameUsuarioIdElement.value = usuarioId;
+      }
+
+      // Intentar establecer nuevo nombre si el elemento existe
+      const nuevoNombreElement = document.getElementById("nuevoNombre");
+      if (nuevoNombreElement) {
+        nuevoNombreElement.value = archivo;
+      }
+    }
+  };
+
+  // Definir confirmarEliminarCarpeta para que esté disponible
+  window.confirmarEliminarCarpeta = function (
+    carpeta,
+    carpetaPadre,
+    usuarioId
+  ) {
+    console.log("🔧 confirmarEliminarCarpeta (usuario_carpetas) llamado con:", {
+      carpeta,
+      carpetaPadre,
+      usuarioId,
+    });
+
+    // Configurar el modal de confirmación
+    const modal = document.getElementById("deleteConfirmModal");
+    const itemName = document.getElementById("deleteItemName");
+    const itemDescription = document.getElementById("deleteItemDescription");
+    const form = document.getElementById("deleteConfirmForm");
+    const usuarioIdInput = document.getElementById("deleteUsuarioId");
+    const carpetaActualInput = document.getElementById("deleteCarpetaActual");
+    const itemNombreInput = document.getElementById("deleteItemNombre");
+    const itemTipoInput = document.getElementById("deleteItemTipo");
+
+    if (!modal || !itemName || !itemDescription || !form) {
+      console.error("❌ Elementos del modal de eliminación no encontrados");
+      alert(
+        "Error: No se pudo abrir el modal de confirmación. Recarga la página e intenta de nuevo."
+      );
+      return;
+    }
+
+    // Configurar el contenido del modal
+    itemName.textContent = `"${carpeta}"`;
+    itemDescription.textContent =
+      "Esta carpeta y todo su contenido serán eliminados permanentemente de Dropbox y no se podrán recuperar.";
+
+    // Configurar el formulario
+    usuarioIdInput.value = usuarioId;
+    carpetaActualInput.value = carpetaPadre;
+    itemNombreInput.value = carpeta;
+    itemTipoInput.value = "carpeta";
+
+    // Configurar la acción del formulario
+    form.action = '{{ url_for("listar_dropbox.eliminar_carpeta") }}';
+
+    // Ocultar todos los menús antes de mostrar el modal
+    window.hideAllMenus();
+
+    // Agregar campo de redirección al formulario
+    const redirectInput = document.createElement('input');
+    redirectInput.type = 'hidden';
+    redirectInput.name = 'redirect_url';
+    redirectInput.value = window.location.href;
+    form.appendChild(redirectInput);
+
+    // Mostrar el modal
+    modal.classList.remove("hidden");
+    console.log("✅ Modal de eliminación de carpeta abierto");
+  };
+
+  console.log("✅ openRenameModal y confirmarEliminarCarpeta definidas globalmente en usuario_carpetas.html");
+
   // Variables globales necesarias para openMoveModal
   window.ESTRUCTURAS_USUARIOS = {{ estructuras_usuarios_json|safe }};
   window.CURRENT_USER_EMAIL = {{ usuario_actual.email|tojson|safe }};

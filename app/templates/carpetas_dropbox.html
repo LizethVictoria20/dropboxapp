@@ -962,6 +962,68 @@ block content %}
   console.log("- Tipo de ESTRUCTURAS_USUARIOS:", typeof ESTRUCTURAS_USUARIOS);
   console.log("- Tipo de CURRENT_USER_ID:", typeof CURRENT_USER_ID);
 
+  // Definir toggleFolderMenu inmediatamente para que esté disponible
+  window.toggleFolderMenu = function (menuId, event) {
+    console.log("🔧 toggleFolderMenu (CARPETAS_DROPBOX) llamado con:", {
+      menuId,
+      event,
+    });
+    event.stopPropagation();
+
+    const menu = document.getElementById(menuId);
+    console.log("🔧 Elemento del menú de carpeta encontrado:", menu);
+
+    if (menu) {
+      // Ocultar todos los menús primero
+      document.querySelectorAll('[id^="folder-menu-"]').forEach((m) => {
+        m.classList.add("hidden");
+      });
+
+      if (menu.classList.contains("hidden")) {
+        // Posicionar el menú cerca del botón
+        const button = event.currentTarget;
+        const rect = button.getBoundingClientRect();
+        console.log("🔧 Posición del botón de carpeta:", rect);
+
+        // Calcular posición del menú
+        const menuWidth = 192; // w-48 = 12rem = 192px
+        const menuHeight = menu.offsetHeight;
+
+        // Posicionar el menú a la derecha del botón
+        let left = rect.right - menuWidth;
+        let top = rect.bottom + 5;
+
+        // Asegurar que el menú no se salga de la pantalla
+        if (left < 0) left = 0;
+        if (top + menuHeight > window.innerHeight) {
+          top = rect.top - menuHeight - 5;
+        }
+
+        menu.style.position = "fixed";
+        menu.style.top = top + "px";
+        menu.style.left = left + "px";
+        menu.style.zIndex = "99999";
+
+        menu.classList.remove("hidden");
+        console.log("🔧 Menú de carpeta abierto:", menuId, "en posición:", {
+          top,
+          left,
+        });
+      } else {
+        menu.classList.add("hidden");
+        console.log("🔧 Menú de carpeta cerrado:", menuId);
+      }
+    } else {
+      console.error("❌ Menú de carpeta no encontrado:", menuId);
+      console.log("🔧 Elementos con 'folder-menu' en el DOM:");
+      document.querySelectorAll('[id^="folder-menu"]').forEach((el) => {
+        console.log("-", el.id);
+      });
+    }
+  };
+
+  console.log("✅ toggleFolderMenu definida globalmente");
+
   // Función para verificar si un archivo tiene extensión
   window.hasExtension = function(filename) {
     return filename.includes('.') && filename.split('.').length > 1;
@@ -1005,7 +1067,7 @@ block content %}
         icon.style.transform = "rotate(0deg)";
       }
     }
-  };
+  // Función toggleFolderMenu ya está definida globalmente arriba
 
   // Esperar a que el DOM esté completamente cargado para el resto de la inicialización
   document.addEventListener("DOMContentLoaded", function () {
@@ -2166,7 +2228,7 @@ block content %}
     }
   };
 
-  // Función toggleFolderMenu eliminada - se usa la de base.html
+  // Función toggleFolderMenu ya está definida globalmente arriba
 
   // Cerrar todos los menús al hacer clic fuera de ellos
   document.addEventListener("click", function (event) {
