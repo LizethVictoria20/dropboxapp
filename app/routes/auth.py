@@ -235,7 +235,7 @@ def complete_with_beneficiaries(user_id):
     flash('Registro completado exitosamente. Ya puedes iniciar sesión.', 'success')
     return redirect(url_for('auth.login'))
 
-@bp.route('/register/complete', methods=['POST'])
+@bp.route('/register/complete', methods=['GET', 'POST'])
 def complete_registration():
     """Completar registro - redirigir a login"""
     flash('Usuario creado exitosamente. Ya puedes iniciar sesión.', 'success')
@@ -267,6 +267,53 @@ def change_password():
             return redirect(url_for('main.profile'))
     
     return render_template('auth/change_password.html')
+
+@bp.route('/admin/change-user-password/<int:user_id>', methods=['POST'])
+@login_required
+@roles_required('admin', 'superadmin')
+def change_user_password(user_id):
+    """Cambiar contraseña de otro usuario (solo administradores)"""
+    user = User.query.get_or_404(user_id)
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+    
+    if not new_password or not confirm_password:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"success": False, "error": "Todos los campos son requeridos."})
+        flash('Todos los campos son requeridos.', 'error')
+        return redirect(url_for('usuarios.lista_usuarios'))
+    
+    if new_password != confirm_password:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"success": False, "error": "Las contraseñas no coinciden."})
+        flash('Las contraseñas no coinciden.', 'error')
+        return redirect(url_for('usuarios.lista_usuarios'))
+    
+    if len(new_password) < 6:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"success": False, "error": "La contraseña debe tener al menos 6 caracteres."})
+        flash('La contraseña debe tener al menos 6 caracteres.', 'error')
+        return redirect(url_for('usuarios.lista_usuarios'))
+    
+    try:
+        user.set_password(new_password)
+        db.session.commit()
+        
+        # Registrar actividad
+        registrar_actividad(current_user, 'password_changed', f'Contraseña cambiada para el usuario {user.email}')
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"success": True, "message": "Contraseña actualizada correctamente."})
+        
+        flash('Contraseña actualizada correctamente.', 'success')
+        return redirect(url_for('usuarios.lista_usuarios'))
+        
+    except Exception as e:
+        db.session.rollback()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"success": False, "error": f"Error al actualizar contraseña: {str(e)}"})
+        flash(f'Error al actualizar contraseña: {str(e)}', 'error')
+        return redirect(url_for('usuarios.lista_usuarios'))
 
 @bp.route('/admin/toggle-user-status/<int:user_id>')
 @login_required

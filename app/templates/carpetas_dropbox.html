@@ -14,26 +14,6 @@ block content %}
           </p>
         </div>
         <div class="flex items-center space-x-3">
-          <a
-            href="{{ url_for('listar_dropbox.buscar_archivos_avanzada') }}"
-            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <svg
-              class="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              ></path>
-            </svg>
-            🔍 Búsqueda Avanzada
-          </a>
-
           <div
             class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"
           >
@@ -262,26 +242,7 @@ block content %}
                     d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                   />
                 </svg>
-                📁 Crear Carpeta
-              </button>
-              <button
-                onclick="openUploadModal('', '{{ usuario_id }}')"
-                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <svg
-                  class="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                  />
-                </svg>
-                📤 Subir Archivo
+                Crear Carpeta
               </button>
             </div>
             {% endif %}
@@ -905,6 +866,11 @@ block content %}
 </div>
 
 <script>
+  // Función para verificar si un archivo tiene extensión
+  window.hasExtension = function(filename) {
+    return filename.includes('.') && filename.split('.').length > 1;
+  };
+
   // Las funciones de modal están definidas en base.html para disponibilidad global
   // Verificar que las funciones estén disponibles
   console.log("Verificando funciones de modal en carpetas_dropbox.html:", {
@@ -1327,20 +1293,6 @@ block content %}
       return true;
     };
 
-    // Función para actualizar badges de visibilidad
-    window.actualizarBadgeVisibilidad = function (ruta, esPublica) {
-      const badgeId = `badge-${ruta}`;
-      const badge = document.getElementById(badgeId);
-      if (badge) {
-        if (esPublica) {
-          badge.className =
-            "ml-2 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800";
-        } else {
-          badge.className =
-            "ml-2 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800";
-        }
-      }
-    };
 
     // Función para cargar información de visibilidad de carpetas
     window.cargarInfoVisibilidad = function () {

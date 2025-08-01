@@ -1,7 +1,7 @@
 from typing import Optional
 from flask_login import current_user
 from flask_wtf import FlaskForm
-from wtforms import DateField, FileField, StringField, PasswordField, SubmitField, TextAreaField, ValidationError, SelectField
+from wtforms import DateField, FileField, StringField, PasswordField, SubmitField, TextAreaField, ValidationError, SelectField, BooleanField
 from wtforms.validators import DataRequired, Length, Optional, EqualTo, Email
 from app.models import User
 
@@ -122,7 +122,7 @@ class ClienteRegistrationForm(BaseForm):
         DataRequired(),
         EqualTo('password', message='Las contraseñas no coinciden')
     ])
-    communications = StringField('Comunicaciones', validators=[DataRequired()])
+    communications = BooleanField('Comunicaciones', validators=[DataRequired()])
     
     def validate_email(self, field):
         user_with_email = User.query.filter_by(email=field.data).first()
