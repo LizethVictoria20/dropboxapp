@@ -232,13 +232,11 @@ def complete_with_beneficiaries(user_id):
     """Completar registro con beneficiarios y redirigir a login"""
     user = User.query.get_or_404(user_id)
     user.registrar_actividad('registration_completed', 'Registro completado con beneficiarios')
-    flash('Registro completado exitosamente. Ya puedes iniciar sesión.', 'success')
     return redirect(url_for('auth.login'))
 
 @bp.route('/register/complete', methods=['GET', 'POST'])
 def complete_registration():
     """Completar registro - redirigir a login"""
-    flash('Usuario creado exitosamente. Ya puedes iniciar sesión.', 'success')
     return redirect(url_for('auth.login'))
 
 @bp.route('/change-password', methods=['GET', 'POST'])
