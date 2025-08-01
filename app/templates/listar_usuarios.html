@@ -1991,6 +1991,8 @@ Inmigración OK{% endblock %} {% block styles %}
             let mappedRole = user.rol;
             if (user.rol === "admin") {
               mappedRole = "admin"; // Mantener como admin
+            } else if (user.rol === "cliente") {
+              mappedRole = "usuario"; // Mapear cliente a usuario
             }
             const fallbackRadio = document.querySelector(
               `input[name="rol"][value="${mappedRole}"]`
@@ -1999,6 +2001,15 @@ Inmigración OK{% endblock %} {% block styles %}
               fallbackRadio.checked = true;
               // Forzar la actualización visual
               toggleLectorPermissions();
+            } else {
+              // Si no se encuentra el rol, seleccionar usuario por defecto
+              const defaultRadio = document.querySelector(
+                'input[name="rol"][value="usuario"]'
+              );
+              if (defaultRadio) {
+                defaultRadio.checked = true;
+                toggleLectorPermissions();
+              }
             }
           }
 

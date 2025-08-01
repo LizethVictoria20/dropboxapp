@@ -358,9 +358,6 @@ def update_user():
         user_id = request.form.get('user_id')
         user = User.query.get(user_id)
         
-        # Debug: Imprimir datos recibidos
-        print(f"DEBUG: Actualizando usuario ID: {user_id}")
-        print(f"DEBUG: Datos del formulario: {dict(request.form)}")
         
         if not user:
             flash('Usuario no encontrado', 'error')
@@ -377,7 +374,16 @@ def update_user():
         user.codigo_postal = request.form.get('codigo_postal')
         user.nacionality = request.form.get('nacionality')
         user.country = request.form.get('country')
-        user.rol = request.form.get('rol')
+        
+        # Validar y actualizar rol
+        nuevo_rol = request.form.get('rol')
+        if nuevo_rol is not None and nuevo_rol.strip():  # Solo actualizar si se proporciona un valor válido
+            user.rol = nuevo_rol
+        else:
+            # Si no se proporciona un rol válido, mantener el rol actual
+            # o establecer un rol por defecto si no existe
+            if not user.rol:
+                user.rol = 'cliente'  # Rol por defecto
         
         # Procesar permisos adicionales para lectores
         if user.rol == 'lector':

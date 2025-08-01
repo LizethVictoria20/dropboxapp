@@ -122,4 +122,15 @@ def create_app(config_name=None):
         colombia_offset = timedelta(hours=-5)
         return value + colombia_offset
     
+    @app.template_filter('from_json')
+    def from_json_filter(value):
+        """Convierte una cadena JSON a un objeto Python"""
+        if value is None or value == '':
+            return []
+        try:
+            import json
+            return json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
     return app
