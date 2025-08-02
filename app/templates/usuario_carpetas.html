@@ -271,7 +271,13 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         action="{{ url_for('listar_dropbox.crear_carpeta') }}"
         method="post"
       >
-        <input type="hidden" name="usuario_id" value="{{ usuario_id }}" />
+        <input type="hidden" id="createFolderParent" name="padre" value="" />
+        <input
+          type="hidden"
+          id="createFolderUsuarioId"
+          name="usuario_id"
+          value="{{ usuario_id }}"
+        />
         <div class="mb-4">
           <label
             for="folderName"

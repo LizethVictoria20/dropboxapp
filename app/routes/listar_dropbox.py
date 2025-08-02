@@ -131,10 +131,6 @@ def filtra_archivos_ocultos(estructura, usuario_id, prefix=""):
     archivos_visibles = Archivo.query.filter_by(usuario_id=usuario_id).all()
     rutas_visibles = {archivo.dropbox_path for archivo in archivos_visibles}
     
-    print(f"DEBUG | Archivos visibles en BD para usuario {usuario_id}: {len(archivos_visibles)}")
-    for archivo in archivos_visibles:
-        print(f"DEBUG | Archivo visible en BD: {archivo.nombre} - {archivo.dropbox_path}")
-    
     # Filtrar archivos: solo mostrar los que están en la BD (visibles)
     for archivo_nombre in estructura.get("_archivos", []):
         archivo_path = f"{prefix}/{archivo_nombre}".replace('//', '/')
@@ -440,7 +436,20 @@ def crear_carpeta():
     
     nombre = request.form.get("nombre")
     padre = request.form.get("padre", "")
-    es_publica = request.form.get("es_publica", "true").lower() == "true"  # Por defecto pública
+    es_publica_raw = request.form.get("es_publica", "true")
+    es_publica = es_publica_raw.lower() == "true"  # Por defecto pública
+    
+    print(f"🔧 Datos del formulario:")
+    print(f"   - nombre: '{nombre}'")
+    print(f"   - padre: '{padre}'")
+    print(f"   - es_publica_raw: '{es_publica_raw}'")
+    print(f"   - es_publica_boolean: {es_publica}")
+    print(f"   - Todos los datos del formulario: {dict(request.form)}")
+    print(f"🔧 Análisis de la ruta padre:")
+    print(f"   - Tipo: {type(padre)}")
+    print(f"   - Longitud: {len(padre) if padre else 0}")
+    print(f"   - Contiene '/': {'/' in padre if padre else False}")
+    print(f"   - Partes: {padre.split('/') if padre else []}")
     
     # Obtener el usuario_id específico del formulario
     usuario_id = request.form.get("usuario_id")
@@ -459,70 +468,59 @@ def crear_carpeta():
         flash("El nombre de la carpeta es obligatorio.", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
     
-    # Construir la ruta en Dropbox correctamente
-    if padre:
-        # Buscar la carpeta padre en la base de datos para obtener la ruta completa
-        print(f"🔍 Buscando carpeta padre: '{padre}' para usuario {usuario_id}")
-        
-        # Intentar diferentes métodos de búsqueda
-        carpeta_padre = None
-        
-        # Método 1: Buscar por dropbox_path exacto
-        carpeta_padre = Folder.query.filter_by(
-            user_id=usuario_id, 
-            dropbox_path=padre
-        ).first()
-        
-        if carpeta_padre:
-            print(f"✅ Encontrada por dropbox_path exacto: {carpeta_padre.dropbox_path}")
-        else:
-            # Método 2: Buscar por nombre de carpeta
-            nombre_carpeta = padre.split("/")[-1]  # Obtener el último segmento
-            carpeta_padre = Folder.query.filter_by(
-                user_id=usuario_id, 
-                name=nombre_carpeta
-            ).first()
-            
-            if carpeta_padre:
-                print(f"✅ Encontrada por nombre: {carpeta_padre.name} -> {carpeta_padre.dropbox_path}")
-            else:
-                # Método 3: Buscar por dropbox_path que termine con el padre
-                carpeta_padre = Folder.query.filter_by(user_id=usuario_id).filter(
-                    Folder.dropbox_path.endswith(padre)
-                ).first()
-                
-                if carpeta_padre:
-                    print(f"✅ Encontrada por dropbox_path que termina con: {carpeta_padre.dropbox_path}")
-                else:
-                    # Método 4: Buscar por dropbox_path que contenga el padre
-                    carpeta_padre = Folder.query.filter_by(user_id=usuario_id).filter(
-                        Folder.dropbox_path.contains(padre)
-                    ).first()
-                    
-                    if carpeta_padre:
-                        print(f"✅ Encontrada por dropbox_path que contiene: {carpeta_padre.dropbox_path}")
-                    else:
-                        print(f"❌ No se encontró carpeta padre para: {padre}")
-        
-        if carpeta_padre:
-            # Usar la ruta completa de la carpeta padre
-            ruta = carpeta_padre.dropbox_path.rstrip("/") + "/" + nombre
-            print(f"🔧 Carpeta padre encontrada: {carpeta_padre.name} -> {carpeta_padre.dropbox_path}")
-        else:
-            # Si no se encuentra la carpeta padre, usar la ruta del padre directamente
-            if padre.startswith("/"):
-                # El padre ya es una ruta completa de Dropbox
-                ruta = padre.rstrip("/") + "/" + nombre
-                print(f"🔧 Usando ruta completa del padre: {padre} -> {ruta}")
-            else:
-                # Si no empieza con /, agregarlo
-                ruta = "/" + padre.rstrip("/") + "/" + nombre
-                print(f"🔧 Agregando / al padre: {padre} -> {ruta}")
+    # Construir la ruta en Dropbox correctamente usando la misma lógica que renombrar_carpeta
+    print(f"🔧 Procesando carpeta padre: '{padre}' para usuario {usuario_id}")
+    
+    # Obtener el usuario específico
+    usuario_especifico = User.query.get(usuario_id)
+    if not usuario_especifico:
+        print(f"❌ Usuario {usuario_id} no encontrado")
+        flash("Error: Usuario no encontrado.", "error")
+        return redirect(url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id))
+    
+    # Construir la ruta base del usuario (misma lógica que renombrar_carpeta)
+    if hasattr(usuario_especifico, 'dropbox_folder_path') and usuario_especifico.dropbox_folder_path:
+        ruta_base = usuario_especifico.dropbox_folder_path
     else:
-        # Si no hay padre, crear en la carpeta raíz del usuario
-        ruta = "/" + nombre
+        # Fallback: usar el email del usuario
+        ruta_base = f"/{usuario_especifico.email}"
+        
+    # Función auxiliar para construir rutas (misma que renombrar_carpeta)
+    def join_dropbox_path(parent, name):
+        if not parent or parent in ('/', '', None):
+            return f"/{name}"
+        return f"{parent.rstrip('/')}/{name}"
+    
+    if padre:
+        # Limpiar la ruta padre
+        padre = padre.strip().replace('//', '/')
+        if padre.startswith('/'):
+            padre = padre[1:]
+        if padre.endswith('/'):
+            padre = padre[:-1]
+        
+        
+        if padre.startswith("/"):
+            # Si la carpeta padre ya empieza con /, verificar si incluye la ruta base
+            if padre.startswith(ruta_base):
+                # Ya incluye la ruta base, usar directamente
+                ruta = join_dropbox_path(padre, nombre)
+            else:
+                # No incluye la ruta base, agregarla
+                carpeta_padre_completa = f"{ruta_base}{padre}"
+                ruta = join_dropbox_path(carpeta_padre_completa, nombre)
+        else:
+            # Si no empieza con /, construir la ruta completa
+            carpeta_padre_completa = f"{ruta_base}/{padre}"
+            ruta = join_dropbox_path(carpeta_padre_completa, nombre)
+        
+    else:
+        # Si no hay padre, crear en la carpeta del usuario específico
+        ruta = join_dropbox_path(ruta_base, nombre)
+
     
     print(f"🔧 Creando carpeta: nombre='{nombre}', padre='{padre}', ruta='{ruta}'")
+    print(f"🔧 Ruta final para crear en Dropbox: '{ruta}'")
     
     try:
         dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
@@ -537,7 +535,7 @@ def crear_carpeta():
         )
         db.session.add(nueva_carpeta)
         db.session.commit()
-        
+
         # Registrar actividad
         current_user.registrar_actividad('folder_created', f'Carpeta "{nombre}" creada en {ruta}')
         

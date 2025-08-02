@@ -258,7 +258,8 @@ folders_por_ruta={}, usuario_email="") %}
               {% if usuario_actual and (usuario_actual.rol == 'admin' or
               usuario_actual.rol == 'cliente') %}
               <button
-                onclick="openCreateFolderModal('{{ parent ~ '/' ~ carpeta }}', '{{ usuario_id }}')"
+                onclick="openCreateFolderModal('{{ (parent + '/' + carpeta) if parent else carpeta }}', '{{ usuario_id }}')"
+                data-debug="parent: {{ parent }}, carpeta: {{ carpeta }}, ruta_completa: {{ (parent + '/' + carpeta) if parent else carpeta }}, nivel: {{ parent.count('/') + 1 if parent else 1 }}"
                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
               >
                 <svg

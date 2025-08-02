@@ -57,6 +57,101 @@
         },
       };
     </script>
+
+    <!-- Funciones globales para modales y carpetas -->
+    <script>
+      // Funciones globales necesarias para el macro tree_macros.html
+      window.openCreateFolderModal = function (parentPath, usuarioId) {
+        console.log("🔧 openCreateFolderModal llamado con:", {
+          parentPath,
+          usuarioId,
+        });
+        console.log("🔧 Tipo de parentPath:", typeof parentPath);
+        console.log(
+          "🔧 Longitud de parentPath:",
+          parentPath ? parentPath.length : 0
+        );
+
+        // Limpiar y normalizar la ruta padre
+        let cleanParentPath = parentPath || "";
+        if (cleanParentPath) {
+          // Remover barras dobles y normalizar
+          cleanParentPath = cleanParentPath.replace(/\/+/g, "/");
+          // Remover barra inicial si existe
+          cleanParentPath = cleanParentPath.replace(/^\//, "");
+          // Remover barra final si existe
+          cleanParentPath = cleanParentPath.replace(/\/$/, "");
+        }
+
+        console.log("🔧 Ruta padre normalizada:", cleanParentPath);
+        console.log("🔧 Ruta padre original vs normalizada:", {
+          original: parentPath,
+          normalizada: cleanParentPath,
+        });
+
+        // Configurar los campos del formulario
+        const parentInput = document.getElementById("createFolderParent");
+        const usuarioIdInput = document.getElementById("createFolderUsuarioId");
+
+        if (parentInput) {
+          parentInput.value = cleanParentPath;
+          console.log("✅ Campo padre configurado:", parentInput.value);
+        } else {
+          console.error("❌ Campo createFolderParent no encontrado");
+        }
+
+        if (usuarioIdInput) {
+          usuarioIdInput.value = usuarioId || "";
+          console.log("✅ Campo usuario_id configurado:", usuarioIdInput.value);
+        } else {
+          console.error("❌ Campo createFolderUsuarioId no encontrado");
+        }
+
+        // Limpiar el campo de nombre
+        const folderNameInput = document.getElementById("folderName");
+        if (folderNameInput) {
+          folderNameInput.value = "";
+        }
+
+        // Mostrar el modal
+        const modal = document.getElementById("createFolderModal");
+        if (modal) {
+          modal.classList.remove("hidden");
+          console.log("✅ Modal de crear carpeta abierto");
+        } else {
+          console.error("❌ Modal createFolderModal no encontrado");
+        }
+      };
+
+      window.handleFolderClick = function (folderId, event) {
+        // Detener la propagación del evento para evitar conflictos
+        if (event) {
+          event.stopPropagation();
+          event.preventDefault();
+        }
+
+        // Solo ejecutar toggleFolder, no otras funciones
+        toggleFolder(folderId);
+      };
+
+      function toggleFolder(folderId) {
+        const div = document.getElementById("folder-" + folderId);
+        const icon = document.getElementById("icon-" + folderId);
+        if (!div) return;
+
+        if (div.classList.contains("hidden")) {
+          div.classList.remove("hidden");
+          if (icon) {
+            icon.style.transform = "rotate(90deg)";
+          }
+        } else {
+          div.classList.add("hidden");
+          if (icon) {
+            icon.style.transform = "rotate(0deg)";
+          }
+        }
+      }
+    </script>
     <style>
       html,
       body {
