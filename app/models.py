@@ -211,8 +211,29 @@ class Folder(db.Model):
     es_publica = db.Column(db.Boolean, default=True)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Campos para soft delete
+    eliminado = db.Column(db.Boolean, default=False)
+    fecha_eliminacion = db.Column(db.DateTime, nullable=True)
+    eliminado_por = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    
     # Relación con usuario
-    usuario = db.relationship('User', backref=db.backref('folders', lazy=True))
+    usuario = db.relationship('User', foreign_keys=[user_id], backref=db.backref('folders', lazy=True))
+    eliminador = db.relationship('User', foreign_keys=[eliminado_por], backref=db.backref('folders_eliminadas', lazy=True))
+    
+    @classmethod
+    def get_activos(cls):
+        """Obtener solo carpetas no eliminadas"""
+        return cls.query.filter_by(eliminado=False).all()
+    
+    @classmethod
+    def get_activos_by_usuario(cls, user_id):
+        """Obtener carpetas activas de un usuario específico"""
+        return cls.query.filter_by(user_id=user_id, eliminado=False).all()
+    
+    @classmethod
+    def get_activos_publicas_by_usuario(cls, user_id):
+        """Obtener carpetas activas y públicas de un usuario específico"""
+        return cls.query.filter_by(user_id=user_id, es_publica=True, eliminado=False).all()
 
 class FolderPermiso(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -236,12 +257,33 @@ class Archivo(db.Model):
     extension = db.Column(db.String(20), nullable=True)  # extensión (ej: pdf, jpg)
     descripcion = db.Column(db.String(255), nullable=True)  # descripción opcional del archivo
 
+    # Campos para soft delete
+    eliminado = db.Column(db.Boolean, default=False)
+    fecha_eliminacion = db.Column(db.DateTime, nullable=True)
+    eliminado_por = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
     # Relación con usuario (opcional, solo si manejas usuarios)
     usuario_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    usuario = db.relationship('User', backref=db.backref('archivos', lazy=True))
+    usuario = db.relationship('User', foreign_keys=[usuario_id], backref=db.backref('archivos', lazy=True))
+    eliminador = db.relationship('User', foreign_keys=[eliminado_por], backref=db.backref('archivos_eliminados', lazy=True))
 
     def __repr__(self):
         return f"<Archivo {self.nombre} en {self.dropbox_path}>"
+    
+    @classmethod
+    def get_activos(cls):
+        """Obtener solo archivos no eliminados"""
+        return cls.query.filter_by(eliminado=False).all()
+    
+    @classmethod
+    def get_activos_by_usuario(cls, usuario_id):
+        """Obtener archivos activos de un usuario específico"""
+        return cls.query.filter_by(usuario_id=usuario_id, eliminado=False).all()
+    
+    @classmethod
+    def get_activos_by_path(cls, dropbox_path):
+        """Obtener archivos activos por ruta de Dropbox"""
+        return cls.query.filter_by(dropbox_path=dropbox_path, eliminado=False).all()
 
 class UserActivityLog(db.Model):
     """Modelo para registrar actividades de usuarios"""

@@ -1961,7 +1961,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   }
 
   // Función para confirmar eliminación de archivo
-  function confirmarEliminarArchivo(archivo, carpeta, usuarioId) {
+  window.confirmarEliminarArchivo = function(archivo, carpeta, usuarioId) {
     console.log("🔧 confirmarEliminarArchivo llamado con:", { archivo, carpeta, usuarioId });
 
     // Configurar el modal de confirmación

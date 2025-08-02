@@ -1,0 +1,365 @@
+{% extends "base.html" %} {% block title %}Elementos Eliminados{% endblock %} {%
+block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Elementos Eliminados</h1>
+          <p class="mt-2 text-sm text-gray-600">
+            Gestiona archivos y carpetas marcados como eliminados
+          </p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <a
+            href="{{ url_for('listar_dropbox.carpetas_dropbox') }}"
+            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            Volver a Carpetas
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %}
+    <div class="mb-6 space-y-3">
+      {% for category, message in messages %}
+      <div
+        class="rounded-lg p-4 {{ 'bg-green-50 border border-green-200' if category=='success' else 'bg-red-50 border border-red-200' if category=='error' else 'bg-yellow-50 border border-yellow-200' }}"
+      >
+        <div class="flex items-center">
+          {% if category == 'success' %}
+          <svg
+            class="w-5 h-5 text-green-600 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          {% elif category == 'error' %}
+          <svg
+            class="w-5 h-5 text-red-600 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          {% else %}
+          <svg
+            class="w-5 h-5 text-yellow-600 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
+          </svg>
+          {% endif %}
+          <span
+            class="{{ 'text-green-800' if category=='success' else 'text-red-800' if category=='error' else 'text-yellow-800' }} font-medium"
+            >{{ message }}</span
+          >
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %} {% endwith %}
+
+    <!-- Tabs -->
+    <div class="mb-6">
+      <div class="border-b border-gray-200">
+        <nav class="-mb-px flex space-x-8">
+          <button
+            onclick="showTab('archivos')"
+            id="tab-archivos"
+            class="tab-button py-2 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600"
+          >
+            Archivos Eliminados ({{ archivos_eliminados|length }})
+          </button>
+          <button
+            onclick="showTab('carpetas')"
+            id="tab-carpetas"
+            class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700"
+          >
+            Carpetas Eliminadas ({{ carpetas_eliminadas|length }})
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Archivos Eliminados Tab -->
+    <div id="content-archivos" class="tab-content">
+      {% if archivos_eliminados %}
+      <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        <ul class="divide-y divide-gray-200">
+          {% for archivo in archivos_eliminados %}
+          <li class="px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <svg
+                    class="w-8 h-8 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+                <div class="ml-4">
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ archivo.nombre }}
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    <span class="font-medium">Ruta:</span> {{
+                    archivo.dropbox_path }}
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    <span class="font-medium">Categoría:</span> {{
+                    archivo.categoria }} / {{ archivo.subcategoria }}
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    <span class="font-medium">Eliminado:</span> {{
+                    archivo.fecha_eliminacion.strftime('%d/%m/%Y %H:%M') if
+                    archivo.fecha_eliminacion else 'N/A' }}
+                  </div>
+                  {% if archivo.eliminador %}
+                  <div class="text-sm text-gray-500">
+                    <span class="font-medium">Por:</span> {{
+                    archivo.eliminador.nombre or archivo.eliminador.email }}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <form
+                  method="POST"
+                  action="{{ url_for('listar_dropbox.restaurar_archivo', archivo_id=archivo.id) }}"
+                  class="inline"
+                >
+                  <button
+                    type="submit"
+                    onclick="return confirm('¿Estás seguro de que quieres restaurar este archivo?')"
+                    class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <svg
+                      class="w-4 h-4 mr-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Restaurar
+                  </button>
+                </form>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <div class="text-center py-12">
+        <svg
+          class="mx-auto h-12 w-12 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">
+          No hay archivos eliminados
+        </h3>
+        <p class="mt-1 text-sm text-gray-500">
+          Todos los archivos están activos.
+        </p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Carpetas Eliminadas Tab -->
+    <div id="content-carpetas" class="tab-content hidden">
+      {% if carpetas_eliminadas %}
+      <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        <ul class="divide-y divide-gray-200">
+          {% for carpeta in carpetas_eliminadas %}
+          <li class="px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <svg
+                    class="w-8 h-8 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                    />
+                  </svg>
+                </div>
+                <div class="ml-4">
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ carpeta.name }}
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    <span class="font-medium">Ruta:</span> {{
+                    carpeta.dropbox_path }}
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    <span class="font-medium">Usuario:</span> {{
+                    carpeta.usuario.nombre or carpeta.usuario.email }}
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    <span class="font-medium">Eliminado:</span> {{
+                    carpeta.fecha_eliminacion.strftime('%d/%m/%Y %H:%M') if
+                    carpeta.fecha_eliminacion else 'N/A' }}
+                  </div>
+                  {% if carpeta.eliminador %}
+                  <div class="text-sm text-gray-500">
+                    <span class="font-medium">Por:</span> {{
+                    carpeta.eliminador.nombre or carpeta.eliminador.email }}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <form
+                  method="POST"
+                  action="{{ url_for('listar_dropbox.restaurar_carpeta', carpeta_id=carpeta.id) }}"
+                  class="inline"
+                >
+                  <button
+                    type="submit"
+                    onclick="return confirm('¿Estás seguro de que quieres restaurar esta carpeta?')"
+                    class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <svg
+                      class="w-4 h-4 mr-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Restaurar
+                  </button>
+                </form>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <div class="text-center py-12">
+        <svg
+          class="mx-auto h-12 w-12 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+          />
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">
+          No hay carpetas eliminadas
+        </h3>
+        <p class="mt-1 text-sm text-gray-500">
+          Todas las carpetas están activas.
+        </p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function showTab(tabName) {
+    // Ocultar todos los contenidos de tabs
+    const tabContents = document.querySelectorAll(".tab-content");
+    tabContents.forEach((content) => {
+      content.classList.add("hidden");
+    });
+
+    // Desactivar todos los botones de tabs
+    const tabButtons = document.querySelectorAll(".tab-button");
+    tabButtons.forEach((button) => {
+      button.classList.remove("border-blue-500", "text-blue-600");
+      button.classList.add("border-transparent", "text-gray-500");
+    });
+
+    // Mostrar el contenido del tab seleccionado
+    document.getElementById(`content-${tabName}`).classList.remove("hidden");
+
+    // Activar el botón del tab seleccionado
+    document
+      .getElementById(`tab-${tabName}`)
+      .classList.remove("border-transparent", "text-gray-500");
+    document
+      .getElementById(`tab-${tabName}`)
+      .classList.add("border-blue-500", "text-blue-600");
+  }
+</script>
+{% endblock %}

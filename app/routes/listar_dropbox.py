@@ -127,8 +127,8 @@ def filtra_archivos_ocultos(estructura, usuario_id, prefix=""):
     
     nueva_estructura = {"_archivos": [], "_subcarpetas": {}}
     
-    # Obtener todos los archivos visibles del usuario (los que están en la BD)
-    archivos_visibles = Archivo.query.filter_by(usuario_id=usuario_id).all()
+    # Obtener todos los archivos visibles del usuario (los que están en la BD y no están eliminados)
+    archivos_visibles = Archivo.get_activos_by_usuario(usuario_id)
     rutas_visibles = {archivo.dropbox_path for archivo in archivos_visibles}
     
     # Filtrar archivos: solo mostrar los que están en la BD (visibles)
@@ -146,6 +146,41 @@ def filtra_archivos_ocultos(estructura, usuario_id, prefix=""):
         nueva_estructura["_subcarpetas"][subcarpeta] = filtra_archivos_ocultos(
             contenido, usuario_id, sub_prefix
         )
+    
+    return nueva_estructura
+
+def filtra_carpetas_eliminadas(estructura, usuario_id, prefix=""):
+    """
+    Filtra las carpetas eliminadas de la estructura basándose en la base de datos.
+    Solo muestra carpetas que están en la BD y no están marcadas como eliminadas.
+    - estructura: dict con formato {'_archivos': [...], '_subcarpetas': { ... }}
+    - usuario_id: ID del usuario para filtrar carpetas eliminadas
+    - prefix: path base actual para construir rutas completas
+    """
+    from app.models import Folder
+    
+    if not estructura:
+        return estructura
+    
+    nueva_estructura = {"_archivos": [], "_subcarpetas": {}}
+    
+    # Obtener todas las carpetas activas del usuario (no eliminadas)
+    carpetas_activas = Folder.get_activos_by_usuario(usuario_id)
+    rutas_activas = {carpeta.dropbox_path for carpeta in carpetas_activas}
+    
+    # Mantener archivos (se filtran por separado)
+    nueva_estructura["_archivos"] = estructura.get("_archivos", [])
+    
+    # Filtrar subcarpetas: solo mostrar las que están en la BD y no están eliminadas
+    for subcarpeta, contenido in estructura.get("_subcarpetas", {}).items():
+        carpeta_path = f"{prefix}/{subcarpeta}".replace('//', '/')
+        if carpeta_path in rutas_activas:
+            nueva_estructura["_subcarpetas"][subcarpeta] = filtra_carpetas_eliminadas(
+                contenido, usuario_id, carpeta_path
+            )
+            print(f"DEBUG | Carpeta activa mostrada: {subcarpeta}")
+        else:
+            print(f"DEBUG | Carpeta eliminada filtrada: {subcarpeta} - {carpeta_path}")
     
     return nueva_estructura
 
@@ -215,24 +250,24 @@ def carpetas_dropbox():
         # Determina qué usuarios cargar
         if current_user.rol == "admin" or current_user.rol == "superadmin":
             usuarios = User.query.all()
-            # Admin ve todas las carpetas
-            folders = Folder.query.all()
+            # Admin ve todas las carpetas activas
+            folders = Folder.get_activos()
         elif current_user.rol == "lector":
-            # Lector puede ver todas las carpetas de todos los usuarios
+            # Lector puede ver todas las carpetas activas de todos los usuarios
             usuarios = User.query.all()
-            folders = Folder.query.all()
+            folders = Folder.get_activos()
         elif current_user.rol == "cliente":
-            # Cliente ve solo sus propias carpetas (no beneficiarios en la vista principal)
+            # Cliente ve solo sus propias carpetas activas (no beneficiarios en la vista principal)
             usuarios = [current_user]
             
-            # Obtener carpetas del cliente y sus beneficiarios (para permisos)
+            # Obtener carpetas activas del cliente y sus beneficiarios (para permisos)
             beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).all()
             user_ids = [current_user.id] + [b.id for b in beneficiarios]
-            folders = Folder.query.filter(Folder.user_id.in_(user_ids)).all()
+            folders = Folder.query.filter(Folder.user_id.in_(user_ids), Folder.eliminado == False).all()
         else:
             # Otros roles
             usuarios = [current_user]
-            folders = Folder.query.filter_by(user_id=current_user.id, es_publica=True).all()
+            folders = Folder.get_activos_publicas_by_usuario(current_user.id)
 
         usuarios_dict = {u.id: u for u in usuarios}
         folders_por_ruta = {f.dropbox_path: f for f in folders}
@@ -257,9 +292,10 @@ def carpetas_dropbox():
                 # Usar la función optimizada con recursión limitada para mejor rendimiento
                 estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
                 
-                # Filtrar archivos ocultos de la estructura para este usuario
-                print(f"DEBUG | Filtrando archivos ocultos para usuario {user.id} en carpetas_dropbox")
+                # Filtrar archivos ocultos y eliminados de la estructura para este usuario
+                print(f"DEBUG | Filtrando archivos ocultos y eliminados para usuario {user.id} en carpetas_dropbox")
                 estructura = filtra_archivos_ocultos(estructura, user.id, path)
+                estructura = filtra_carpetas_eliminadas(estructura, user.id, path)
                 
             except Exception as e:
                 user_identifier = user.email if hasattr(user, 'email') else user.nombre
@@ -271,9 +307,9 @@ def carpetas_dropbox():
                 flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
                 return redirect(url_for("auth.login"))
             if current_user.rol == "cliente":
-                # Para clientes, solo mostrar carpetas públicas
-                print("🔧 Filtrando carpetas para cliente - solo mostrar públicas")
-                carpetas_publicas = Folder.query.filter_by(user_id=user.id, es_publica=True).all()
+                # Para clientes, solo mostrar carpetas públicas y activas
+                print("🔧 Filtrando carpetas para cliente - solo mostrar públicas y activas")
+                carpetas_publicas = Folder.get_activos_publicas_by_usuario(user.id)
                 rutas_visibles = set(f.dropbox_path for f in carpetas_publicas)
                 user_identifier = user.email if hasattr(user, 'email') else user.nombre
                 estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user_identifier)
@@ -2254,6 +2290,10 @@ def ver_usuario_carpetas(usuario_id):
             print(f"DEBUG | Filtrando archivos ocultos para usuario {usuario.id}")
             estructura = filtra_archivos_ocultos(estructura, usuario.id, path)
             
+            # Filtrar carpetas eliminadas de la estructura
+            print(f"DEBUG | Filtrando carpetas eliminadas para usuario {usuario.id}")
+            estructura = filtra_carpetas_eliminadas(estructura, usuario.id, path)
+            
         except Exception as e:
             print(f"Error obteniendo estructura para usuario {usuario.email}: {e}")
             estructura = {"_subcarpetas": {}, "_archivos": []}
@@ -2293,8 +2333,8 @@ def ver_usuario_carpetas(usuario_id):
         # Guardar la estructura en el diccionario (misma lógica que carpetas_dropbox)
         estructuras_usuarios[usuario.id] = estructura
         
-        # Carpetas de este usuario
-        folders = Folder.query.filter_by(user_id=usuario.id).all()
+        # Carpetas activas de este usuario (no eliminadas)
+        folders = Folder.get_activos_by_usuario(usuario.id)
         folders_por_ruta = {f.dropbox_path: f for f in folders}
         
         return render_template(
@@ -2445,17 +2485,18 @@ def eliminar_archivo():
             else:
                 return redirect(url_for("listar_dropbox.carpetas_dropbox"))
         
-        # Ocultar el archivo (eliminar solo de la base de datos)
-        # El archivo permanece en Dropbox pero se oculta de la interfaz
-        db.session.delete(archivo_bd)
+        # Implementar soft delete - marcar como eliminado pero mantener en Dropbox
+        archivo_bd.eliminado = True
+        archivo_bd.fecha_eliminacion = datetime.utcnow()
+        archivo_bd.eliminado_por = current_user.id
         db.session.commit()
-        print(f"DEBUG | Archivo ocultado de BD: {archivo_bd.nombre}")
+        print(f"DEBUG | Archivo marcado como eliminado en BD: {archivo_bd.nombre}")
         print(f"DEBUG | Archivo mantenido en Dropbox: {archivo_path}")
         
         # Registrar actividad
-        current_user.registrar_actividad('file_hidden', f'Archivo "{archivo_nombre}" ocultado de la interfaz')
+        current_user.registrar_actividad('file_soft_deleted', f'Archivo "{archivo_nombre}" marcado como eliminado')
         
-        flash("Archivo eliminado correctamente.", "success")
+        flash("Archivo eliminado correctamente. Puede ser restaurado por un administrador.", "success")
         
     except Exception as e:
         print(f"ERROR | Error eliminando archivo: {e}")
@@ -2701,38 +2742,34 @@ def eliminar_carpeta():
         # Construir la ruta completa de la carpeta
         carpeta_path = f"{carpeta_padre}/{carpeta_nombre}".replace('//', '/')
         
-        print(f"DEBUG | Eliminando carpeta: {carpeta_path}")
+        print(f"DEBUG | Marcando carpeta como eliminada: {carpeta_path}")
         
-        # Conectar a Dropbox
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        # NO eliminar físicamente de Dropbox - solo soft delete
+        print(f"DEBUG | Carpeta mantenida en Dropbox: {carpeta_path}")
         
-        # Eliminar carpeta de Dropbox (esto eliminará recursivamente todo el contenido)
-        try:
-            dbx.files_delete_v2(carpeta_path)
-            print(f"DEBUG | Carpeta eliminada de Dropbox: {carpeta_path}")
-        except dropbox.exceptions.ApiError as e:
-            if "not_found" in str(e):
-                print(f"DEBUG | Carpeta no encontrada en Dropbox: {carpeta_path}")
-            else:
-                raise e
+        # Implementar soft delete para carpetas y archivos
+        # Marcar archivos en la carpeta como eliminados
+        archivos_en_carpeta = Archivo.query.filter(Archivo.dropbox_path.like(f"{carpeta_path}/%")).all()
+        for archivo in archivos_en_carpeta:
+            archivo.eliminado = True
+            archivo.fecha_eliminacion = datetime.utcnow()
+            archivo.eliminado_por = current_user.id
+        print(f"DEBUG | Archivos marcados como eliminados: {len(archivos_en_carpeta)}")
         
-        # Eliminar registros de la base de datos
-        # Primero eliminar archivos que estén en esta carpeta
-        archivos_eliminados = Archivo.query.filter(Archivo.dropbox_path.like(f"{carpeta_path}/%")).delete()
-        print(f"DEBUG | Archivos eliminados de BD: {archivos_eliminados}")
-        
-        # Luego eliminar la carpeta
+        # Marcar la carpeta como eliminada
         carpeta_bd = Folder.query.filter_by(dropbox_path=carpeta_path).first()
         if carpeta_bd:
-            db.session.delete(carpeta_bd)
-            print(f"DEBUG | Carpeta eliminada de BD: {carpeta_bd.name}")
+            carpeta_bd.eliminado = True
+            carpeta_bd.fecha_eliminacion = datetime.utcnow()
+            carpeta_bd.eliminado_por = current_user.id
+            print(f"DEBUG | Carpeta marcada como eliminada: {carpeta_bd.name}")
         
         db.session.commit()
         
         # Registrar actividad
-        current_user.registrar_actividad('folder_deleted', f'Carpeta "{carpeta_nombre}" eliminada')
+        current_user.registrar_actividad('folder_soft_deleted', f'Carpeta "{carpeta_nombre}" marcada como eliminada')
         
-        flash("Carpeta eliminada correctamente.", "success")
+        flash("Carpeta eliminada correctamente. Puede ser restaurada por un administrador.", "success")
         
     except Exception as e:
         print(f"ERROR | Error eliminando carpeta: {e}")
@@ -2742,6 +2779,100 @@ def eliminar_carpeta():
     if redirect_url and "/usuario/" in redirect_url:
         return redirect(redirect_url)
     else:
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+
+@bp.route('/restaurar_archivo/<int:archivo_id>', methods=['POST'])
+@login_required
+def restaurar_archivo(archivo_id):
+    """Restaurar un archivo marcado como eliminado"""
+    if not current_user.puede_administrar():
+        flash("No tienes permisos para restaurar archivos.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
+    try:
+        archivo = Archivo.query.get_or_404(archivo_id)
+        
+        if not archivo.eliminado:
+            flash("El archivo no está marcado como eliminado.", "warning")
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # Restaurar el archivo
+        archivo.eliminado = False
+        archivo.fecha_eliminacion = None
+        archivo.eliminado_por = None
+        db.session.commit()
+        
+        # Registrar actividad
+        current_user.registrar_actividad('file_restored', f'Archivo "{archivo.nombre}" restaurado')
+        
+        flash(f"Archivo '{archivo.nombre}' restaurado correctamente.", "success")
+        
+    except Exception as e:
+        print(f"ERROR | Error restaurando archivo: {e}")
+        flash(f"Error restaurando archivo: {e}", "error")
+    
+    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+
+@bp.route('/restaurar_carpeta/<int:carpeta_id>', methods=['POST'])
+@login_required
+def restaurar_carpeta(carpeta_id):
+    """Restaurar una carpeta marcada como eliminada"""
+    if not current_user.puede_administrar():
+        flash("No tienes permisos para restaurar carpetas.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
+    try:
+        carpeta = Folder.query.get_or_404(carpeta_id)
+        
+        if not carpeta.eliminado:
+            flash("La carpeta no está marcada como eliminada.", "warning")
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # Restaurar la carpeta
+        carpeta.eliminado = False
+        carpeta.fecha_eliminacion = None
+        carpeta.eliminado_por = None
+        db.session.commit()
+        
+        # Registrar actividad
+        current_user.registrar_actividad('folder_restored', f'Carpeta "{carpeta.name}" restaurada')
+        
+        flash(f"Carpeta '{carpeta.name}' restaurada correctamente.", "success")
+        
+    except Exception as e:
+        print(f"ERROR | Error restaurando carpeta: {e}")
+        flash(f"Error restaurando carpeta: {e}", "error")
+    
+    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+
+@bp.route('/elementos_eliminados')
+@login_required
+def elementos_eliminados():
+    """Mostrar elementos eliminados para administradores"""
+    if not current_user.puede_administrar():
+        flash("No tienes permisos para ver elementos eliminados.", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
+    try:
+        # Obtener archivos eliminados
+        archivos_eliminados = Archivo.query.filter_by(eliminado=True).all()
+        
+        # Obtener carpetas eliminadas
+        carpetas_eliminadas = Folder.query.filter_by(eliminado=True).all()
+        
+        return render_template(
+            "elementos_eliminados.html",
+            archivos_eliminados=archivos_eliminados,
+            carpetas_eliminadas=carpetas_eliminadas,
+            usuario_actual=current_user
+        )
+        
+    except Exception as e:
+        print(f"ERROR | Error obteniendo elementos eliminados: {e}")
+        flash(f"Error obteniendo elementos eliminados: {e}", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
 @bp.route("/buscar_archivos_avanzada", methods=["GET", "POST"])
