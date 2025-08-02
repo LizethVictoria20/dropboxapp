@@ -35,12 +35,12 @@ def dashboard():
     # Registrar actividad de acceso al dashboard
     current_user.registrar_actividad('dashboard_access', 'Acceso al dashboard principal')
     
-    if current_user.es_cliente():
+    # Redirigir según el rol
+    if current_user.rol == 'cliente':
         return redirect(url_for('listar_dropbox.subir_archivo'))
-    elif current_user.puede_administrar():
-        return redirect(url_for('main.dashboard_admin'))
     else:
-        return redirect(url_for('main.dashboard_lector'))
+        # Admin, superadmin y lector van al dashboard admin
+        return redirect(url_for('main.dashboard_admin'))
 
 @bp.route('/dashboard/cliente')
 @login_required

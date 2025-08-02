@@ -89,17 +89,12 @@ def login():
                     # Solo redirigir si es una URL relativa y segura
                     return redirect(next_page)
                 
-                # Redirigir según el rol si no hay next parameter
-                if user.rol == 'superadmin':
-                    return redirect(url_for('main.dashboard_admin'))
-                elif user.rol == 'admin':
-                    return redirect(url_for('main.dashboard_admin'))
-                elif user.rol == 'cliente':
-                    return redirect(url_for('listar_dropbox.carpetas_dropbox'))
-                elif user.rol == 'lector':
-                    return redirect(url_for('main.dashboard_admin'))
+                # Redirigir según el rol
+                if user.rol == 'cliente':
+                    return redirect(url_for('listar_dropbox.subir_archivo'))
                 else:
-                    return redirect(url_for('main.dashboard_lector'))
+                    # Admin, superadmin y lector van al dashboard admin
+                    return redirect(url_for('main.dashboard_admin'))
         else:
             error = "Credenciales incorrectas."
     
