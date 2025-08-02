@@ -1,5 +1,5 @@
-Necesito q{% extends "base.html" %} {% block title %}Carpetas de Dropbox{% endblock %} {%
-block content %}
+{% extends "base.html" %} {% block title %}Carpetas de Dropbox{%
+endblock %} {% block content %}
 <div class="min-h-screen bg-gray-50 py-8">
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     {# Header Section #}
@@ -2936,6 +2936,36 @@ block content %}
       console.log("✅ Árbol simple renderizado");
     }
   };
+
+  // Funciones necesarias para el macro tree_macros.html
+  function handleFolderClick(folderId, event) {
+    // Detener la propagación del evento para evitar conflictos
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+
+    // Solo ejecutar toggleFolder, no otras funciones
+    toggleFolder(folderId);
+  }
+
+  function toggleFolder(folderId) {
+    const div = document.getElementById("folder-" + folderId);
+    const icon = document.getElementById("icon-" + folderId);
+    if (!div) return;
+
+    if (div.classList.contains("hidden")) {
+      div.classList.remove("hidden");
+      if (icon) {
+        icon.style.transform = "rotate(90deg)";
+      }
+    } else {
+      div.classList.add("hidden");
+      if (icon) {
+        icon.style.transform = "rotate(0deg)";
+      }
+    }
+  }
 </script>
 
 {% endblock %}

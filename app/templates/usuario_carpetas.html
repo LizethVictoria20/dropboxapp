@@ -440,11 +440,16 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         <input type="hidden" name="carpeta_actual" id="renameCarpetaActual" />
         <!-- Elemento adicional para compatibilidad con openRenameModal -->
         <input type="hidden" id="renameUsuarioId" value="{{ usuario_id }}" />
+        <!-- Campo oculto para preservar la extensión del archivo -->
+        <input type="hidden" id="archivoExtension" name="archivo_extension" />
         <div class="mb-4">
           <label
             for="newName"
             class="block text-sm font-medium text-gray-700 mb-2"
-            >Nuevo nombre</label
+            >Nuevo nombre
+            <span class="text-xs text-gray-500"
+              >(la extensión se preservará automáticamente)</span
+            ></label
           >
           <input
             type="text"
@@ -944,10 +949,45 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         renameUsuarioIdElement.value = usuarioId;
       }
 
-      // Intentar establecer nuevo nombre si el elemento existe
+      // Establecer el nombre del archivo preservando la extensión
       const nuevoNombreElement = document.getElementById("nuevoNombre");
+      const newNameElement = document.getElementById("newName");
+
       if (nuevoNombreElement) {
         nuevoNombreElement.value = archivo;
+      }
+
+            if (newNameElement) {
+        // Separar el nombre y la extensión
+        const lastDotIndex = archivo.lastIndexOf('.');
+        if (lastDotIndex !== -1) {
+          const nombreSinExtension = archivo.substring(0, lastDotIndex);
+          const extension = archivo.substring(lastDotIndex);
+
+          // Establecer solo el nombre sin extensión en el campo visible
+          newNameElement.value = nombreSinExtension;
+
+          // Guardar la extensión en un campo oculto para preservarla
+          const extensionInput = document.getElementById("archivoExtension");
+          if (!extensionInput) {
+            // Crear el campo si no existe
+            const hiddenInput = document.createElement("input");
+            hiddenInput.type = "hidden";
+            hiddenInput.id = "archivoExtension";
+            hiddenInput.name = "archivo_extension";
+            hiddenInput.value = extension;
+            document.getElementById("renameForm").appendChild(hiddenInput);
+          } else {
+            extensionInput.value = extension;
+          }
+
+          // Mostrar información sobre la extensión que se preservará
+          console.log(`✅ Extensión preservada: ${extension}`);
+        } else {
+          // Si no hay extensión, usar el nombre completo
+          newNameElement.value = archivo;
+          console.log("ℹ️ Archivo sin extensión detectado");
+        }
       }
     }
   };
@@ -1613,6 +1653,27 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   console.log(
     "Funciones renderDestinoTreeExpandible y toggleDestinoSubcarpetas definidas"
   );
+
+    // Event listener para preservar la extensión al renombrar archivos
+  document.addEventListener('DOMContentLoaded', function() {
+    const renameForm = document.getElementById('renameForm');
+    if (renameForm) {
+      renameForm.addEventListener('submit', function(e) {
+        const newNameInput = document.getElementById('newName');
+        const extensionInput = document.getElementById('archivoExtension');
+
+        if (newNameInput && extensionInput && extensionInput.value) {
+          // Combinar el nuevo nombre con la extensión original
+          const nuevoNombreCompleto = newNameInput.value + extensionInput.value;
+
+          // Actualizar el campo que se envía al servidor (el campo visible con name="nuevo_nombre")
+          newNameInput.value = nuevoNombreCompleto;
+
+          console.log('✅ Nombre combinado:', nuevoNombreCompleto);
+        }
+      });
+    }
+  });
 </script>
 
 <!-- Script para comentar que usamos la función de base.html -->
