@@ -2937,6 +2937,74 @@ block content %}
       console.log("✅ Árbol simple renderizado");
     }
   };
+
+  // Asegurar que las funciones estén disponibles globalmente
+  if (typeof window.hideAllMenus === 'undefined') {
+    console.log('🔧 Definindo hideAllMenus de respaldo...');
+    window.hideAllMenus = function() {
+      console.log('🔧 hideAllMenus de respaldo ejecutándose...');
+      const menus = document.querySelectorAll('[id^="file-menu-"], [id^="folder-menu-"]');
+      menus.forEach((menu) => {
+        if (!menu.classList.contains('hidden')) {
+          menu.classList.add('hidden');
+        }
+      });
+    };
+  }
+
+  if (typeof window.openUploadModal === 'undefined') {
+    console.error('❌ openUploadModal no está definida, definiendo función de respaldo...');
+    window.openUploadModal = function(folderPath, userId) {
+      console.log('🔧 openUploadModal de respaldo ejecutándose con:', { folderPath, userId });
+
+      // Buscar el modal
+      const modal = document.getElementById('uploadFileModal');
+      if (!modal) {
+        console.error('❌ Modal uploadFileModal no encontrado');
+        alert('Error: Modal de subida no encontrado. Recarga la página e intenta de nuevo.');
+        return;
+      }
+
+      // Buscar o crear los campos necesarios
+      let folderInput = modal.querySelector('#uploadFileFolder');
+      let userIdInput = modal.querySelector('#uploadFileUsuarioId');
+
+      if (!folderInput) {
+        folderInput = document.createElement('input');
+        folderInput.type = 'hidden';
+        folderInput.id = 'uploadFileFolder';
+        folderInput.name = 'carpeta_destino';
+        modal.querySelector('#uploadFileForm').appendChild(folderInput);
+      }
+
+      if (!userIdInput) {
+        userIdInput = document.createElement('input');
+        userIdInput.type = 'hidden';
+        userIdInput.id = 'uploadFileUsuarioId';
+        userIdInput.name = 'usuario_id';
+        modal.querySelector('#uploadFileForm').appendChild(userIdInput);
+      }
+
+      // Establecer valores
+      folderInput.value = folderPath;
+      userIdInput.value = userId;
+
+      // Ocultar menús y mostrar modal
+      if (typeof window.hideAllMenus === 'function') {
+        window.hideAllMenus();
+      }
+
+      modal.classList.remove('hidden');
+      console.log('✅ Modal de subida abierto correctamente');
+    };
+  }
+
+  // Verificación final de funciones disponibles
+  console.log('🔍 Verificación final de funciones en carpetas_dropbox.html:');
+  console.log('- openUploadModal:', typeof window.openUploadModal);
+  console.log('- openCreateFolderModal:', typeof window.openCreateFolderModal);
+  console.log('- openRenameModal:', typeof window.openRenameModal);
+  console.log('- openMoveModal:', typeof window.openMoveModal);
 </script>
 
 {% endblock %}
