@@ -7,7 +7,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-4">
         <a
-          href="{{ url_for('listar_dropbox.carpetas_dropbox') }}"
+          href="{{ url_for('usuarios.lista_usuarios') }}"
           class="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
         >
           <svg
