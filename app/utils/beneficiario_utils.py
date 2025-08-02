@@ -52,7 +52,7 @@ def ensure_beneficiario_folder_no_commit(beneficiario_id):
             }
         
         # Paso 2: Crear carpeta del beneficiario
-        expected_path = f"{titular.dropbox_folder_path}/{beneficiario.nombre}_{beneficiario.id}"
+        expected_path = f"{titular.dropbox_folder_path}/{beneficiario.nombre}"
         
         # Verificar si ya tiene carpeta configurada
         if beneficiario.dropbox_folder_path:
@@ -141,7 +141,7 @@ def ensure_beneficiario_folder(beneficiario_id):
             }
         
         # Paso 2: Crear carpeta del beneficiario
-        expected_path = f"{titular.dropbox_folder_path}/{beneficiario.nombre}_{beneficiario.id}"
+        expected_path = f"{titular.dropbox_folder_path}/{beneficiario.nombre}"
         
         # Verificar si ya tiene carpeta configurada
         if beneficiario.dropbox_folder_path:
@@ -408,7 +408,7 @@ def create_beneficiario_simple(nombre, email, fecha_nacimiento, titular_id):
             # Crear carpeta en Dropbox sin actualizar la BD inmediatamente
             titular = User.query.get(titular_id)
             if titular and titular.dropbox_folder_path:
-                expected_path = f"{titular.dropbox_folder_path}/{beneficiario.nombre}_{beneficiario.id}"
+                expected_path = f"{titular.dropbox_folder_path}/{beneficiario.nombre}"
                 create_dropbox_folder(expected_path)
                 
                 # Actualizar la BD en una nueva transacción
@@ -500,7 +500,7 @@ def ensure_beneficiario_folder_new_session(beneficiario_id):
             }
         
         # Paso 2: Crear carpeta del beneficiario
-        expected_path = f"{titular.dropbox_folder_path}/{beneficiario.nombre}_{beneficiario.id}"
+        expected_path = f"{titular.dropbox_folder_path}/{beneficiario.nombre}"
         
         # Verificar si ya tiene carpeta configurada
         if beneficiario.dropbox_folder_path:
