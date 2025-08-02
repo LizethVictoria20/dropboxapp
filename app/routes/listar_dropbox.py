@@ -271,9 +271,12 @@ def carpetas_dropbox():
                 flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
                 return redirect(url_for("auth.login"))
             if current_user.rol == "cliente":
-                # Para clientes, mostrar todo (ya están filtrados por usuario)
-                # No necesitamos filtrar más porque solo cargamos sus carpetas
-                pass
+                # Para clientes, solo mostrar carpetas públicas
+                print("🔧 Filtrando carpetas para cliente - solo mostrar públicas")
+                carpetas_publicas = Folder.query.filter_by(user_id=user.id, es_publica=True).all()
+                rutas_visibles = set(f.dropbox_path for f in carpetas_publicas)
+                user_identifier = user.email if hasattr(user, 'email') else user.nombre
+                estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user_identifier)
             elif current_user.rol == "lector":
                 # Para lectores, mostrar todas las carpetas sin filtrar
                 pass
@@ -2267,9 +2270,11 @@ def ver_usuario_carpetas(usuario_id):
                 flash("No tienes permiso para ver estas carpetas.", "error")
                 return redirect(url_for("listar_dropbox.carpetas_dropbox"))
             else:
-                # Cliente viendo sus propias carpetas - mostrar todas
-                print("✅ Cliente viendo sus propias carpetas - mostrar todas")
-                pass
+                # Cliente viendo sus propias carpetas - solo mostrar públicas
+                print("✅ Cliente viendo sus propias carpetas - solo mostrar públicas")
+                folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
+                rutas_visibles = set(f.dropbox_path for f in folders)
+                estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, usuario.email)
         elif current_user.rol == "lector":
             # Lector puede ver todas las carpetas de todos los usuarios
             print("✅ Lector - puede ver todas las carpetas")

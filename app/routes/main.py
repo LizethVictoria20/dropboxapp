@@ -53,13 +53,13 @@ def dashboard_cliente():
     
     # Obtener estadísticas del cliente
     total_archivos = Archivo.query.filter_by(usuario_id=current_user.id).count()
-    total_carpetas = Folder.query.filter_by(user_id=current_user.id).count()
+    total_carpetas = Folder.query.filter_by(user_id=current_user.id, es_publica=True).count()
     beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).count()
     
     # Crear diccionario de estadísticas
     stats = {
         'total_archivos': total_archivos,
-        'total_carpetas': total_carpetas,
+        'mis_carpetas': total_carpetas,
         'beneficiarios': beneficiarios
     }
     
@@ -68,8 +68,8 @@ def dashboard_cliente():
                                                 .order_by(desc(UserActivityLog.fecha))\
                                                 .limit(5).all()
     
-    # Carpetas recientes del usuario (últimas 5)
-    carpetas_recientes = Folder.query.filter_by(user_id=current_user.id)\
+    # Carpetas recientes del usuario (últimas 5) - solo públicas para clientes
+    carpetas_recientes = Folder.query.filter_by(user_id=current_user.id, es_publica=True)\
         .order_by(Folder.fecha_creacion.desc())\
         .limit(5).all()
     
