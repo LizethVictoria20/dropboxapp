@@ -138,16 +138,43 @@ class User(UserMixin, db.Model):
             return False
     
     def puede_renombrar_archivos(self):
-        """Verifica si el lector puede renombrar archivos"""
-        return self.tiene_permiso_lector('renombrar')
+        """Verifica si el usuario puede renombrar archivos"""
+        # Los administradores siempre pueden renombrar
+        if self.rol in ['admin', 'superadmin']:
+            return True
+        # Los lectores necesitan permiso específico
+        if self.rol == 'lector':
+            return self.tiene_permiso_lector('renombrar')
+        # Los clientes pueden renombrar sus propios archivos
+        if self.rol == 'cliente':
+            return True
+        return False
     
     def puede_mover_archivos(self):
-        """Verifica si el lector puede mover archivos"""
-        return self.tiene_permiso_lector('mover')
+        """Verifica si el usuario puede mover archivos"""
+        # Los administradores siempre pueden mover
+        if self.rol in ['admin', 'superadmin']:
+            return True
+        # Los lectores necesitan permiso específico
+        if self.rol == 'lector':
+            return self.tiene_permiso_lector('mover')
+        # Los clientes pueden mover sus propios archivos
+        if self.rol == 'cliente':
+            return True
+        return False
     
     def puede_eliminar_archivos(self):
-        """Verifica si el lector puede eliminar archivos"""
-        return self.tiene_permiso_lector('eliminar')
+        """Verifica si el usuario puede eliminar archivos"""
+        # Los administradores siempre pueden eliminar
+        if self.rol in ['admin', 'superadmin']:
+            return True
+        # Los lectores necesitan permiso específico
+        if self.rol == 'lector':
+            return self.tiene_permiso_lector('eliminar')
+        # Los clientes pueden eliminar sus propios archivos
+        if self.rol == 'cliente':
+            return True
+        return False
     
     def puede_agregar_beneficiarios(self):
         """Verifica si el lector puede agregar beneficiarios"""

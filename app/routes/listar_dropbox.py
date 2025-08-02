@@ -563,17 +563,50 @@ def crear_carpeta():
     
     try:
         dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
-        dbx.files_create_folder_v2(ruta)
         
-        # Guardar carpeta en la base de datos
-        nueva_carpeta = Folder(
-            name=nombre,
-            user_id=usuario_id,
+        # Verificar si ya existe una carpeta con la misma ruta antes de crear
+        carpeta_existente = Folder.query.filter_by(
             dropbox_path=ruta,
-            es_publica=es_publica
-        )
-        db.session.add(nueva_carpeta)
-        db.session.commit()
+            user_id=usuario_id
+        ).first()
+        
+        if carpeta_existente:
+            print(f"⚠️ Ya existe una carpeta con la ruta: {ruta}")
+            print(f"   ID existente: {carpeta_existente.id}")
+            print(f"   Estado: {'ELIMINADA' if carpeta_existente.eliminado else 'ACTIVA'}")
+            
+            # Si la carpeta existente está eliminada, restaurarla
+            if carpeta_existente.eliminado:
+                carpeta_existente.eliminado = False
+                carpeta_existente.fecha_eliminacion = None
+                carpeta_existente.eliminado_por = None
+                db.session.commit()
+                print(f"✅ Carpeta eliminada restaurada: ID {carpeta_existente.id}")
+                nueva_carpeta = carpeta_existente
+            else:
+                # Si está activa, usar la existente
+                print(f"✅ Usando carpeta existente: ID {carpeta_existente.id}")
+                nueva_carpeta = carpeta_existente
+        else:
+            # Crear la carpeta en Dropbox solo si no existe
+            try:
+                dbx.files_create_folder_v2(ruta)
+                print(f"✅ Carpeta creada en Dropbox: {ruta}")
+            except dropbox.exceptions.ApiError as e:
+                if "conflict" not in str(e):
+                    raise e
+                print(f"⚠️ Carpeta ya existe en Dropbox: {ruta}")
+            
+            # Crear nuevo registro en la base de datos
+            nueva_carpeta = Folder(
+                name=nombre,
+                user_id=usuario_id,
+                dropbox_path=ruta,
+                es_publica=es_publica
+            )
+            db.session.add(nueva_carpeta)
+            db.session.commit()
+            print(f"✅ Carpeta registrada en la base de datos con ID: {nueva_carpeta.id}")
 
         # Registrar actividad
         current_user.registrar_actividad('folder_created', f'Carpeta "{nombre}" creada en {ruta}')
@@ -850,17 +883,42 @@ def subir_archivo():
         dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
         print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
 
-        # Guardar en la base de datos
-        nuevo_archivo = Archivo(
-            nombre=archivo.filename,
-            categoria=categoria,
-            subcategoria=subcategoria,
+        # Verificar si ya existe un archivo con la misma ruta antes de crear el registro
+        usuario_id = getattr(usuario, "id", None)
+        archivo_existente = Archivo.query.filter_by(
             dropbox_path=dropbox_dest,
-            usuario_id=getattr(usuario, "id", None)
-        )
-        db.session.add(nuevo_archivo)
-        db.session.commit()
-        print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
+            usuario_id=usuario_id
+        ).first()
+        
+        if archivo_existente:
+            print(f"⚠️ Ya existe un archivo con la ruta: {dropbox_dest}")
+            print(f"   ID existente: {archivo_existente.id}")
+            print(f"   Estado: {'ELIMINADO' if archivo_existente.eliminado else 'ACTIVO'}")
+            
+            # Si el archivo existente está eliminado, restaurarlo
+            if archivo_existente.eliminado:
+                archivo_existente.eliminado = False
+                archivo_existente.fecha_eliminacion = None
+                archivo_existente.eliminado_por = None
+                db.session.commit()
+                print(f"✅ Archivo eliminado restaurado: ID {archivo_existente.id}")
+                nuevo_archivo = archivo_existente
+            else:
+                # Si está activo, usar el existente
+                print(f"✅ Usando archivo existente: ID {archivo_existente.id}")
+                nuevo_archivo = archivo_existente
+        else:
+            # Crear nuevo registro en la base de datos
+            nuevo_archivo = Archivo(
+                nombre=archivo.filename,
+                categoria=categoria,
+                subcategoria=subcategoria,
+                dropbox_path=dropbox_dest,
+                usuario_id=usuario_id
+            )
+            db.session.add(nuevo_archivo)
+            db.session.commit()
+            print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
 
         # Registrar actividad
         current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a {categoria}/{subcategoria}')
@@ -2198,18 +2256,43 @@ def subir_archivo_rapido():
         dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
         print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
 
-        # Guardar en la base de datos con categoría y subcategoría genéricas
-        print(f"🔧 Guardando en BD con ruta: {dropbox_dest}")
-        nuevo_archivo = Archivo(
-            nombre=archivo.filename,
-            categoria="Subida Rápida",  # Categoría genérica
-            subcategoria="Directo",     # Subcategoría genérica
+        # Verificar si ya existe un archivo con la misma ruta antes de crear el registro
+        usuario_id = getattr(usuario, "id", None)
+        archivo_existente = Archivo.query.filter_by(
             dropbox_path=dropbox_dest,
-            usuario_id=getattr(usuario, "id", None)
-        )
-        db.session.add(nuevo_archivo)
-        db.session.commit()
-        print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
+            usuario_id=usuario_id
+        ).first()
+        
+        if archivo_existente:
+            print(f"⚠️ Ya existe un archivo con la ruta: {dropbox_dest}")
+            print(f"   ID existente: {archivo_existente.id}")
+            print(f"   Estado: {'ELIMINADO' if archivo_existente.eliminado else 'ACTIVO'}")
+            
+            # Si el archivo existente está eliminado, restaurarlo
+            if archivo_existente.eliminado:
+                archivo_existente.eliminado = False
+                archivo_existente.fecha_eliminacion = None
+                archivo_existente.eliminado_por = None
+                db.session.commit()
+                print(f"✅ Archivo eliminado restaurado: ID {archivo_existente.id}")
+                nuevo_archivo = archivo_existente
+            else:
+                # Si está activo, usar el existente
+                print(f"✅ Usando archivo existente: ID {archivo_existente.id}")
+                nuevo_archivo = archivo_existente
+        else:
+            # Crear nuevo registro en la base de datos
+            print(f"🔧 Guardando en BD con ruta: {dropbox_dest}")
+            nuevo_archivo = Archivo(
+                nombre=archivo.filename,
+                categoria="Subida Rápida",  # Categoría genérica
+                subcategoria="Directo",     # Subcategoría genérica
+                dropbox_path=dropbox_dest,
+                usuario_id=usuario_id
+            )
+            db.session.add(nuevo_archivo)
+            db.session.commit()
+            print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
 
         # Registrar actividad
         current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a Subida Rápida/Directo')
@@ -2728,9 +2811,16 @@ def eliminar_carpeta():
             return redirect(url_for("listar_dropbox.carpetas_dropbox"))
     
     try:
-        carpeta_nombre = request.form.get("carpeta_nombre")
-        carpeta_padre = request.form.get("carpeta_padre")
+        # Obtener datos del formulario - manejar ambos formatos de nombres de campos
+        carpeta_nombre = request.form.get("carpeta_nombre") or request.form.get("item_nombre")
+        carpeta_padre = request.form.get("carpeta_padre") or request.form.get("carpeta_actual")
         redirect_url = request.form.get("redirect_url", "")
+        
+        print(f"DEBUG | Datos recibidos para eliminar carpeta:")
+        print(f"DEBUG | carpeta_nombre: {carpeta_nombre}")
+        print(f"DEBUG | carpeta_padre: {carpeta_padre}")
+        print(f"DEBUG | redirect_url: {redirect_url}")
+        print(f"DEBUG | Todos los datos del formulario: {dict(request.form)}")
         
         if not carpeta_nombre or not carpeta_padre:
             flash("Faltan datos para eliminar la carpeta.", "error")
