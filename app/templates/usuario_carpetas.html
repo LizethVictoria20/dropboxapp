@@ -934,6 +934,11 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       isFolder,
     });
 
+    // Ocultar todos los menús antes de mostrar el modal
+    if (window.hideAllMenus) {
+      window.hideAllMenus();
+    }
+
     if (isFolder) {
       // Renombrar carpeta
       console.log("Abriendo modal de carpeta");
@@ -2211,6 +2216,11 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   // ========================
 
   function openPreviewModal(fileId, extension, filename = "") {
+    // Ocultar todos los menús antes de mostrar el modal
+    if (window.hideAllMenus) {
+      window.hideAllMenus();
+    }
+
     const modal = document.getElementById("viewerModal");
     const content = document.getElementById("viewerContent");
     const fileNameSpan = document.getElementById("viewerFileName");
