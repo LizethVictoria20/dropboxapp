@@ -164,8 +164,8 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       set estructura_usuario = estructuras_usuarios[usuario_id] %} {% if
       estructura_usuario._subcarpetas or estructura_usuario._archivos %} {%
       import "tree_macros.html" as macros with context %} {{
-      macros.render_tree(estructura_usuario, '', usuario_id, usuario_actual,
-      folders_por_ruta, usuario.email) }} {% else %}
+      macros.render_tree(estructura_usuario, usuario.dropbox_folder_path,
+      usuario_id, usuario_actual, folders_por_ruta, usuario.email) }} {% else %}
       <div class="text-center py-12">
         <svg
           class="w-16 h-16 text-gray-400 mx-auto mb-4"
@@ -2158,6 +2158,8 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 
   // Función para confirmar eliminación de carpeta
   function confirmarEliminarCarpeta(carpeta, carpetaPadre, usuarioId) {
+
+
     console.log("🔧 confirmarEliminarCarpeta llamado con:", { carpeta, carpetaPadre, usuarioId });
 
     // Configurar el modal de confirmación
