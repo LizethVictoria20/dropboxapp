@@ -99,6 +99,12 @@ Inmigración OK{% endblock %} {% block styles %}
     transition: all 0.3s ease-in-out;
   }
 
+  /* Estilos para el menú dropdown de usuarios - siguiendo el patrón de tree_macros */
+  [x-show="open"] {
+    z-index: 99999 !important;
+    position: fixed !important;
+  }
+
   #editLectorPermissions .bg-gray-50 {
     border-left: 3px solid #0076a8;
   }
@@ -319,9 +325,9 @@ Inmigración OK{% endblock %} {% block styles %}
                 usuario.fecha_registro else 'N/A' }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div class="relative" x-data="{ open: false }">
+                <div class="relative">
                   <button
-                    @click="open = !open"
+                    onclick="toggleUserMenu('user-menu-{{ usuario.id }}', event)"
                     class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary rounded-full p-1"
                   >
                     <i class="fas fa-ellipsis-v"></i>
@@ -329,15 +335,9 @@ Inmigración OK{% endblock %} {% block styles %}
 
                   <!-- Menú desplegable -->
                   <div
-                    x-show="open"
-                    @click.away="open = false"
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="transform opacity-0 scale-95"
-                    x-transition:enter-end="transform opacity-100 scale-100"
-                    x-transition:leave="transition ease-in duration-75"
-                    x-transition:leave-start="transform opacity-100 scale-100"
-                    x-transition:leave-end="transform opacity-0 scale-95"
-                    class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+                    id="user-menu-{{ usuario.id }}"
+                    class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden"
+                    style="position: fixed"
                   >
                     <div class="py-1">
                       <!-- Ver historial -->
@@ -2364,6 +2364,76 @@ Inmigración OK{% endblock %} {% block styles %}
         filterUsers();
       });
     }
+  });
+
+  // Función para manejar el menú de usuarios (siguiendo el patrón de toggleFolderMenu)
+  window.toggleUserMenu = function (menuId, event) {
+    console.log("🔧 toggleUserMenu llamado con:", {
+      menuId,
+      event,
+    });
+    event.stopPropagation();
+
+    const menu = document.getElementById(menuId);
+    console.log("🔧 Elemento del menú de usuario encontrado:", menu);
+
+    if (menu) {
+      // Ocultar todos los menús primero
+      document.querySelectorAll('[id^="user-menu-"]').forEach((m) => {
+        m.classList.add("hidden");
+      });
+
+      if (menu.classList.contains("hidden")) {
+        // Posicionar el menú cerca del botón
+        const button = event.currentTarget;
+        const rect = button.getBoundingClientRect();
+        console.log("🔧 Posición del botón de usuario:", rect);
+
+        // Calcular posición del menú
+        const menuWidth = 192; // w-48 = 12rem = 192px
+        const menuHeight = menu.offsetHeight;
+
+        // Posicionar el menú a la derecha del botón
+        let left = rect.right - menuWidth;
+        let top = rect.bottom + 5;
+
+        // Asegurar que el menú no se salga de la pantalla
+        if (left < 0) left = 0;
+        if (top + menuHeight > window.innerHeight) {
+          top = rect.top - menuHeight - 5;
+        }
+
+        menu.style.position = "fixed";
+        menu.style.top = top + "px";
+        menu.style.left = left + "px";
+        menu.style.zIndex = "99999";
+
+        menu.classList.remove("hidden");
+        console.log("🔧 Menú de usuario abierto:", menuId, "en posición:", {
+          top,
+          left,
+        });
+      } else {
+        menu.classList.add("hidden");
+        console.log("🔧 Menú de usuario cerrado:", menuId);
+      }
+    } else {
+      console.error("❌ Menú de usuario no encontrado:", menuId);
+      console.log("🔧 Elementos con 'user-menu' en el DOM:");
+      document.querySelectorAll('[id^="user-menu"]').forEach((el) => {
+        console.log("-", el.id);
+      });
+    }
+  };
+
+  // Cerrar menús de usuario al hacer clic fuera de ellos
+  document.addEventListener("click", function (event) {
+    const menus = document.querySelectorAll('[id^="user-menu-"]');
+    menus.forEach((menu) => {
+      if (!menu.contains(event.target) && !event.target.closest("button")) {
+        menu.classList.add("hidden");
+      }
+    });
   });
 </script>
 {% endblock %}

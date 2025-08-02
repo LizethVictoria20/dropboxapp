@@ -16,7 +16,7 @@ def lista_usuarios():
     # Verificar permisos de administrador
     if not current_user.puede_administrar():
         flash("No tienes permisos para acceder a esta sección.", "error")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.profile'))
     
     # Parámetros de búsqueda y paginación
     rol = request.args.get('rol', 'cliente')  # 'cliente' por default
@@ -59,7 +59,7 @@ def ver_historial_usuario(usuario_id):
     """Ver historial de actividades de un usuario"""
     if not current_user.puede_administrar():
         flash("No tienes permisos para acceder a esta sección.", "error")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.profile'))
     
     usuario = User.query.get_or_404(usuario_id)
     
@@ -241,7 +241,7 @@ def importar_archivo_usuario(usuario_id):
     """Importar archivo para un usuario específico"""
     if not current_user.puede_administrar():
         flash("No tienes permisos para acceder a esta sección.", "error")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.profile'))
     
     usuario = User.query.get_or_404(usuario_id)
     
@@ -325,7 +325,7 @@ def editar_usuario(usuario_id):
     """Editar información de un usuario"""
     if not current_user.puede_administrar():
         flash("No tienes permisos para acceder a esta sección.", "error")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.profile'))
     
     usuario = User.query.get_or_404(usuario_id)
     

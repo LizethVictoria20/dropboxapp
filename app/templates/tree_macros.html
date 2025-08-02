@@ -82,7 +82,7 @@ folders_por_ruta={}, usuario_email="") %}
             Ver archivo
           </button>
           <button
-            onclick="openMoveModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
+            onclick="openMoveModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}', event)"
             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
           >
             <svg
@@ -104,8 +104,18 @@ folders_por_ruta={}, usuario_email="") %}
             onclick="descargarArchivo('', '/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', '{{ archivo }}')"
             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
           >
-            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v16h16V4H4zm4 8l4 4 4-4m-4-4v8"/>
+            <svg
+              class="w-4 h-4 inline mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v16h16V4H4zm4 8l4 4 4-4m-4-4v8"
+              />
             </svg>
             Descargar
           </button>
@@ -168,7 +178,7 @@ folders_por_ruta={}, usuario_email="") %}
       <div class="flex items-center justify-between">
         <div
           class="flex items-center cursor-pointer"
-          onclick="toggleFolder('{{ parent ~ '/' ~ carpeta }}')"
+          onclick="handleFolderClick('{{ parent ~ '/' ~ carpeta }}', event)"
         >
           <div
             id="icon-{{ parent ~ '/' ~ carpeta }}"
