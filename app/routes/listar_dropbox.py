@@ -2789,8 +2789,8 @@ def renombrar_carpeta():
 @bp.route('/eliminar_carpeta', methods=['POST'])
 @login_required
 def eliminar_carpeta():
-    """Elimina una carpeta de Dropbox y de la base de datos"""
-    from app.models import Folder, Archivo
+    """Oculta una carpeta eliminándola solo de la base de datos, manteniéndola en Dropbox"""
+    from app.models import Folder, Archivo, User, Beneficiario
     
     # Verificar que el usuario esté autenticado
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
@@ -2825,17 +2825,98 @@ def eliminar_carpeta():
             else:
                 return redirect(url_for("listar_dropbox.carpetas_dropbox"))
         
-        # Construir la ruta completa de la carpeta
-        carpeta_path = f"{carpeta_padre}/{carpeta_nombre}".replace('//', '/')
+        # Obtener el usuario para construir la ruta base
+        try:
+            usuario_id_int = int(request.form.get("usuario_id"))
+            usuario = User.query.get(usuario_id_int)
+            if not usuario:
+                # Intentar buscar como beneficiario
+                usuario = Beneficiario.query.get(usuario_id_int)
+            
+            if not usuario:
+                print(f"DEBUG | Usuario no encontrado con ID: {usuario_id_int}")
+                flash("Usuario no encontrado.", "error")
+                if redirect_url and "/usuario/" in redirect_url:
+                    return redirect(redirect_url)
+                else:
+                    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+                
+        except (ValueError, TypeError):
+            print(f"DEBUG | usuario_id inválido: {request.form.get('usuario_id')}")
+            flash("ID de usuario inválido.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+        # Construir la ruta base del usuario
+        if hasattr(usuario, 'dropbox_folder_path') and usuario.dropbox_folder_path:
+            # Si es un User, usar su dropbox_folder_path
+            ruta_base = usuario.dropbox_folder_path
+        elif hasattr(usuario, 'ruta_base') and usuario.ruta_base:
+            # Si es un Beneficiario, usar su ruta_base
+            ruta_base = usuario.ruta_base
+        else:
+            print(f"DEBUG | No se encontró ruta base para usuario: {usuario_id_int}")
+            flash("No se encontró la ruta base del usuario.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+        print(f"DEBUG | ruta_base: {ruta_base}")
         
-        print(f"DEBUG | Marcando carpeta como eliminada: {carpeta_path}")
+        # Construir la ruta completa de la carpeta incluyendo la ruta base
+        # Asegurar que la ruta base termine con /
+        ruta_base_normalizada = ruta_base.rstrip('/') + '/'
         
-        # NO eliminar físicamente de Dropbox - solo soft delete
-        print(f"DEBUG | Carpeta mantenida en Dropbox: {carpeta_path}")
+        if carpeta_padre.startswith(ruta_base_normalizada):
+            # Si la carpeta padre ya incluye la ruta base, usar tal como está
+            carpeta_path = f"{carpeta_padre}/{carpeta_nombre}".replace('//', '/')
+        else:
+            # Si no incluye la ruta base, agregarla
+            carpeta_path = f"{ruta_base_normalizada}{carpeta_padre}/{carpeta_nombre}".replace('//', '/')
+        
+        print(f"DEBUG | ruta_base_normalizada: {ruta_base_normalizada}")
+        print(f"DEBUG | carpeta_path construido: {carpeta_path}")
+        
+        # Buscar la carpeta en la base de datos
+        carpeta_bd = Folder.query.filter_by(dropbox_path=carpeta_path).first()
+        
+        # Si no se encuentra con la ruta exacta, buscar de manera más flexible
+        if not carpeta_bd:
+            print(f"DEBUG | Carpeta no encontrada con ruta exacta: {carpeta_path}")
+            
+            # Buscar por nombre y usuario
+            carpetas_del_usuario = Folder.query.filter_by(user_id=usuario_id_int).all()
+            print(f"DEBUG | Carpetas del usuario {usuario_id_int}: {len(carpetas_del_usuario)}")
+            
+            for carpeta in carpetas_del_usuario:
+                print(f"DEBUG | Carpeta en BD: {carpeta.name} - {carpeta.dropbox_path}")
+                if carpeta.name == carpeta_nombre:
+                    print(f"DEBUG | Carpeta encontrada por nombre: {carpeta.name}")
+                    carpeta_bd = carpeta
+                    break
+            
+            # Si aún no se encuentra, buscar por nombre en cualquier ruta
+            if not carpeta_bd:
+                carpeta_bd = Folder.query.filter_by(name=carpeta_nombre).first()
+                if carpeta_bd:
+                    print(f"DEBUG | Carpeta encontrada por nombre en cualquier ruta: {carpeta_bd.name} - {carpeta_bd.dropbox_path}")
+        
+        if not carpeta_bd:
+            print(f"DEBUG | Carpeta no encontrada en BD después de búsqueda flexible: {carpeta_nombre}")
+            flash("Carpeta no encontrada en la base de datos.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        print(f"DEBUG | Carpeta encontrada: {carpeta_bd.name} - {carpeta_bd.dropbox_path}")
         
         # Implementar soft delete para carpetas y archivos
         # Marcar archivos en la carpeta como eliminados
-        archivos_en_carpeta = Archivo.query.filter(Archivo.dropbox_path.like(f"{carpeta_path}/%")).all()
+        archivos_en_carpeta = Archivo.query.filter(Archivo.dropbox_path.like(f"{carpeta_bd.dropbox_path}/%")).all()
         for archivo in archivos_en_carpeta:
             archivo.eliminado = True
             archivo.fecha_eliminacion = datetime.utcnow()
@@ -2843,18 +2924,18 @@ def eliminar_carpeta():
         print(f"DEBUG | Archivos marcados como eliminados: {len(archivos_en_carpeta)}")
         
         # Marcar la carpeta como eliminada
-        carpeta_bd = Folder.query.filter_by(dropbox_path=carpeta_path).first()
-        if carpeta_bd:
-            carpeta_bd.eliminado = True
-            carpeta_bd.fecha_eliminacion = datetime.utcnow()
-            carpeta_bd.eliminado_por = current_user.id
-            print(f"DEBUG | Carpeta marcada como eliminada: {carpeta_bd.name}")
+        carpeta_bd.eliminado = True
+        carpeta_bd.fecha_eliminacion = datetime.utcnow()
+        carpeta_bd.eliminado_por = current_user.id
         
         db.session.commit()
+        print(f"DEBUG | Carpeta marcada como eliminada en BD: {carpeta_bd.name}")
+        print(f"DEBUG | Carpeta mantenida en Dropbox: {carpeta_bd.dropbox_path}")
         
         # Registrar actividad
         current_user.registrar_actividad('folder_soft_deleted', f'Carpeta "{carpeta_nombre}" marcada como eliminada')
         
+        flash(f"Carpeta '{carpeta_nombre}' eliminada correctamente.", "success")
         
     except Exception as e:
         print(f"ERROR | Error eliminando carpeta: {e}")
