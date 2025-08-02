@@ -221,9 +221,10 @@ block content %}
               Crea una nueva carpeta para comenzar
             </p>
 
-            {# Botones para clientes cuando no hay carpetas #} {% if
-            usuario_actual.rol == 'cliente' and usuario_actual.id ==
-            usuario_id|int %}
+            {# Botones para administradores y lectores con permisos cuando no
+            hay carpetas #} {% if usuario_actual.rol == 'admin' or
+            (usuario_actual.rol == 'lector' and
+            usuario_actual.puede_modificar_archivos()) %}
             <div class="mt-6 flex justify-center space-x-4">
               <button
                 onclick="openCreateFolderModal('', '{{ usuario_id }}')"
