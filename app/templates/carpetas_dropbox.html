@@ -947,12 +947,16 @@ block content %}
   window.CURRENT_USER_EMAIL = {{ current_user.email|tojson|safe }};
   window.CURRENT_USER_ID = {{ current_user.id|tojson|safe }};
   window.USUARIOS_EMAILS = {{ usuarios_emails_json|safe }};
+  window.CURRENT_USER_ROLE = {{ current_user.rol|tojson|safe }};
+  window.CURRENT_USER_CAN_MODIFY = {{ (current_user.rol == 'admin' or current_user.rol == 'cliente' or (current_user.rol == 'lector' and current_user.puede_modificar_archivos()))|tojson|safe }};
 
   // También mantener las variables locales para compatibilidad
   const ESTRUCTURAS_USUARIOS = window.ESTRUCTURAS_USUARIOS;
   const CURRENT_USER_EMAIL = window.CURRENT_USER_EMAIL;
   const CURRENT_USER_ID = window.CURRENT_USER_ID;
   const USUARIOS_EMAILS = window.USUARIOS_EMAILS;
+  const CURRENT_USER_ROLE = window.CURRENT_USER_ROLE;
+  const CURRENT_USER_CAN_MODIFY = window.CURRENT_USER_CAN_MODIFY;
 
   // Debug: Verificar que las variables se cargaron correctamente
   console.log("🔍 DEBUG - Variables cargadas:");
@@ -1261,6 +1265,8 @@ block content %}
                     </svg>
                     Ver archivo
                   </button>
+
+                  ${CURRENT_USER_CAN_MODIFY ? `
                   <button onclick="descargarArchivo('', '/${limpiarRuta(rutaBase)}/${archivo}', '${archivo}')"
                           class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1282,6 +1288,7 @@ block content %}
                     </svg>
                     Renombrar
                   </button>
+                  ` : ''}
                 </div>
               </div>
             </div>

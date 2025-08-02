@@ -28,10 +28,8 @@ folders_por_ruta={}, usuario_email="") %}
       <span class="text-gray-700 font-medium">{{ archivo }}</span>
     </div>
 
-    {# Solo mostrar menú de tres puntos si es admin, cliente o lector con
-    permisos #} {% if usuario_actual and (usuario_actual.rol == 'admin' or
-    usuario_actual.rol == 'cliente' or (usuario_actual.rol == 'lector' and
-    usuario_actual.puede_modificar_archivos())) %}
+    {# Mostrar menú de tres puntos para todos los usuarios autenticados #} {% if
+    usuario_actual %}
     <div class="relative">
       <button
         onclick="toggleFileMenu('file-menu-{{ parent.replace('/', '-').replace('\\', '-') }}-{{ archivo.replace('/', '-').replace('\\', '-') }}', event)"
@@ -81,6 +79,11 @@ folders_por_ruta={}, usuario_email="") %}
             </svg>
             Ver archivo
           </button>
+
+          {# Opciones de modificación solo para usuarios con permisos #} {% if
+          usuario_actual.rol == 'admin' or usuario_actual.rol == 'cliente' or
+          (usuario_actual.rol == 'lector' and
+          usuario_actual.puede_modificar_archivos()) %}
           <button
             onclick="openMoveModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}', event)"
             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
@@ -160,7 +163,7 @@ folders_por_ruta={}, usuario_email="") %}
             </svg>
             Eliminar
           </button>
-          {% endif %}
+          {% endif %} {% endif %}
         </div>
       </div>
     </div>
