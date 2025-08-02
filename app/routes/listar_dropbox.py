@@ -352,7 +352,6 @@ def carpetas_dropbox():
         print(f"Error general en carpetas_dropbox: {e}")
         import traceback
         traceback.print_exc()
-        flash(f"Error al cargar carpetas: {str(e)}", "error")
         return render_template("carpetas_dropbox.html", 
                              estructuras_usuarios={},
                              usuarios={},
@@ -2432,7 +2431,6 @@ def ver_usuario_carpetas(usuario_id):
         
     except Exception as e:
         print(f"Error general en ver_usuario_carpetas: {e}")
-        flash(f"Error al cargar carpetas: {str(e)}", "error")
         return render_template("usuario_carpetas.html", 
                              usuario=usuario,
                              usuario_id=usuario.id,
@@ -2578,8 +2576,6 @@ def eliminar_archivo():
         
         # Registrar actividad
         current_user.registrar_actividad('file_soft_deleted', f'Archivo "{archivo_nombre}" marcado como eliminado')
-        
-        flash("Archivo eliminado correctamente. Puede ser restaurado por un administrador.", "success")
         
     except Exception as e:
         print(f"ERROR | Error eliminando archivo: {e}")
@@ -2859,7 +2855,6 @@ def eliminar_carpeta():
         # Registrar actividad
         current_user.registrar_actividad('folder_soft_deleted', f'Carpeta "{carpeta_nombre}" marcada como eliminada')
         
-        flash("Carpeta eliminada correctamente. Puede ser restaurada por un administrador.", "success")
         
     except Exception as e:
         print(f"ERROR | Error eliminando carpeta: {e}")
