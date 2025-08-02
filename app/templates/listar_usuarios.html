@@ -342,7 +342,7 @@ Inmigración OK{% endblock %} {% block styles %}
                     <div class="py-1">
                       <!-- Ver historial -->
                       <button
-                        @click="open = false; openHistoryModal({{ usuario.id }})"
+                        onclick="closeUserMenu('user-menu-{{ usuario.id }}'); openHistoryModal({{ usuario.id }})"
                         class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                       >
                         <i
@@ -353,7 +353,7 @@ Inmigración OK{% endblock %} {% block styles %}
 
                       <!-- Editar -->
                       <button
-                        @click="open = false; openEditModal({{ usuario.id }})"
+                        onclick="closeUserMenu('user-menu-{{ usuario.id }}'); openEditModal({{ usuario.id }})"
                         class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                       >
                         <i
@@ -370,6 +370,7 @@ Inmigración OK{% endblock %} {% block styles %}
 
                       <!-- Eliminar -->
                       <button
+                        onclick="closeUserMenu('user-menu-{{ usuario.id }}'); confirmDeleteUser({{ usuario.id }}, '{{ usuario.nombre_completo or usuario.email }}')"
                         class="group flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
                       >
                         <i
@@ -1688,7 +1689,7 @@ Inmigración OK{% endblock %} {% block styles %}
 {% endblock %} {% block scripts %}
 <script>
   // Funciones para el modal de crear usuario
-  function openCreateUserModal() {
+  window.openCreateUserModal = function () {
     document.getElementById("createUserModal").classList.remove("hidden");
     document.body.style.overflow = "hidden";
 
@@ -1718,17 +1719,17 @@ Inmigración OK{% endblock %} {% block styles %}
         });
       });
     }, 100); // Pequeño delay para asegurar que el modal esté completamente renderizado
-  }
+  };
 
-  function closeCreateUserModal() {
+  window.closeCreateUserModal = function () {
     document.getElementById("createUserModal").classList.add("hidden");
     document.body.style.overflow = "auto";
     // Limpiar formulario
     document.getElementById("createUserForm").reset();
-  }
+  };
 
   // Funciones para el modal de ver historial
-  function openHistoryModal(userId) {
+  window.openHistoryModal = function (userId) {
     // Actualizar información del usuario en el header
     document.getElementById("historyUserInfo").textContent =
       "Cargando historial...";
@@ -1763,9 +1764,9 @@ Inmigración OK{% endblock %} {% block styles %}
         document.getElementById("historyUserContent").innerHTML =
           '<p class="text-center text-red-500">Error al cargar el historial del usuario</p>';
       });
-  }
+  };
 
-  function generateHistoryHTML(user, history) {
+  window.generateHistoryHTML = function (user, history) {
     return `
       <!-- Tabs -->
       <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
@@ -1864,9 +1865,9 @@ Inmigración OK{% endblock %} {% block styles %}
         </div>
       </div>
     `;
-  }
+  };
 
-  function closeHistoryModal() {
+  window.closeHistoryModal = function () {
     document.getElementById("historyUserModal").classList.add("hidden");
     document.body.style.overflow = "auto";
     // Limpiar contenido
@@ -1876,10 +1877,10 @@ Inmigración OK{% endblock %} {% block styles %}
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     `;
-  }
+  };
 
   // Funciones auxiliares para el historial
-  function getActivityIcon(tipo) {
+  window.getActivityIcon = function (tipo) {
     const icons = {
       login: "fa-sign-in-alt",
       logout: "fa-sign-out-alt",
@@ -1894,9 +1895,9 @@ Inmigración OK{% endblock %} {% block styles %}
       system: "fa-cog",
     };
     return icons[tipo] || "fa-circle";
-  }
+  };
 
-  function getActivityColor(tipo) {
+  window.getActivityColor = function (tipo) {
     const colors = {
       login: "green",
       logout: "gray",
@@ -1911,9 +1912,9 @@ Inmigración OK{% endblock %} {% block styles %}
       system: "gray",
     };
     return colors[tipo] || "gray";
-  }
+  };
 
-  function getActivityStatus(tipo) {
+  window.getActivityStatus = function (tipo) {
     const status = {
       login: "Exitoso",
       logout: "Completado",
@@ -1928,9 +1929,9 @@ Inmigración OK{% endblock %} {% block styles %}
       system: "Realizado",
     };
     return status[tipo] || "Completado";
-  }
+  };
 
-  function mostrarTabHistorial(tabName) {
+  window.mostrarTabHistorial = function (tabName) {
     // Ocultar todos los contenidos
     document.querySelectorAll(".tab-content").forEach((content) => {
       content.classList.add("hidden");
@@ -1952,10 +1953,10 @@ Inmigración OK{% endblock %} {% block styles %}
     document
       .getElementById(`tab-${tabName}`)
       .classList.remove("border-transparent", "text-gray-500");
-  }
+  };
 
   // Funciones para el modal de editar
-  function openEditModal(userId) {
+  window.openEditModal = function (userId) {
     // Cargar datos del usuario para editar
     fetch(`/users/get_user/${userId}`)
       .then((response) => response.json())
@@ -2057,9 +2058,9 @@ Inmigración OK{% endblock %} {% block styles %}
         console.error("Error:", error);
         alert("Error al cargar los datos del usuario");
       });
-  }
+  };
 
-  function closeEditModal() {
+  window.closeEditModal = function () {
     document.getElementById("editUserModal").classList.add("hidden");
     document.body.style.overflow = "auto";
 
@@ -2086,10 +2087,10 @@ Inmigración OK{% endblock %} {% block styles %}
       dropdownBtn.classList.remove("text-primary", "bg-white");
       dropdownBtn.classList.add("text-gray-400");
     }
-  }
+  };
 
   // Función para mostrar/ocultar permisos adicionales de lector
-  function toggleLectorPermissions() {
+  window.toggleLectorPermissions = function () {
     const selectedRole = document.querySelector('input[name="rol"]:checked');
     const permisosDiv = document.getElementById("editLectorPermissions");
     const dropdownBtn = document.querySelector(".lector-dropdown-btn");
@@ -2116,10 +2117,10 @@ Inmigración OK{% endblock %} {% block styles %}
         dropdownBtn.classList.add("text-gray-400");
       }
     }
-  }
+  };
 
   // Función para manejar el dropdown del rol Lector
-  function toggleLectorDropdown(event) {
+  window.toggleLectorDropdown = function (event) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -2138,10 +2139,10 @@ Inmigración OK{% endblock %} {% block styles %}
       dropdownBtn.classList.remove("text-primary", "bg-white");
       dropdownBtn.classList.add("text-gray-400");
     }
-  }
+  };
 
   // Funciones para manejar las pestañas del modal de edición
-  function showTab(tabId) {
+  window.showTab = function (tabId) {
     // Ocultar todas las pestañas
     const tabPanes = document.querySelectorAll(".tab-pane");
     tabPanes.forEach((pane) => pane.classList.add("hidden"));
@@ -2165,7 +2166,7 @@ Inmigración OK{% endblock %} {% block styles %}
       selectedButton.classList.add("active", "border-primary", "text-primary");
       selectedButton.classList.remove("text-gray-500", "border-transparent");
     }
-  }
+  };
 
   // Agregar event listeners para las pestañas
   document.addEventListener("DOMContentLoaded", function () {
@@ -2426,6 +2427,30 @@ Inmigración OK{% endblock %} {% block styles %}
     }
   };
 
+  // Función para cerrar un menú de usuario específico
+  window.closeUserMenu = function (menuId) {
+    const menu = document.getElementById(menuId);
+    if (menu) {
+      menu.classList.add("hidden");
+    }
+  };
+
+  // Función para confirmar eliminación de usuario
+  window.confirmDeleteUser = function (userId, userName) {
+    if (
+      confirm(
+        `¿Estás seguro de que quieres eliminar al usuario "${userName}"?\n\nEsta acción no se puede deshacer.`
+      )
+    ) {
+      // Aquí puedes agregar la lógica para eliminar el usuario
+      // Por ejemplo, hacer una petición AJAX al servidor
+      console.log(`Eliminando usuario ${userId}: ${userName}`);
+      alert(
+        "Función de eliminación no implementada aún. Contacta al administrador."
+      );
+    }
+  };
+
   // Cerrar menús de usuario al hacer clic fuera de ellos
   document.addEventListener("click", function (event) {
     const menus = document.querySelectorAll('[id^="user-menu-"]');
@@ -2434,6 +2459,48 @@ Inmigración OK{% endblock %} {% block styles %}
         menu.classList.add("hidden");
       }
     });
+  });
+
+  // Verificar que todas las funciones estén disponibles al cargar la página
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("🔧 Verificando funciones disponibles:");
+    console.log("- toggleUserMenu:", typeof window.toggleUserMenu);
+    console.log("- openHistoryModal:", typeof window.openHistoryModal);
+    console.log("- openEditModal:", typeof window.openEditModal);
+    console.log("- closeUserMenu:", typeof window.closeUserMenu);
+    console.log("- confirmDeleteUser:", typeof window.confirmDeleteUser);
+    console.log("- openCreateUserModal:", typeof window.openCreateUserModal);
+    console.log("- closeCreateUserModal:", typeof window.closeCreateUserModal);
+    console.log("- closeHistoryModal:", typeof window.closeHistoryModal);
+    console.log("- closeEditModal:", typeof window.closeEditModal);
+    console.log(
+      "- toggleLectorPermissions:",
+      typeof window.toggleLectorPermissions
+    );
+    console.log("- toggleLectorDropdown:", typeof window.toggleLectorDropdown);
+    console.log("- showTab:", typeof window.showTab);
+    console.log("- mostrarTabHistorial:", typeof window.mostrarTabHistorial);
+    console.log("- generateHistoryHTML:", typeof window.generateHistoryHTML);
+    console.log("- getActivityIcon:", typeof window.getActivityIcon);
+    console.log("- getActivityColor:", typeof window.getActivityColor);
+    console.log("- getActivityStatus:", typeof window.getActivityStatus);
+
+    // Verificar que hay usuarios en la tabla
+    const userMenus = document.querySelectorAll('[id^="user-menu-"]');
+    console.log("🔧 Menús de usuario encontrados:", userMenus.length);
+    userMenus.forEach((menu, index) => {
+      console.log(`- Menú ${index + 1}:`, menu.id);
+    });
+
+    // Verificar que los botones de 3 puntos estén presentes
+    const ellipsisButtons = document.querySelectorAll(
+      'button[onclick*="toggleUserMenu"]'
+    );
+    console.log("🔧 Botones de 3 puntos encontrados:", ellipsisButtons.length);
+
+    console.log(
+      "✅ Verificación completada. Los modales deberían funcionar correctamente."
+    );
   });
 </script>
 {% endblock %}
