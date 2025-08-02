@@ -208,9 +208,11 @@ def add_beneficiary(user_id):
                 db.session.add(beneficiario)
                 db.session.commit()
                 
+                flash(f'Beneficiario {nombre} agregado exitosamente.', 'success')
                 
             except Exception as e:
                 db.session.rollback()
+                flash(f'Error al agregar beneficiario: {str(e)}', 'error')
     
     # Obtener beneficiarios existentes
     beneficiarios = Beneficiario.query.filter_by(titular_id=user.id).all()

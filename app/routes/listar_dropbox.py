@@ -352,6 +352,7 @@ def carpetas_dropbox():
         print(f"Error general en carpetas_dropbox: {e}")
         import traceback
         traceback.print_exc()
+        flash(f"Error al cargar carpetas: {str(e)}", "error")
         return render_template("carpetas_dropbox.html", 
                              estructuras_usuarios={},
                              usuarios={},
@@ -1541,6 +1542,9 @@ def renombrar_archivo():
     # Registrar actividad
     current_user.registrar_actividad('file_renamed', f'Archivo renombrado de "{archivo_nombre_actual}" a "{nuevo_nombre}"')
 
+    print(f"DEBUG | Renombrado exitoso: {old_path} -> {new_path}")
+    flash("Archivo renombrado correctamente.", "success")
+    
     # Redirigir a la carpeta específica del usuario
     redirect_url = url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_int)
     print(f"🔧 Redirigiendo a usuario específico: /usuario/{usuario_id_int}/carpetas")
@@ -2303,6 +2307,7 @@ def subir_archivo_rapido():
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"success": True, "redirectUrl": redirect_url})
         else:
+            flash("Archivo subido exitosamente a la carpeta seleccionada.", "success")
             return redirect(redirect_url)
 
     except Exception as e:
@@ -2427,6 +2432,7 @@ def ver_usuario_carpetas(usuario_id):
         
     except Exception as e:
         print(f"Error general en ver_usuario_carpetas: {e}")
+        flash(f"Error al cargar carpetas: {str(e)}", "error")
         return render_template("usuario_carpetas.html", 
                              usuario=usuario,
                              usuario_id=usuario.id,
@@ -2572,6 +2578,8 @@ def eliminar_archivo():
         
         # Registrar actividad
         current_user.registrar_actividad('file_soft_deleted', f'Archivo "{archivo_nombre}" marcado como eliminado')
+        
+        flash("Archivo eliminado correctamente. Puede ser restaurado por un administrador.", "success")
         
     except Exception as e:
         print(f"ERROR | Error eliminando archivo: {e}")
@@ -2814,10 +2822,8 @@ def eliminar_carpeta():
         print(f"DEBUG | redirect_url: {redirect_url}")
         print(f"DEBUG | Todos los datos del formulario: {dict(request.form)}")
         
-        
-
-        
         if not carpeta_nombre or not carpeta_padre:
+            flash("Faltan datos para eliminar la carpeta.", "error")
             if redirect_url and "/usuario/" in redirect_url:
                 return redirect(redirect_url)
             else:
@@ -2852,6 +2858,8 @@ def eliminar_carpeta():
         
         # Registrar actividad
         current_user.registrar_actividad('folder_soft_deleted', f'Carpeta "{carpeta_nombre}" marcada como eliminada')
+        
+        flash("Carpeta eliminada correctamente. Puede ser restaurada por un administrador.", "success")
         
     except Exception as e:
         print(f"ERROR | Error eliminando carpeta: {e}")
