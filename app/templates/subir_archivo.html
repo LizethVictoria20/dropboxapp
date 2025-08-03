@@ -1,83 +1,99 @@
 {% extends "base.html" %} {% block title %}Subir archivo{% endblock %} {% block
 styles %}
 <style>
-  /* Estilos para el modal de progreso */
-  ayuda #progressModal.hidden {
+  /* Estilos mejorados para el modal de progreso */
+  #progressModal.hidden {
     display: none !important;
   }
 
   #progressModal:not(.hidden) {
     display: flex !important;
+    backdrop-filter: blur(4px);
   }
 
-  /* Animación suave para la barra de progreso */
+  /* Barra de progreso mejorada con gradiente animado */
   #progressBar {
-    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    background: linear-gradient(90deg, #3b82f6, #1d4ed8, #2563eb);
-    background-size: 200% 100%;
-    animation: progressShimmer 2s infinite;
+    transition: width 0.5s ease-out;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
   }
 
-  /* Efecto shimmer en la barra de progreso */
-  @keyframes progressShimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
+  /* Efecto de brillo en la barra de progreso */
+  #progressBar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shine 2s infinite;
   }
 
-  /* Animación para el texto de progreso */
+  @keyframes shine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Animación mejorada para el texto de progreso */
   #progressText {
     transition: all 0.3s ease-in-out;
+    font-weight: 600;
   }
 
-  /* Animación para el modal */
-  #progressModal:not(.hidden) .bg-white {
-    animation: modalFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Animación de entrada del modal mejorada */
+  #progressModal:not(.hidden) .modal-content {
+    animation: modalSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Efecto de pulsación para cuando está subiendo */
-  #progressModal:not(.hidden) .bg-white::before {
-    content: "";
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(45deg, #3b82f6, #1d4ed8, #3b82f6);
-    background-size: 300% 300%;
-    border-radius: inherit;
-    z-index: -1;
-    animation: borderPulse 3s infinite;
-  }
-
-  @keyframes borderPulse {
-    0%,
-    100% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-  }
-
-  @keyframes modalFadeIn {
+  @keyframes modalSlideUp {
     from {
       opacity: 0;
-      transform: scale(0.95);
+      transform: translateY(20px) scale(0.95);
     }
     to {
       opacity: 1;
-      transform: scale(1);
+      transform: translateY(0) scale(1);
     }
   }
 
-  /* Estilo para el contenedor del modal para el efecto de borde */
-  #progressModal .bg-white {
+  /* Efectos visuales adicionales */
+  .progress-container {
     position: relative;
-    overflow: hidden;
+    background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  /* Icono de carga animado */
+  .upload-icon {
+    animation: bounce 2s infinite;
+  }
+
+  @keyframes bounce {
+    0%, 20%, 53%, 80%, 100% {
+      transform: translate3d(0,0,0);
+    }
+    40%, 43% {
+      transform: translate3d(0,-8px,0);
+    }
+    70% {
+      transform: translate3d(0,-4px,0);
+    }
+    90% {
+      transform: translate3d(0,-2px,0);
+    }
   }
 </style>
 {% endblock %} {% block content %}
@@ -356,25 +372,25 @@ styles %}
   </div>
 </div>
 
-<!-- Modal para la barra de progreso -->
+<!-- Modal mejorado para la barra de progreso -->
 <div
   id="progressModal"
-  class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center"
+  class="fixed inset-0 z-50 hidden bg-black bg-opacity-60 flex items-center justify-center"
   aria-labelledby="modal-title"
   role="dialog"
   aria-modal="true"
 >
-  <!-- Contenido del modal -->
-  <div class="bg-white rounded-lg shadow-xl mx-4 w-full max-w-md">
-    <!-- Cabecera del modal -->
-    <div class="px-6 py-4 border-b border-gray-200">
+  <!-- Contenido del modal mejorado -->
+  <div class="modal-content bg-white rounded-2xl shadow-2xl mx-4 w-full max-w-lg border border-gray-100">
+    <!-- Cabecera del modal mejorada -->
+    <div class="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-2xl">
       <h3
-        class="text-lg font-semibold text-gray-900 flex items-center"
+        class="text-xl font-bold text-gray-800 flex items-center justify-center"
         id="modal-title"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5 text-blue-600 mr-2"
+          class="upload-icon h-7 w-7 text-blue-600 mr-3"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -383,29 +399,42 @@ styles %}
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
           />
         </svg>
         Subiendo archivo
       </h3>
     </div>
 
-    <!-- Contenido del modal: barra de progreso -->
-    <div class="px-6 py-6">
+    <!-- Contenido del modal: barra de progreso mejorada -->
+    <div class="px-8 py-8">
       <div class="text-center">
-        <p class="text-sm font-medium mb-4 text-gray-700" id="progressText">
-          Subiendo: 0%
+        <!-- Texto de progreso más prominente -->
+        <p class="text-lg font-bold mb-2 text-gray-800" id="progressText">
+          Preparando subida...
         </p>
-        <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
-          <div
-            id="progressBar"
-            class="bg-blue-600 h-3 rounded-full transition-all duration-300 ease-out"
-            style="width: 0%"
-          ></div>
+        <p class="text-sm text-gray-500 mb-6" id="progressSubtext">
+          Iniciando proceso de carga
+        </p>
+        
+        <!-- Contenedor mejorado de la barra de progreso -->
+        <div class="progress-container mb-6">
+          <div class="w-full bg-gray-100 rounded-lg h-4 overflow-hidden">
+            <div
+              id="progressBar"
+              class="h-4 rounded-lg"
+              style="width: 0%"
+            ></div>
+          </div>
         </div>
-        <p class="text-xs text-gray-500">
-          Por favor, no cierre esta ventana mientras se completa la subida
-        </p>
+
+        <!-- Información adicional -->
+        <div class="flex items-center justify-center text-xs text-gray-500 bg-gray-50 rounded-lg p-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Por favor, mantenga esta ventana abierta durante la carga</span>
+        </div>
       </div>
     </div>
   </div>
@@ -633,88 +662,176 @@ styles %}
 </script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // Selector específico por ID para evitar conflictos con subida rápida
+    // Elementos del modal de progreso
     const form = document.getElementById("formSubidaNormal");
     const progressModal = document.getElementById("progressModal");
     const progressBar = document.getElementById("progressBar");
     const progressText = document.getElementById("progressText");
+    const progressSubtext = document.getElementById("progressSubtext");
 
-    console.log("Form found:", form);
-    console.log("Progress modal found:", progressModal);
-    console.log(
-      "Progress modal classes:",
-      progressModal ? progressModal.className : "null"
-    );
-    console.log(
-      "Progress modal style:",
-      progressModal ? progressModal.style.display : "null"
-    );
-
-    // Variables para controlar el progreso fluido
-    let currentProgress = 0;
+    // Variables para controlar el progreso real
+    let lastDisplayedProgress = 0;
     let targetProgress = 0;
+    let currentProgress = 0;
     let progressInterval = null;
+    let fileSize = 0;
 
-    // Función para animar el progreso de manera fluida
-    function animateProgress(target) {
-      targetProgress = target;
-
-      if (progressInterval) {
-        clearInterval(progressInterval);
+    // Función para actualizar el progreso de manera suave y controlada
+    function updateProgress(percent, message, subMessage = "") {
+      // Asegurar que el porcentaje esté entre 0 y 100
+      const clampedPercent = Math.max(0, Math.min(100, percent));
+      
+      // Evitar que el progreso vaya hacia atrás (excepto cuando se reinicia)
+      if (clampedPercent < lastDisplayedProgress && clampedPercent > 0) {
+        return;
       }
-
-      progressInterval = setInterval(() => {
-        if (currentProgress < targetProgress) {
-          // Incremento variable: más lento al acercarse al objetivo
-          const difference = targetProgress - currentProgress;
-          const increment = difference > 20 ? 2 : difference > 10 ? 1 : 0.5;
-
-          currentProgress = Math.min(
-            currentProgress + increment,
-            targetProgress
-          );
-          progressBar.style.width = Math.floor(currentProgress) + "%";
-          progressText.textContent =
-            "Subiendo: " + Math.floor(currentProgress) + "%";
-        } else {
-          clearInterval(progressInterval);
-          progressInterval = null;
-        }
-      }, 80); // Intervalo ajustado para mejor fluidez
+      
+      lastDisplayedProgress = clampedPercent;
+      
+      // Actualizar barra de progreso con transición suave
+      progressBar.style.width = clampedPercent + "%";
+      
+      // Actualizar textos
+      progressText.textContent = message || `Subiendo: ${clampedPercent}%`;
+      if (progressSubtext) {
+        progressSubtext.textContent = subMessage || `${clampedPercent}% completado`;
+      }
+      
+      console.log(`Progress updated: ${clampedPercent}% - ${message}`);
     }
 
-    // Función de test para verificar el modal con progreso animado
-    window.testModal = function () {
-      console.log("Testing modal with animated progress...");
-      if (progressModal) {
-        progressModal.classList.remove("hidden");
-        currentProgress = 0;
-        progressBar.style.width = "0%";
-        progressText.textContent = "Test: 0%";
-        console.log("Modal should be visible now");
-
-        // Simular progreso gradual
-        setTimeout(() => animateProgress(25), 500);
-        setTimeout(() => animateProgress(50), 1500);
-        setTimeout(() => animateProgress(75), 2500);
-        setTimeout(() => animateProgress(100), 3500);
-
-        setTimeout(() => {
-          progressModal.classList.add("hidden");
-          currentProgress = 0;
-          progressBar.style.width = "0%";
-          progressText.textContent = "Subiendo: 0%";
-          console.log("Modal hidden again");
-        }, 5000);
+    // Función para animar suavemente hacia el progreso objetivo
+    function animateToProgress(newTargetProgress, allowFullProgress = false) {
+      // Si no se permite progreso completo, limitar a 98%
+      if (!allowFullProgress && newTargetProgress > 98) {
+        targetProgress = 98;
+      } else {
+        targetProgress = newTargetProgress;
       }
+      
+      // Si no hay animación en curso, iniciarla
+      if (!progressInterval) {
+        progressInterval = setInterval(() => {
+          if (currentProgress < targetProgress) {
+            // Incremento gradual - más rápido al principio, más lento al acercarse
+            const difference = targetProgress - currentProgress;
+            const increment = Math.max(0.2, difference * 0.1); // Mínimo 0.2%, máximo 10% de la diferencia
+            
+            currentProgress = Math.min(currentProgress + increment, targetProgress);
+            
+            const displayPercent = Math.round(currentProgress);
+            const loadedMB = ((currentProgress / 100) * fileSize / (1024 * 1024)).toFixed(2);
+            const totalMB = (fileSize / (1024 * 1024)).toFixed(2);
+            
+            updateProgress(
+              displayPercent,
+              `Subiendo archivo: ${displayPercent}%`,
+              `${loadedMB} MB de ${totalMB} MB transferidos`
+            );
+          } else {
+            // Detener animación cuando se alcance el objetivo
+            clearInterval(progressInterval);
+            progressInterval = null;
+          }
+        }, 100); // Actualizar cada 100ms para suavidad
+      }
+    }
+    
+    // Función para detener la animación de progreso
+    function stopProgressAnimation() {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+    }
+
+    // Función para mostrar el modal
+    function showProgressModal() {
+      lastDisplayedProgress = 0; // Reiniciar el seguimiento de progreso
+      targetProgress = 0;
+      currentProgress = 0;
+      stopProgressAnimation(); // Asegurar que no hay animaciones previas
+      progressModal.classList.remove("hidden");
+      updateProgress(0, "Preparando subida...", "Iniciando proceso de carga");
+      // Forzar reflow
+      progressModal.offsetHeight;
+    }
+
+    // Función para ocultar el modal
+    function hideProgressModal() {
+      stopProgressAnimation();
+      progressModal.classList.add("hidden");
+      lastDisplayedProgress = 0; // Reiniciar el seguimiento de progreso
+      targetProgress = 0;
+      currentProgress = 0;
+      updateProgress(0, "Preparando subida...", "Iniciando proceso de carga");
+    }
+
+    // Función de test que simula progreso real con límite en 98%
+    window.testModal = function () {
+      console.log("Testing modal with real upload progress simulation (max 98% during upload)...");
+      
+      // Simular un archivo para la prueba
+      fileSize = 10 * 1024 * 1024; // 10 MB
+      
+      showProgressModal();
+      
+      // Simular progreso real de carga gradual que se limita automáticamente a 98%
+      const progressSteps = [
+        { progress: 5, delay: 500 },
+        { progress: 15, delay: 1500 },
+        { progress: 28, delay: 3000 },
+        { progress: 42, delay: 4500 },
+        { progress: 58, delay: 6000 },
+        { progress: 71, delay: 7500 },
+        { progress: 84, delay: 9000 },
+        { progress: 93, delay: 10500 },
+        { progress: 99, delay: 12000 }, // Intentar 99% pero se limitará a 98%
+        { progress: 100, delay: 13000 } // Intentar 100% pero se limitará a 98%
+      ];
+      
+      progressSteps.forEach(step => {
+        setTimeout(() => {
+          animateToProgress(step.progress); // Sin allowFullProgress, se limita a 98%
+          console.log(`Simulating real progress: ${step.progress}% (will be limited to max 98%)`);
+        }, step.delay);
+      });
+      
+      // Simular finalización después de que termine la "carga"
+      setTimeout(() => {
+        console.log("Upload completed, starting final phases...");
+        console.log("Progress should be stuck at 98% until final step");
+        stopProgressAnimation();
+        
+        // Asegurar que está en 98%
+        updateProgress(98, "Finalizando transferencia...", "Archivo subido completamente");
+        
+        // Fases finales
+        setTimeout(() => {
+          updateProgress(99, "Procesando archivo...", "Validando y guardando en servidor");
+        }, 800);
+        
+        setTimeout(() => {
+          updateProgress(99.5, "Sincronizando con Dropbox...", "Almacenando en la nube");
+        }, 1600);
+        
+        // SOLO AQUÍ permitimos llegar al 100%
+        setTimeout(() => {
+          console.log("Now allowing progress to reach 100%");
+          animateToProgress(100, true); // Permitir progreso completo
+          updateProgress(100, "¡Archivo subido exitosamente!", "Proceso completado");
+        }, 2400);
+        
+        setTimeout(() => {
+          hideProgressModal();
+        }, 4000);
+        
+      }, 14000);
     };
 
     if (form && progressModal) {
-      console.log("Setting up form submit handler");
-
       form.addEventListener("submit", function (e) {
         e.preventDefault();
-        console.log("Form submitted, preventing default");
 
         const fileInput = document.getElementById("archivo");
         if (!fileInput.files.length) {
@@ -722,110 +839,107 @@ styles %}
           return;
         }
 
-        console.log("File selected, showing modal");
-        console.log("Modal classes before:", progressModal.className);
-
+        const file = fileInput.files[0];
+        fileSize = file.size; // Guardar el tamaño del archivo
+        const fileSizeDisplay = (fileSize / (1024 * 1024)).toFixed(2);
+        
         // Mostrar modal de progreso
-        progressModal.classList.remove("hidden");
-        currentProgress = 0;
-        progressBar.style.width = "0%";
-        progressText.textContent = "Preparando subida...";
-
-        // Forzar reflow para asegurar que el modal se muestre
-        progressModal.offsetHeight;
-
-        console.log("Modal classes after:", progressModal.className);
-        console.log(
-          "Modal computed style:",
-          window.getComputedStyle(progressModal).display
-        );
-        console.log("Modal should be visible now");
-
-        // Simular progreso inicial
-        setTimeout(() => {
-          animateProgress(5);
-          progressText.textContent = "Iniciando subida...";
-        }, 300);
+        showProgressModal();
 
         const formData = new FormData(form);
         const xhr = new XMLHttpRequest();
         xhr.open("POST", form.action, true);
         xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
 
+        // Monitorear el progreso real de la carga y actualizar la barra
         xhr.upload.onprogress = function (event) {
           if (event.lengthComputable) {
-            const actualPercent = Math.round(
-              (event.loaded / event.total) * 100
-            );
-            // Añadir un pequeño retraso para hacer el progreso más visible
-            setTimeout(() => {
-              animateProgress(Math.min(actualPercent, 90)); // Máximo 90% hasta completar
-              console.log("Upload progress:", actualPercent + "%");
-            }, 50); // Reducido a 50ms para mejor respuesta
+            const realProgress = (event.loaded / event.total) * 100;
+            console.log(`Real upload progress: ${realProgress.toFixed(1)}%`);
+            
+            // Animar suavemente hacia el progreso real
+            animateToProgress(realProgress);
           }
         };
 
+        // Cuando la subida se completa
         xhr.onload = function () {
-          console.log("Upload completed with status:", xhr.status);
           if (xhr.status === 200) {
-            // Animar hasta 90% y luego completar gradualmente
-            animateProgress(90);
-
-            setTimeout(() => {
-              progressText.textContent = "Procesando archivo...";
-              animateProgress(95);
-            }, 800);
-
-            setTimeout(() => {
-              progressText.textContent = "Guardando en Dropbox...";
-              animateProgress(98);
-            }, 1200);
-
-            setTimeout(() => {
-              progressText.textContent = "¡Archivo subido exitosamente!";
-              animateProgress(100);
-            }, 1600);
-
-            let redirectUrl =
-              "{{ url_for('listar_dropbox.carpetas_dropbox') }}";
-            try {
-              const response = JSON.parse(xhr.responseText);
-              if (response.redirectUrl) redirectUrl = response.redirectUrl;
-            } catch (err) {
-              console.log("No JSON response or redirect URL");
+            console.log("Upload completed, current displayed progress:", lastDisplayedProgress);
+            
+            // Detener la animación de progreso
+            stopProgressAnimation();
+            
+            // Asegurar que llegamos al 98% antes de proceder
+            if (lastDisplayedProgress < 98) {
+              animateToProgress(98, false); // Forzar a 98% sin permitir más
+              
+              // Esperar a que llegue al 98% antes de continuar
+              setTimeout(() => {
+                updateProgress(98, "Finalizando transferencia...", "Archivo subido completamente");
+                proceedWithFinalSteps();
+              }, 500);
+            } else {
+              updateProgress(98, "Finalizando transferencia...", "Archivo subido completamente");
+              proceedWithFinalSteps();
             }
+            
+            function proceedWithFinalSteps() {
+              // Procesamiento del archivo en el servidor
+              setTimeout(() => {
+                updateProgress(99, "Procesando archivo...", "Validando y guardando en servidor");
+              }, 800);
+              
+              // Sincronización con Dropbox
+              setTimeout(() => {
+                updateProgress(99.5, "Sincronizando con Dropbox...", "Almacenando en la nube");
+              }, 1600);
+              
+              // Finalización exitosa - AQUÍ permitimos llegar al 100%
+              setTimeout(() => {
+                animateToProgress(100, true); // Permitir progreso completo
+                updateProgress(100, "¡Archivo subido exitosamente!", "Proceso completado");
+              }, 2400);
 
-            setTimeout(() => {
-              window.location.href = redirectUrl;
-            }, 2500); // Tiempo extendido para ver el 100%
+              // Redireccionar después de mostrar el éxito completo
+              let redirectUrl = "{{ url_for('listar_dropbox.carpetas_dropbox') }}";
+              try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.redirectUrl) redirectUrl = response.redirectUrl;
+              } catch (err) {
+                console.log("Using default redirect URL");
+              }
+
+              setTimeout(() => {
+                window.location.href = redirectUrl;
+              }, 4000);
+            }
+            
           } else {
-            alert("Error al subir archivo.");
-            progressModal.classList.add("hidden");
-            currentProgress = 0;
-            progressBar.style.width = "0%";
-            if (progressInterval) {
-              clearInterval(progressInterval);
-              progressInterval = null;
-            }
+            stopProgressAnimation();
+            hideProgressModal();
+            alert("Error al subir el archivo. Por favor, inténtelo de nuevo.");
           }
         };
 
+        // Manejo de errores
         xhr.onerror = function () {
-          console.log("Upload error occurred");
-          alert("Error de conexión.");
-          progressModal.classList.add("hidden");
-          currentProgress = 0;
-          progressBar.style.width = "0%";
-          if (progressInterval) {
-            clearInterval(progressInterval);
-            progressInterval = null;
-          }
+          stopProgressAnimation();
+          hideProgressModal();
+          alert("Error de conexión. Verifique su conexión a internet e inténtelo de nuevo.");
         };
+
+        xhr.ontimeout = function () {
+          stopProgressAnimation();
+          hideProgressModal();
+          alert("El tiempo de espera se agotó. El archivo puede ser muy grande o la conexión muy lenta.");
+        };
+
+        // Configurar timeout más generoso (60 segundos por MB, mínimo 2 minutos)
+        xhr.timeout = Math.max(120000, file.size / (1024 * 1024) * 60000);
 
         xhr.send(formData);
       });
-    } else {
-      console.log("Form or modal not found!");
     }
   });
 </script>
