@@ -135,6 +135,7 @@ def register():
                     estado=form.state.data,
                     direccion=form.address.data,
                     codigo_postal=form.zip_code.data,
+                    nacionality=form.nationality.data,  # Agregar nacionalidad
                     fecha_nacimiento=form.date_of_birth.data,
                     rol='cliente',
                     activo=True,
