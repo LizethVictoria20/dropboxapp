@@ -220,14 +220,19 @@ def crear_usuario():
             nacionality = request.form.get('nacionality')
             country = request.form.get('country')
             rol = request.form.get('rol')
+            activo = request.form.get('activo') == 'on'
             
             # Validaciones básicas
             if not email or not password:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"success": False, "error": "Email y contraseña son obligatorios"})
                 flash('Email y contraseña son obligatorios', 'error')
                 return redirect(url_for('users.listar_usuarios'))
             
             # Verificar si el usuario ya existe
             if User.query.filter_by(email=email).first():
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"success": False, "error": "El email ya está registrado"})
                 flash('El email ya está registrado', 'error')
                 return redirect(url_for('users.listar_usuarios'))
             
@@ -243,7 +248,9 @@ def crear_usuario():
                 codigo_postal=codigo_postal,
                 nacionality=nacionality,
                 country=country,
-                rol=rol
+                rol=rol,
+                activo=activo,
+                fecha_registro=datetime.utcnow()
             )
             
             # Establecer contraseña
@@ -255,6 +262,8 @@ def crear_usuario():
                     fecha_nacimiento = datetime.strptime(fecha_nacimiento_str, '%Y-%m-%d').date()
                     user.fecha_nacimiento = fecha_nacimiento
                 except ValueError:
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return jsonify({"success": False, "error": "Formato de fecha de nacimiento inválido"})
                     flash('Formato de fecha de nacimiento inválido', 'error')
                     return redirect(url_for('users.listar_usuarios'))
             
@@ -278,6 +287,8 @@ def crear_usuario():
                 create_dropbox_folder(path)
                 user.dropbox_folder_path = path
             except Exception as e:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"success": False, "error": f"Error al crear carpeta en Dropbox: {str(e)}"})
                 flash(f'Error al crear carpeta en Dropbox: {str(e)}', 'warning')
             
             # Guardar usuario en la base de datos
@@ -292,11 +303,20 @@ def crear_usuario():
                 descripcion=f'Usuario creado con rol {rol}'
             )
             
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    "success": True, 
+                    "message": f"Usuario {user.nombre_completo} creado exitosamente con rol {rol}",
+                    "user_id": user.id
+                })
+            
             flash(f'Usuario {user.nombre_completo} creado exitosamente con rol {rol}', 'success')
             return redirect(url_for('users.listar_usuarios'))
             
         except Exception as e:
             db.session.rollback()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"success": False, "error": f"Error al crear usuario: {str(e)}"})
             flash(f'Error al crear usuario: {str(e)}', 'error')
             return redirect(url_for('users.listar_usuarios'))
     

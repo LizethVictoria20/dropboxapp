@@ -7,12 +7,12 @@ block content %}
       <h1 class="text-3xl font-bold text-primary-dark">Lista de Usuarios</h1>
       <p class="text-gray-500 mt-1">Gestiona los usuarios del sistema</p>
     </div>
-    <a
-      href="{{ url_for('usuarios.lista_usuarios', rol=rol) }}"
+    <button
+      onclick="abrirModalCrearUsuario()"
       class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition"
     >
       + Agregar usuario
-    </a>
+    </button>
   </div>
 
   <!-- Search -->
@@ -501,6 +501,271 @@ block content %}
           >
             <i class="fas fa-upload mr-2"></i>
             Importar Archivo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Crear Usuario -->
+<div
+  id="modalCrearUsuario"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
+>
+  <div
+    class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden"
+  >
+    <div class="flex items-center justify-between p-6 border-b">
+      <div>
+        <h3 class="text-xl font-semibold text-gray-900">Crear Nuevo Usuario</h3>
+        <p class="text-sm text-gray-500">Completa la información del nuevo usuario</p>
+      </div>
+      <button
+        onclick="cerrarModalCrearUsuario()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+      <form id="formCrearUsuario" class="space-y-6">
+        <!-- Información Personal -->
+        <div class="border-b border-gray-200 pb-6">
+          <h4 class="text-lg font-medium text-gray-900 mb-4">
+            <i class="fas fa-user mr-2 text-blue-500"></i>
+            Información Personal
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label
+                for="crear_nombre"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Nombre *</label
+              >
+              <input
+                type="text"
+                id="crear_nombre"
+                name="nombre"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label
+                for="crear_apellido"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Apellido</label
+              >
+              <input
+                type="text"
+                id="crear_apellido"
+                name="apellido"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label
+                for="crear_email"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Email *</label
+              >
+              <input
+                type="email"
+                id="crear_email"
+                name="email"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label
+                for="crear_telefono"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Teléfono</label
+              >
+              <input
+                type="tel"
+                id="crear_telefono"
+                name="telefono"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Dirección -->
+        <div class="border-b border-gray-200 pb-6">
+          <h4 class="text-lg font-medium text-gray-900 mb-4">
+            <i class="fas fa-map-marker-alt mr-2 text-green-500"></i>
+            Dirección
+          </h4>
+
+          <div class="space-y-4">
+            <div>
+              <label
+                for="crear_direccion"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Dirección</label
+              >
+              <input
+                type="text"
+                id="crear_direccion"
+                name="direccion"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label
+                  for="crear_ciudad"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >Ciudad</label
+                >
+                <input
+                  type="text"
+                  id="crear_ciudad"
+                  name="ciudad"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label
+                  for="crear_estado"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >Estado</label
+                >
+                <input
+                  type="text"
+                  id="crear_estado"
+                  name="estado"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label
+                  for="crear_codigo_postal"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >Código Postal</label
+                >
+                <input
+                  type="text"
+                  id="crear_codigo_postal"
+                  name="codigo_postal"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Configuración de Cuenta -->
+        <div class="border-b border-gray-200 pb-6">
+          <h4 class="text-lg font-medium text-gray-900 mb-4">
+            <i class="fas fa-cog mr-2 text-purple-500"></i>
+            Configuración de Cuenta
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label
+                for="crear_rol"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Rol *</label
+              >
+              <select
+                id="crear_rol"
+                name="rol"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="cliente">Cliente</option>
+                <option value="admin">Administrador</option>
+                <option value="lector">Lector</option>
+                <option value="superadmin">Super Administrador</option>
+              </select>
+            </div>
+
+            <div class="flex items-center">
+              <input
+                type="checkbox"
+                id="crear_activo"
+                name="activo"
+                checked
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label for="crear_activo" class="ml-2 block text-sm text-gray-900"
+                >Cuenta Activa</label
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Contraseña -->
+        <div>
+          <h4 class="text-lg font-medium text-gray-900 mb-4">
+            <i class="fas fa-key mr-2 text-orange-500"></i>
+            Contraseña
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label
+                for="crear_password"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Contraseña *</label
+              >
+              <input
+                type="password"
+                id="crear_password"
+                name="password"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+
+            <div>
+              <label
+                for="crear_confirm_password"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Confirmar Contraseña *</label
+              >
+              <input
+                type="password"
+                id="crear_confirm_password"
+                name="confirm_password"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Repite la contraseña"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            onclick="cerrarModalCrearUsuario()"
+            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center"
+          >
+            <i class="fas fa-user-plus mr-2"></i>
+            Crear Usuario
           </button>
         </div>
       </form>
@@ -1354,5 +1619,75 @@ block content %}
       }
     });
   }
+
+  // Funciones para el modal de crear usuario
+  function abrirModalCrearUsuario() {
+    document.getElementById("modalCrearUsuario").classList.remove("hidden");
+    // Limpiar formulario
+    document.getElementById("formCrearUsuario").reset();
+  }
+
+  function cerrarModalCrearUsuario() {
+    document.getElementById("modalCrearUsuario").classList.add("hidden");
+    document.getElementById("formCrearUsuario").reset();
+  }
+
+  // Manejo del formulario de crear usuario
+  document.getElementById("formCrearUsuario").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const password = document.getElementById("crear_password").value;
+    const confirmPassword = document.getElementById("crear_confirm_password").value;
+
+    // Validar contraseñas
+    if (password !== confirmPassword) {
+      alert("Las contraseñas no coinciden");
+      return;
+    }
+
+    if (password.length < 6) {
+      alert("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    // Enviar formulario
+    fetch("{{ url_for('users.crear_usuario') }}", {
+      method: "POST",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: formData,
+    })
+      .then((response) => {
+        if (response.redirected) {
+          // Si hay redirección, recargar la página
+          window.location.reload();
+        } else {
+          return response.text();
+        }
+      })
+      .then((data) => {
+        if (data) {
+          try {
+            const jsonData = JSON.parse(data);
+            if (jsonData.success) {
+              alert("Usuario creado exitosamente");
+              cerrarModalCrearUsuario();
+              location.reload(); // Recargar para ver el nuevo usuario
+            } else {
+              alert("Error: " + jsonData.error);
+            }
+          } catch (e) {
+            // Si no es JSON, asumir que es HTML de error
+            alert("Error al crear usuario. Verifica los datos ingresados.");
+          }
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("Error al crear usuario. Verifica tu conexión e inténtalo de nuevo.");
+      });
+  });
 </script>
 {% endblock %}
