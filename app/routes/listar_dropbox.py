@@ -191,7 +191,6 @@ def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
 def carpetas_dropbox():
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
-        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
         return redirect(url_for("auth.login"))
         
     try:
@@ -200,7 +199,6 @@ def carpetas_dropbox():
         # Verificar configuración de Dropbox
         api_key = current_app.config.get("DROPBOX_API_KEY")
         if not api_key:
-            flash("Error: Configuración de Dropbox no disponible. Visita /config/dropbox/status para más información.", "error")
             return render_template("carpetas_dropbox.html", 
                                  estructuras_usuarios={},
                                  usuarios={},
@@ -268,7 +266,6 @@ def carpetas_dropbox():
             
             # Filtrar la estructura según los permisos del usuario
             if not current_user.is_authenticated or not hasattr(current_user, "rol"):
-                flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
                 return redirect(url_for("auth.login"))
             if current_user.rol == "cliente":
                 # Para clientes, solo mostrar carpetas públicas
@@ -958,7 +955,6 @@ def mover_archivo_modal():
         redirect_url = request.form.get("redirect_url", "")
         
         if not all([archivo_nombre, carpeta_actual, nueva_carpeta]):
-            flash("Faltan datos requeridos para mover el archivo", "error")
             if redirect_url and "/usuario/" in redirect_url:
                 return redirect(redirect_url)
             else:
@@ -1405,7 +1401,6 @@ def renombrar_archivo():
 
     if not (archivo_nombre_actual and carpeta_actual and usuario_id and nuevo_nombre):
         print("DEBUG | Faltan datos para renombrar")
-        flash("Faltan datos para renombrar.", "error")
         
         # En caso de error, intentar redirigir al usuario específico si es posible
         try:
@@ -2351,7 +2346,6 @@ def eliminar_archivo():
         print(f"DEBUG | Todos los datos del formulario: {dict(request.form)}")
         
         if not archivo_nombre or not carpeta_actual:
-            flash("Faltan datos para eliminar el archivo.", "error")
             if redirect_url and "/usuario/" in redirect_url:
                 return redirect(redirect_url)
             else:
@@ -2455,7 +2449,6 @@ def eliminar_archivo():
         # Registrar actividad
         current_user.registrar_actividad('file_hidden', f'Archivo "{archivo_nombre}" ocultado de la interfaz')
         
-        flash("Archivo eliminado correctamente.", "success")
         
     except Exception as e:
         print(f"ERROR | Error eliminando archivo: {e}")
@@ -2564,7 +2557,6 @@ def renombrar_carpeta():
 
     if not (carpeta_nombre_actual and usuario_id and nuevo_nombre):
         print("DEBUG | Faltan datos para renombrar carpeta")
-        flash("Faltan datos para renombrar la carpeta.", "error")
         if redirect_url and "/usuario/" in redirect_url:
             return redirect(redirect_url)
         else:
@@ -2692,7 +2684,6 @@ def eliminar_carpeta():
         redirect_url = request.form.get("redirect_url", "")
         
         if not carpeta_nombre or not carpeta_padre:
-            flash("Faltan datos para eliminar la carpeta.", "error")
             if redirect_url and "/usuario/" in redirect_url:
                 return redirect(redirect_url)
             else:
