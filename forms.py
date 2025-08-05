@@ -92,27 +92,8 @@ class ClienteRegistrationForm(BaseForm):
     city = StringField('Ciudad', validators=[DataRequired(), Length(max=64)])
     state = StringField('Estado', validators=[DataRequired(), Length(max=64)])
     address = StringField('Dirección', validators=[DataRequired(), Length(max=255)])
-    nationality = SelectField('Nacionalidad', validators=[DataRequired()], choices=[
-        ('colombiana', 'Colombiana'),
-        ('venezolana', 'Venezolana'),
-        ('mexicana', 'Mexicana'),
-        ('ecuatoriana', 'Ecuatoriana'),
-        ('peruana', 'Peruana'),
-        ('argentina', 'Argentina'),
-        ('chilena', 'Chilena'),
-        ('brasileña', 'Brasileña'),
-        ('estadounidense', 'Estadounidense'),
-        ('española', 'Española'),
-        ('francesa', 'Francesa'),
-        ('alemana', 'Alemana'),
-        ('italiana', 'Italiana'),
-        ('británica', 'Británica'),
-        ('china', 'China'),
-        ('japonesa', 'Japonesa'),
-        ('coreana', 'Coreana'),
-        ('india', 'India'),
-        ('otra', 'Otra')
-    ])
+    nationality = SelectField('Nacionalidad', validators=[DataRequired()], choices=[])
+    country = SelectField('País', validators=[DataRequired()], choices=[])
     date_of_birth = DateField('Fecha de nacimiento', validators=[DataRequired()])
     password = PasswordField('Contraseña', validators=[
         DataRequired(),

@@ -118,9 +118,18 @@ def logout():
 def register():
     """Página de registro de clientes"""
     from forms import ClienteRegistrationForm
+    from app.utils.countries import get_countries_list, get_nationalities_list
     
     form = ClienteRegistrationForm()
     errors = {}
+    
+    # Obtener listas de países y nacionalidades
+    countries = get_countries_list()
+    nationalities = get_nationalities_list()
+    
+    # Configurar las opciones del formulario
+    form.nationality.choices = [('', 'Selecciona tu nacionalidad')] + nationalities
+    form.country.choices = [('', 'Selecciona tu país')] + [(code, country) for code, country in countries]
     
     if request.method == 'POST':
         if form.validate_on_submit():
@@ -135,7 +144,8 @@ def register():
                     estado=form.state.data,
                     direccion=form.address.data,
                     codigo_postal=form.zip_code.data,
-                    nacionality=form.nationality.data,  # Agregar nacionalidad
+                    nacionality=form.nationality.data,
+                    country=dict(countries)[form.country.data] if form.country.data else None,  # Usar nombre del país
                     fecha_nacimiento=form.date_of_birth.data,
                     rol='cliente',
                     activo=True,
