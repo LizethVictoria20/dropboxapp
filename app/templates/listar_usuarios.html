@@ -984,6 +984,121 @@ Inmigración OK{% endblock %} {% block styles %}
   </div>
 </div>
 
+<!-- Modal de Confirmación para Eliminar Usuario -->
+<div
+  id="deleteUserModal"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
+>
+  <div class="bg-white rounded-lg max-w-md w-full">
+    <div class="flex items-center justify-between p-6 border-b">
+      <div>
+        <h3 class="text-xl font-semibold text-gray-900">
+          <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+          Confirmar Eliminación
+        </h3>
+        <p class="text-sm text-gray-500 mt-1">Esta acción no se puede deshacer</p>
+      </div>
+      <button
+        onclick="closeDeleteModal()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-6">
+      <div class="mb-4">
+        <p class="text-gray-700">
+          ¿Estás seguro de que quieres eliminar al usuario 
+          <span id="deleteUserName" class="font-semibold text-red-600"></span>?
+        </p>
+        <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div class="flex items-start">
+            <i class="fas fa-exclamation-circle text-red-500 mt-0.5 mr-2"></i>
+            <div>
+              <p class="text-sm text-red-700 font-medium">Advertencia</p>
+              <p class="text-xs text-red-600 mt-1">
+                Se eliminarán también todos los archivos, carpetas y beneficiarios asociados a este usuario.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-3">
+        <button
+          onclick="closeDeleteModal()"
+          class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+        >
+          Cancelar
+        </button>
+        <button
+          id="confirmDeleteBtn"
+          class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+        >
+          <i class="fas fa-trash mr-2"></i>
+          Eliminar Usuario
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmación de Éxito -->
+<div
+  id="successDeleteModal"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
+>
+  <div class="bg-white rounded-lg max-w-md w-full">
+    <div class="flex items-center justify-between p-6 border-b">
+      <div>
+        <h3 class="text-xl font-semibold text-gray-900">
+          <i class="fas fa-check-circle text-green-500 mr-2"></i>
+          Usuario Eliminado
+        </h3>
+        <p class="text-sm text-gray-500 mt-1">Operación completada exitosamente</p>
+      </div>
+      <button
+        onclick="closeSuccessModal()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-6">
+      <div class="mb-4">
+        <div class="flex items-start">
+          <i class="fas fa-check-circle text-green-500 mt-0.5 mr-3 text-lg"></i>
+          <div>
+            <p class="text-gray-700" id="successMessage">
+              El usuario ha sido eliminado exitosamente.
+            </p>
+            <div id="deletedItems" class="mt-2 text-sm text-gray-600 hidden">
+              <p class="font-medium">Elementos eliminados:</p>
+              <ul class="list-disc list-inside mt-1 space-y-1">
+                <li id="deletedFiles" class="hidden"></li>
+                <li id="deletedFolders" class="hidden"></li>
+                <li id="deletedBeneficiaries" class="hidden"></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button
+          onclick="closeSuccessModal()"
+          class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
+          <i class="fas fa-check mr-2"></i>
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal para Editar Usuario -->
 <div
   id="editUserModal"
@@ -2269,6 +2384,24 @@ Inmigración OK{% endblock %} {% block styles %}
       }
     });
 
+  // Cerrar modal de eliminación al hacer clic fuera de él
+  document
+    .getElementById("deleteUserModal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeDeleteModal();
+      }
+    });
+
+  // Cerrar modal de éxito al hacer clic fuera de él
+  document
+    .getElementById("successDeleteModal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeSuccessModal();
+      }
+    });
+
   // Filtros de la tabla (solo para la página actual)
   document.addEventListener("DOMContentLoaded", function () {
     const searchInput = document.getElementById("search");
@@ -2394,20 +2527,122 @@ Inmigración OK{% endblock %} {% block styles %}
     }
   };
 
-  // Función para confirmar eliminación de usuario
+  // Función para abrir modal de confirmación de eliminación
   window.confirmDeleteUser = function (userId, userName) {
-    if (
-      confirm(
-        `¿Estás seguro de que quieres eliminar al usuario "${userName}"?\n\nEsta acción no se puede deshacer.`
-      )
-    ) {
-      // Aquí puedes agregar la lógica para eliminar el usuario
-      // Por ejemplo, hacer una petición AJAX al servidor
-      console.log(`Eliminando usuario ${userId}: ${userName}`);
-      alert(
-        "Función de eliminación no implementada aún. Contacta al administrador."
-      );
+    // Configurar el modal
+    document.getElementById('deleteUserName').textContent = userName;
+    
+    // Configurar el botón de confirmación
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.onclick = function() {
+      deleteUserConfirmed(userId, userName, this);
+    };
+    
+    // Mostrar el modal
+    document.getElementById('deleteUserModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  };
+
+  // Función para cerrar modal de eliminación
+  window.closeDeleteModal = function () {
+    document.getElementById('deleteUserModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+  };
+
+  // Función para eliminar usuario confirmado
+  window.deleteUserConfirmed = function (userId, userName, button) {
+    // Mostrar indicador de carga
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Eliminando...';
+    button.disabled = true;
+    
+    // Hacer petición AJAX para eliminar el usuario
+    fetch(`/users/delete_user/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Cerrar modal de confirmación
+        closeDeleteModal();
+        // Mostrar modal de éxito
+        showSuccessModal(data.message);
+      } else {
+        // Mostrar error
+        alert(`Error: ${data.error}`);
+        // Restaurar botón
+        button.innerHTML = originalText;
+        button.disabled = false;
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al eliminar el usuario. Por favor, intenta de nuevo.');
+      // Restaurar botón
+      button.innerHTML = originalText;
+      button.disabled = false;
+    });
+  };
+
+  // Función para mostrar modal de éxito
+  window.showSuccessModal = function (message) {
+    // Configurar el mensaje principal
+    document.getElementById('successMessage').textContent = message;
+    
+    // Extraer información sobre elementos eliminados del mensaje
+    const deletedItems = [];
+    
+    // Buscar información sobre archivos eliminados
+    const filesMatch = message.match(/(\d+) archivo\(s\)/);
+    if (filesMatch) {
+      document.getElementById('deletedFiles').textContent = `${filesMatch[1]} archivo(s)`;
+      document.getElementById('deletedFiles').classList.remove('hidden');
+      deletedItems.push('files');
     }
+    
+    // Buscar información sobre carpetas eliminadas
+    const foldersMatch = message.match(/(\d+) carpeta\(s\)/);
+    if (foldersMatch) {
+      document.getElementById('deletedFolders').textContent = `${foldersMatch[1]} carpeta(s)`;
+      document.getElementById('deletedFolders').classList.remove('hidden');
+      deletedItems.push('folders');
+    }
+    
+    // Buscar información sobre beneficiarios eliminados
+    const beneficiariesMatch = message.match(/(\d+) beneficiario\(s\)/);
+    if (beneficiariesMatch) {
+      document.getElementById('deletedBeneficiaries').textContent = `${beneficiariesMatch[1]} beneficiario(s)`;
+      document.getElementById('deletedBeneficiaries').classList.remove('hidden');
+      deletedItems.push('beneficiaries');
+    }
+    
+    // Mostrar sección de elementos eliminados si hay alguno
+    if (deletedItems.length > 0) {
+      document.getElementById('deletedItems').classList.remove('hidden');
+    }
+    
+    // Mostrar el modal
+    document.getElementById('successDeleteModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  };
+
+  // Función para cerrar modal de éxito
+  window.closeSuccessModal = function () {
+    document.getElementById('successDeleteModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    
+    // Limpiar elementos eliminados para la próxima vez
+    document.getElementById('deletedFiles').classList.add('hidden');
+    document.getElementById('deletedFolders').classList.add('hidden');
+    document.getElementById('deletedBeneficiaries').classList.add('hidden');
+    document.getElementById('deletedItems').classList.add('hidden');
+    
+    // Recargar la página para actualizar la lista
+    window.location.reload();
   };
 
   // Cerrar menús de usuario al hacer clic fuera de ellos
@@ -2428,6 +2663,10 @@ Inmigración OK{% endblock %} {% block styles %}
     console.log("- openEditModal:", typeof window.openEditModal);
     console.log("- closeUserMenu:", typeof window.closeUserMenu);
     console.log("- confirmDeleteUser:", typeof window.confirmDeleteUser);
+    console.log("- closeDeleteModal:", typeof window.closeDeleteModal);
+    console.log("- deleteUserConfirmed:", typeof window.deleteUserConfirmed);
+    console.log("- showSuccessModal:", typeof window.showSuccessModal);
+    console.log("- closeSuccessModal:", typeof window.closeSuccessModal);
     console.log("- openCreateUserModal:", typeof window.openCreateUserModal);
     console.log("- closeCreateUserModal:", typeof window.closeCreateUserModal);
     console.log("- closeHistoryModal:", typeof window.closeHistoryModal);

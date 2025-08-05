@@ -1,7 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, jsonify, current_app, url_for, flash
 from flask_login import login_required, current_user
 from app import db
-from app.models import Beneficiario, User, UserActivityLog
+from app.models import Beneficiario, User, UserActivityLog, Archivo, Folder
 from app.dropbox_utils import create_dropbox_folder
 from app.routes.listar_dropbox import obtener_estructura_dropbox
 import dropbox
@@ -593,3 +593,77 @@ def get_user_history(user_id):
     except Exception as e:
         print(f"Error en get_user_history: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/delete_user/<int:user_id>', methods=['POST'])
+def delete_user(user_id):
+    """Eliminar un usuario administrativo"""
+    try:
+        # Verificar permisos de administrador
+        if not current_user.puede_administrar():
+            return jsonify({'success': False, 'error': 'No tienes permisos para realizar esta acción.'}), 403
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'success': False, 'error': 'Usuario no encontrado.'}), 404
+        
+        # No permitir eliminar al usuario actual
+        if user.id == current_user.id:
+            return jsonify({'success': False, 'error': 'No puedes eliminar tu propia cuenta.'}), 400
+        
+        # No permitir eliminar superadmins (excepto por otros superadmins)
+        if user.rol == 'superadmin' and current_user.rol != 'superadmin':
+            return jsonify({'success': False, 'error': 'No puedes eliminar un Super Admin.'}), 403
+        
+        # Verificar si el usuario tiene contenido asociado (solo para información)
+        archivos_count = Archivo.query.filter_by(usuario_id=user_id).count()
+        carpetas_count = Folder.query.filter_by(user_id=user_id).count()
+        
+        # Eliminar archivos y carpetas asociadas
+        if archivos_count > 0:
+            Archivo.query.filter_by(usuario_id=user_id).delete()
+        
+        if carpetas_count > 0:
+            Folder.query.filter_by(user_id=user_id).delete()
+        
+        # Eliminar beneficiarios asociados al usuario
+        beneficiarios_count = Beneficiario.query.filter_by(titular_id=user_id).count()
+        if beneficiarios_count > 0:
+            Beneficiario.query.filter_by(titular_id=user_id).delete()
+        
+        # Eliminar actividades del usuario
+        UserActivityLog.query.filter_by(user_id=user_id).delete()
+        
+        # Eliminar el usuario
+        db.session.delete(user)
+        
+        # Registrar actividad
+        actividad = UserActivityLog(
+            user_id=current_user.id,
+            accion="eliminar_usuario",
+            descripcion=f"Eliminó usuario administrativo {user.email}"
+        )
+        db.session.add(actividad)
+        
+        db.session.commit()
+        
+        # Crear mensaje detallado
+        mensaje = f'Usuario "{user.email}" eliminado exitosamente.'
+        if archivos_count > 0 or carpetas_count > 0 or beneficiarios_count > 0:
+            detalles = []
+            if archivos_count > 0:
+                detalles.append(f"{archivos_count} archivo(s)")
+            if carpetas_count > 0:
+                detalles.append(f"{carpetas_count} carpeta(s)")
+            if beneficiarios_count > 0:
+                detalles.append(f"{beneficiarios_count} beneficiario(s)")
+            
+            mensaje += f" También se eliminaron: {', '.join(detalles)}."
+        
+        return jsonify({
+            'success': True, 
+            'message': mensaje
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': f'Error al eliminar usuario: {str(e)}'}), 500
