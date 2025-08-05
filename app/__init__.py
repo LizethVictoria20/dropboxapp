@@ -10,6 +10,14 @@ import logging
 # Configurar logging
 logger = logging.getLogger(__name__)
 
+# Inicializar el gestor de tokens de Dropbox al importar la aplicación
+try:
+    from app.dropbox_token_manager import get_token_manager
+    # Inicializar el token manager al arrancar la aplicación
+    token_manager = get_token_manager()
+except Exception as e:
+    print(f"Advertencia: No se pudo inicializar el gestor de tokens de Dropbox: {e}")
+
 db = SQLAlchemy()
 migrate = Migrate()
 

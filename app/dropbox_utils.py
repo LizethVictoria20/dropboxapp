@@ -5,12 +5,28 @@ from app import db
 import logging
 from datetime import datetime
 import os
+from app.dropbox_token_manager import get_valid_dropbox_token, get_token_manager
 
 logger = logging.getLogger(__name__)
 
 def get_dbx():
-    api_key = current_app.config["DROPBOX_API_KEY"]
-    return dropbox.Dropbox(api_key)
+    """
+    Obtiene un cliente de Dropbox con token válido
+    """
+    try:
+        # Intentar usar el token manager primero
+        token = get_valid_dropbox_token()
+        if token:
+            return dropbox.Dropbox(token)
+    except Exception as e:
+        logger.warning(f"No se pudo usar token manager: {e}")
+    
+    # Fallback al método anterior
+    api_key = current_app.config.get("DROPBOX_API_KEY")
+    if api_key:
+        return dropbox.Dropbox(api_key)
+    
+    raise ValueError("No se pudo obtener token válido para Dropbox")
 
 def sync_user_files_from_webhook(account_id, cursor=None):
     """
@@ -189,57 +205,69 @@ def verify_dropbox_config():
     Returns:
         dict: Estado de la configuración con detalles
     """
-    config_status = {
-        'api_key': {
-            'available': bool(current_app.config.get('DROPBOX_API_KEY')),
-            'value': current_app.config.get('DROPBOX_API_KEY', 'No configurado')[:10] + '...' if current_app.config.get('DROPBOX_API_KEY') else 'No configurado'
-        },
-        'app_key': {
-            'available': bool(current_app.config.get('DROPBOX_APP_KEY')),
-            'value': current_app.config.get('DROPBOX_APP_KEY', 'No configurado')
-        },
-        'app_secret': {
-            'available': bool(current_app.config.get('DROPBOX_APP_SECRET')),
-            'value': 'Configurado' if current_app.config.get('DROPBOX_APP_SECRET') else 'No configurado'
-        },
-        'access_token': {
-            'available': bool(current_app.config.get('DROPBOX_ACCESS_TOKEN')),
-            'value': 'Configurado' if current_app.config.get('DROPBOX_ACCESS_TOKEN') else 'No configurado'
-        }
-    }
-    
-    # Verificar si al menos la API_KEY está configurada
-    api_key_available = config_status['api_key']['available']
-    
-    # Intentar conectar a Dropbox si hay API_KEY
-    connection_status = {
-        'connected': False,
-        'error': None,
-        'account_info': None
-    }
-    
-    if api_key_available:
-        try:
-            dbx = get_dbx()
-            account = dbx.users_get_current_account()
-            connection_status['connected'] = True
-            connection_status['account_info'] = {
-                'email': account.email,
-                'name': account.name.display_name,
-                'country': account.country
+    try:
+        # Obtener estado del token manager
+        token_manager = get_token_manager()
+        token_status = token_manager.get_token_status()
+        
+        config_status = {
+            'api_key': {
+                'available': bool(token_manager.access_token or current_app.config.get('DROPBOX_API_KEY')),
+                'value': (token_manager.access_token or current_app.config.get('DROPBOX_API_KEY', 'No configurado'))[:10] + '...' if (token_manager.access_token or current_app.config.get('DROPBOX_API_KEY')) else 'No configurado'
+            },
+            'app_key': {
+                'available': token_status['app_key_configured'],
+                'value': token_manager.app_key or current_app.config.get('DROPBOX_APP_KEY', 'No configurado')
+            },
+            'app_secret': {
+                'available': token_status['app_secret_configured'],
+                'value': 'Configurado' if token_status['app_secret_configured'] else 'No configurado'
+            },
+            'access_token': {
+                'available': token_status['access_token_configured'],
+                'value': 'Configurado' if token_status['access_token_configured'] else 'No configurado'
+            },
+            'refresh_token': {
+                'available': token_status['refresh_token_configured'],
+                'value': 'Configurado' if token_status['refresh_token_configured'] else 'No configurado'
             }
-            logger.info(f"Conectado a Dropbox como: {account.email}")
-        except Exception as e:
-            connection_status['connected'] = False
-            connection_status['error'] = str(e)
-            logger.error(f"Error conectando a Dropbox: {e}")
-    
-    return {
-        'config': config_status,
-        'connection': connection_status,
-        'all_configured': all(status['available'] for status in config_status.values()),
-        'api_key_configured': api_key_available
-    }
+        }
+        
+        # Intentar conectar a Dropbox
+        connection_status = token_manager.test_connection()
+        
+        # Verificar si al menos hay un token configurado
+        token_available = (token_status['access_token_configured'] or 
+                          bool(token_manager.access_token) or
+                          current_app.config.get('DROPBOX_API_KEY'))
+        
+        return {
+            'config': config_status,
+            'connection': connection_status,
+            'all_configured': (token_status['access_token_configured'] and 
+                              token_status['app_key_configured'] and 
+                              token_status['app_secret_configured']),
+            'token_configured': token_available,
+            'auto_refresh_enabled': token_status['refresh_token_configured'],
+            'last_refresh': token_status['last_refresh'],
+            'next_refresh': token_status['next_refresh']
+        }
+        
+    except Exception as e:
+        logger.error(f"Error verificando configuración de Dropbox: {e}")
+        return {
+            'config': {
+                'api_key': {'available': False, 'value': 'Error'},
+                'app_key': {'available': False, 'value': 'Error'},
+                'app_secret': {'available': False, 'value': 'Error'},
+                'access_token': {'available': False, 'value': 'Error'},
+                'refresh_token': {'available': False, 'value': 'Error'}
+            },
+            'connection': {'connected': False, 'error': str(e)},
+            'all_configured': False,
+            'token_configured': False,
+            'auto_refresh_enabled': False
+        }
 
 def get_dropbox_client():
     """
@@ -253,8 +281,8 @@ def get_dropbox_client():
     """
     config_status = verify_dropbox_config()
     
-    if not config_status['api_key_configured']:
-        raise ValueError("DROPBOX_API_KEY no está configurado. Verifica las variables de entorno.")
+    if not config_status['token_configured']:
+        raise ValueError("No hay token de Dropbox configurado. Verifica las variables de entorno.")
     
     if not config_status['connection']['connected']:
         raise ValueError(f"No se pudo conectar a Dropbox: {config_status['connection']['error']}")

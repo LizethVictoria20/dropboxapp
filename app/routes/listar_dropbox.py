@@ -7,12 +7,14 @@ from app.models import Archivo, Beneficiario, Folder, User, Notification
 from app import db
 import unicodedata
 from datetime import datetime
+from app.dropbox_utils import get_dbx, get_valid_dropbox_token
 
 bp = Blueprint("listar_dropbox", __name__)
 
 def obtener_carpetas_dropbox_estructura(path="", dbx=None):
     if dbx is None:
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        from app.dropbox_utils import get_dbx
+        dbx = get_dbx()
     res = dbx.files_list_folder(path, recursive=True)
     all_paths = [entry.path_display for entry in res.entries if isinstance(entry, dropbox.files.FolderMetadata)]
 
@@ -28,11 +30,12 @@ def obtener_carpetas_dropbox_estructura(path="", dbx=None):
 
 def obtener_estructura_dropbox(path="", dbx=None):
     if dbx is None:
-        api_key = current_app.config.get("DROPBOX_API_KEY")
-        if not api_key:
-            print("Warning: DROPBOX_API_KEY no configurado, retornando estructura vacía")
+        from app.dropbox_utils import get_dbx
+        try:
+            dbx = get_dbx()
+        except Exception as e:
+            print(f"Warning: Error obteniendo cliente Dropbox: {e}")
             return {"_subcarpetas": {}, "_archivos": []}
-        dbx = dropbox.Dropbox(api_key)
     
     try:
         # Obtener contenido del directorio actual (no recursivo)
@@ -63,11 +66,12 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
     """
     
     if dbx is None:
-        api_key = current_app.config.get("DROPBOX_API_KEY")
-        if not api_key:
-            print("Warning: DROPBOX_API_KEY no configurado, retornando estructura vacía")
+        from app.dropbox_utils import get_dbx
+        try:
+            dbx = get_dbx()
+        except Exception as e:
+            print(f"Warning: Error obteniendo cliente Dropbox: {e}")
             return {"_subcarpetas": {}, "_archivos": []}
-        dbx = dropbox.Dropbox(api_key)
     
     # Limitar la profundidad para evitar recursión infinita
     if current_depth >= max_depth:
@@ -197,7 +201,7 @@ def carpetas_dropbox():
         estructuras_usuarios = {}
         
         # Verificar configuración de Dropbox
-        api_key = current_app.config.get("DROPBOX_API_KEY")
+        api_key = get_valid_dropbox_token()
         if not api_key:
             return render_template("carpetas_dropbox.html", 
                                  estructuras_usuarios={},
@@ -381,7 +385,7 @@ def obtener_contenido_carpeta(ruta):
         
         # Obtener estructura de la carpeta
         print(f"API: Creando cliente Dropbox para ruta: {ruta}")
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         print(f"API: Llamando a obtener_estructura_dropbox_optimizada con path: /{ruta}")
         
         try:
@@ -523,7 +527,7 @@ def crear_carpeta():
     print(f"🔧 Ruta final para crear en Dropbox: '{ruta}'")
     
     try:
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         dbx.files_create_folder_v2(ruta)
         
         # Guardar carpeta en la base de datos
@@ -715,7 +719,7 @@ def subir_archivo():
     archivo.seek(0)  # Resetear el puntero del archivo para futuras lecturas
 
     try:
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         
         # Carpeta raíz de usuario/beneficiario
         if hasattr(usuario, "dropbox_folder_path") and usuario.dropbox_folder_path:
@@ -878,7 +882,7 @@ def mover_archivo(archivo_nombre, carpeta_actual):
         flash("Selecciona un usuario válido.", "error")
         return redirect(url_for("listar_dropbox.mover_archivo", archivo_nombre=archivo_nombre, carpeta_actual=carpeta_actual))
 
-    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    dbx = get_dbx()
     # Crear carpetas destino si no existen
     carpeta_usuario = usuario.dropbox_folder_path or f"/{usuario.email}"
     try:
@@ -1030,7 +1034,7 @@ def mover_archivo_modal():
                     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
         
         # Buscar archivo en Dropbox directamente (fuente de verdad)
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         
         # Debug: Listar carpetas disponibles para verificar
         try:
@@ -1421,7 +1425,7 @@ def renombrar_archivo():
         except:
             return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
-    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    dbx = get_dbx()
     try:
         print(f"DEBUG | Renombrando en Dropbox: {old_path} -> {new_path}")
         dbx.files_move_v2(old_path, new_path, allow_shared_folder=True, autorename=True)
@@ -1454,7 +1458,7 @@ def renombrar_archivo():
 
 def sincronizar_dropbox_a_bd():
     print("🚩 Iniciando sincronización de Dropbox a BD...")
-    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    dbx = get_dbx()
 
     # Obtén todos los paths que ya tienes en la base para comparar rápido
     paths_existentes = set([a.dropbox_path for a in Archivo.query.all()])
@@ -1588,7 +1592,7 @@ def sincronizar_usuario(email):
             db.session.commit()
             print(f"DEBUG | Configurado dropbox_folder_path: {usuario.dropbox_folder_path}")
         
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         
         # Obtener todos los archivos del usuario en Dropbox
         print(f"DEBUG | Buscando archivos en: {usuario.dropbox_folder_path}")
@@ -1657,7 +1661,7 @@ def verificar_dropbox():
     print("🔍 Verificando estado de Dropbox...")
     
     try:
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         
         # Verificar conexión
         account = dbx.users_get_current_account()
@@ -1704,7 +1708,7 @@ def buscar_archivo_especifico():
     print("🔍 Buscando archivo específico: DOCUMENTOS_FINANCIEROS_TITULAR_JOHAN.png")
     
     try:
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         
         # Buscar el archivo específico
         archivo_nombre = "DOCUMENTOS_FINANCIEROS_TITULAR_JOHAN.png"
@@ -1799,7 +1803,7 @@ def buscar_archivo_dropbox(nombre_archivo):
     print(f"🔍 Buscando archivo en Dropbox: {nombre_archivo}")
     
     try:
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         
         # Buscar el archivo en Dropbox con múltiples estrategias
         print(f"DEBUG | Estrategia 1: Búsqueda exacta por nombre")
@@ -1910,7 +1914,7 @@ def buscar_archivo_dropbox(nombre_archivo):
 def sincronizar_dropbox_completo():
     """Sincronización alternativa que busca desde la raíz de Dropbox"""
     print("🚩 Iniciando sincronización completa desde raíz...")
-    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    dbx = get_dbx()
     
     try:
         # Buscar desde la raíz
@@ -1976,7 +1980,7 @@ def sincronizar_dropbox_completo():
 
 def sincronizar_carpetas_dropbox():
     """Sincroniza carpetas de Dropbox que no están en la base de datos"""
-    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    dbx = get_dbx()
     
     # Obtener todas las carpetas que ya están en la base de datos
     carpetas_existentes = set([f.dropbox_path for f in Folder.query.all()])
@@ -2102,7 +2106,7 @@ def subir_archivo_rapido():
     archivo.seek(0)  # Resetear el puntero del archivo para futuras lecturas
 
     try:
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         
         # Construir la ruta completa usando el dropbox_folder_path del usuario
         if hasattr(usuario, 'dropbox_folder_path') and usuario.dropbox_folder_path:
@@ -2216,7 +2220,7 @@ def ver_usuario_carpetas(usuario_id):
         estructuras_usuarios = {}
         
         # Verificar configuración de Dropbox
-        api_key = current_app.config.get("DROPBOX_API_KEY")
+        api_key = get_valid_dropbox_token()
         if not api_key:
             flash("Error: Configuración de Dropbox no disponible.", "error")
             return render_template("usuario_carpetas.html", 
@@ -2586,7 +2590,7 @@ def renombrar_carpeta():
         print(f"DEBUG | Encontradas {len(carpetas_hijas)} carpetas hijas para renombrar")
         
         # Renombrar todas las carpetas hijas
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         try:
             for carpeta_hija in carpetas_hijas:
                 old_path_hija = carpeta_hija.dropbox_path
@@ -2630,7 +2634,7 @@ def renombrar_carpeta():
         else:
             return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
-    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    dbx = get_dbx()
     try:
         print(f"DEBUG | Renombrando carpeta en Dropbox: {old_path} -> {new_path}")
         dbx.files_move_v2(old_path, new_path, allow_shared_folder=True, autorename=True)
@@ -2695,7 +2699,7 @@ def eliminar_carpeta():
         print(f"DEBUG | Eliminando carpeta: {carpeta_path}")
         
         # Conectar a Dropbox
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         
         # Eliminar carpeta de Dropbox (esto eliminará recursivamente todo el contenido)
         try:

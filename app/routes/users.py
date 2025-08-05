@@ -8,6 +8,7 @@ import dropbox
 from datetime import datetime
 import json
 
+from app.dropbox_utils import get_dbx
 bp = Blueprint('users', __name__, url_prefix='/users')
 
 @bp.route('/create', methods=['POST'])
@@ -186,7 +187,7 @@ def listar_beneficiarios():
     estructuras_titulares = {}
     estructuras_beneficiarios = {}
 
-    dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+    dbx = get_dbx()
     for titular in titulares:
         estructuras_titulares[titular.id] = obtener_estructura_dropbox(path=titular.dropbox_folder_path)
         for ben in titular.beneficiarios:

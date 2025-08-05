@@ -357,7 +357,7 @@ def verify_folder_exists(folder_path):
         bool: True si existe, False si no
     """
     try:
-        api_key = current_app.config.get("DROPBOX_API_KEY")
+        api_key = get_valid_dropbox_token()
         if not api_key:
             logger.error("DROPBOX_API_KEY no configurada")
             return False

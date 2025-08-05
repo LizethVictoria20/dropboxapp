@@ -1105,14 +1105,21 @@ def dropbox_config_status():
         'DROPBOX_ACCESS_TOKEN': {
             'configurado': status['config']['access_token']['available'],
             'valor': status['config']['access_token']['value']
+        },
+        'DROPBOX_REFRESH_TOKEN': {
+            'configurado': status['config']['refresh_token']['available'],
+            'valor': status['config']['refresh_token']['value']
         }
     }
     
     # Estado de conexión
     if status['connection']['connected']:
-        account_info = status['connection']['account_info']
-        dropbox_status = f"Conectado como: {account_info['email']} ({account_info['name']})"
-    elif status['connection']['error']:
+        if 'account_info' in status['connection']:
+            account_info = status['connection']['account_info']
+            dropbox_status = f"Conectado como: {account_info['email']} ({account_info['name']})"
+        else:
+            dropbox_status = "Conectado a Dropbox"
+    elif 'error' in status['connection'] and status['connection']['error']:
         dropbox_status = f"Error de conexión: {status['connection']['error']}"
     else:
         dropbox_status = "No configurado"
@@ -1121,7 +1128,30 @@ def dropbox_config_status():
                          config_status=config_status,
                          dropbox_status=dropbox_status,
                          todas_configuradas=status['all_configured'],
-                         connection_status=status['connection']) 
+                         connection_status=status['connection'],
+                         auto_refresh_enabled=status.get('auto_refresh_enabled', False),
+                         last_refresh=status.get('last_refresh'),
+                         next_refresh=status.get('next_refresh'))
+
+@bp.route('/config/dropbox/refresh', methods=['POST'])
+@login_required
+@role_required('admin')
+def refresh_dropbox_token():
+    """
+    Ruta para renovar manualmente el token de Dropbox
+    """
+    from app.dropbox_token_manager import refresh_dropbox_token
+    
+    try:
+        success = refresh_dropbox_token()
+        if success:
+            flash('Token de Dropbox renovado exitosamente', 'success')
+        else:
+            flash('Error renovando el token de Dropbox', 'error')
+    except Exception as e:
+        flash(f'Error renovando token: {str(e)}', 'error')
+    
+    return redirect(url_for('main.dropbox_config_status')) 
 
 @bp.route('/debug/file-extensions')
 @login_required

@@ -142,6 +142,75 @@
           </div>
         </div>
 
+        <!-- Sistema de Renovación Automática -->
+        {% if auto_refresh_enabled is defined %}
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">
+            Sistema de Renovación Automática
+          </h2>
+
+          <div class="space-y-4">
+            <!-- Estado del Auto Refresh -->
+            <div class="flex items-center justify-between p-4 border rounded-lg {% if auto_refresh_enabled %}border-green-200 bg-green-50{% else %}border-yellow-200 bg-yellow-50{% endif %}">
+              <div>
+                <h3 class="text-sm font-medium text-gray-900">
+                  Renovación Automática
+                </h3>
+                <p class="text-sm text-gray-600 mt-1">
+                  {% if auto_refresh_enabled %}
+                    ✅ Habilitada - Los tokens se renuevan automáticamente cada 45 minutos
+                  {% else %}
+                    ⚠️ Deshabilitada - Se requiere renovación manual
+                  {% endif %}
+                </p>
+              </div>
+              <div class="flex-shrink-0">
+                {% if auto_refresh_enabled %}
+                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                {% else %}
+                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Información de Renovación -->
+            {% if last_refresh %}
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-sm font-medium text-gray-900 mb-2">Información de Renovación</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p class="text-gray-600">Última renovación:</p>
+                  <p class="font-medium">{{ last_refresh }}</p>
+                </div>
+                {% if next_refresh %}
+                <div>
+                  <p class="text-gray-600">Próxima renovación:</p>
+                  <p class="font-medium">{{ next_refresh }}</p>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Botón de Renovación Manual -->
+            <div class="border-t pt-4">
+              <form method="POST" action="{{ url_for('main.refresh_dropbox_token') }}" class="inline">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                  🔄 Renovar Token Manualmente
+                </button>
+              </form>
+              <p class="text-xs text-gray-500 mt-2">
+                Usa este botón para renovar el token inmediatamente si hay problemas de conectividad
+              </p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
         <!-- Instrucciones -->
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h2 class="text-xl font-semibold text-blue-800 mb-4">
@@ -170,6 +239,9 @@
                   <strong>DROPBOX_ACCESS_TOKEN:</strong> Token de acceso de
                   Dropbox
                 </li>
+                <li>
+                  <strong>DROPBOX_REFRESH_TOKEN:</strong> Token de renovación para renovación automática (recomendado)
+                </li>
               </ul>
             </div>
 
@@ -188,7 +260,8 @@
                   export DROPBOX_API_KEY="tu_api_key_aqui"<br />
                   export DROPBOX_APP_KEY="tu_app_key_aqui"<br />
                   export DROPBOX_APP_SECRET="tu_app_secret_aqui"<br />
-                  export DROPBOX_ACCESS_TOKEN="tu_access_token_aqui"
+                  export DROPBOX_ACCESS_TOKEN="tu_access_token_aqui"<br />
+                  export DROPBOX_REFRESH_TOKEN="tu_refresh_token_aqui"
                 </code>
               </div>
             </div>

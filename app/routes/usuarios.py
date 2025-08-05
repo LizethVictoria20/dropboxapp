@@ -1,3 +1,4 @@
+from app.dropbox_utils import get_dbx
 # routes/usuarios.py
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
@@ -276,7 +277,7 @@ def importar_archivo_usuario(usuario_id):
         
         # Conectar a Dropbox
         from flask import current_app
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         
         # Leer archivo
         archivo_content = archivo.read()
@@ -410,7 +411,7 @@ def eliminar_usuario(usuario_id):
     try:
         # Conectar a Dropbox
         from flask import current_app
-        dbx = dropbox.Dropbox(current_app.config["DROPBOX_API_KEY"])
+        dbx = get_dbx()
         
         # Eliminar carpetas y archivos de Dropbox
         if usuario.dropbox_folder_path:
