@@ -22,6 +22,7 @@ def get_friendly_file_type(extension):
     
     # Mapeo de extensiones a tipos amigables
     extension_mapping = {
+        # Documentos
         'pdf': 'PDF',
         'doc': 'Word',
         'docx': 'Word',
@@ -29,29 +30,72 @@ def get_friendly_file_type(extension):
         'xlsx': 'Excel',
         'ppt': 'PowerPoint',
         'pptx': 'PowerPoint',
+        'odt': 'OpenDocument',
+        'ods': 'OpenDocument',
+        'odp': 'OpenDocument',
+        
+        # Imágenes
         'jpg': 'Imagen JPG',
         'jpeg': 'Imagen JPG',
         'png': 'Imagen PNG',
         'gif': 'Imagen GIF',
         'bmp': 'Imagen BMP',
+        'tiff': 'Imagen TIFF',
+        'svg': 'Imagen SVG',
+        'webp': 'Imagen WebP',
+        
+        # Texto
         'txt': 'Texto',
         'rtf': 'Texto',
+        'md': 'Markdown',
+        'csv': 'CSV',
+        
+        # Comprimidos
         'zip': 'Comprimido',
         'rar': 'Comprimido',
         '7z': 'Comprimido',
+        'tar': 'Comprimido',
+        'gz': 'Comprimido',
+        
+        # Video
         'mp4': 'Video',
         'avi': 'Video',
         'mov': 'Video',
+        'wmv': 'Video',
+        'flv': 'Video',
+        'mkv': 'Video',
+        'webm': 'Video',
+        
+        # Audio
         'mp3': 'Audio',
         'wav': 'Audio',
+        'aac': 'Audio',
+        'ogg': 'Audio',
+        'flac': 'Audio',
+        
+        # Código
         'json': 'JSON',
         'xml': 'XML',
         'html': 'HTML',
         'css': 'CSS',
-        'js': 'JavaScript'
+        'js': 'JavaScript',
+        'php': 'PHP',
+        'py': 'Python',
+        'java': 'Java',
+        'cpp': 'C++',
+        'c': 'C',
+        'sql': 'SQL',
+        
+        # Otros
+        'exe': 'Ejecutable',
+        'msi': 'Instalador',
+        'iso': 'Imagen ISO',
+        'log': 'Log',
+        'ini': 'Configuración',
+        'conf': 'Configuración'
     }
     
-    return extension_mapping.get(extension, 'Otro')
+    return extension_mapping.get(extension, f'Archivo .{extension.upper()}')
 
 
 def calculate_percent_change(current, previous):
@@ -99,21 +143,72 @@ def calculate_period_dates(period):
     return start_datetime, end_datetime
 
 
-def get_file_types_stats(start_date=None, end_date=None):
-    """Obtiene estadísticas de tipos de archivo para el período especificado"""
-    query = db.session.query(
+def debug_file_extensions():
+    """Función de debug para verificar extensiones en la base de datos"""
+    from app.models import Archivo
+    
+    # Obtener todas las extensiones únicas
+    extensions = db.session.query(Archivo.extension).distinct().all()
+    print("=== DEBUG: Extensiones únicas en la base de datos ===")
+    for ext in extensions:
+        print(f"Extensión: '{ext[0]}'")
+    
+    # Contar archivos por extensión
+    results = db.session.query(
         Archivo.extension,
         func.count(Archivo.id).label('count')
-    )
+    ).group_by(Archivo.extension).all()
+    
+    print("\n=== DEBUG: Conteo por extensión ===")
+    total_files = 0
+    for extension, count in results:
+        print(f"'{extension}': {count} archivos")
+        total_files += count
+    
+    print(f"\nTotal de archivos: {total_files}")
+    return results
 
+def get_file_types_stats(start_date=None, end_date=None):
+    """Obtiene estadísticas de tipos de archivo para el período especificado"""
+    from app.models import Archivo
+    
+    # Obtener todos los archivos del período
+    query = Archivo.query
+    
     if start_date and end_date:
         query = query.filter(
             Archivo.fecha_subida >= start_date,
             Archivo.fecha_subida <= end_date
         )
     
-    results = query.group_by(Archivo.extension).all()
-    total_count = sum([r.count for r in results])
+    archivos = query.all()
+    
+    # Contar extensiones extraídas de nombres
+    extension_counts = {}
+    for archivo in archivos:
+        # Intentar obtener extensión del campo extension primero
+        extension = archivo.extension
+        
+        # Si no hay extensión, extraerla del nombre del archivo
+        if not extension and '.' in archivo.nombre:
+            extension = archivo.nombre.split('.')[-1].lower()
+        elif not extension:
+            extension = 'sin_extension'
+        
+        extension_counts[extension] = extension_counts.get(extension, 0) + 1
+    
+    total_count = sum(extension_counts.values())
+    
+    # Si no hay archivos, devolver lista con mensaje de "Sin datos"
+    if total_count == 0:
+        return [{
+            'name': 'Sin datos para este período',
+            'extension': 'no_data',
+            'friendly_name': 'Sin datos',
+            'count': 0,
+            'percentage': 100.0,
+            'color': '#9CA3AF'
+        }]
     
     # Colores personalizados para los tipos de archivo
     colors = [
@@ -123,19 +218,49 @@ def get_file_types_stats(start_date=None, end_date=None):
     ]
     
     stats = []
-    for i, (extension, count) in enumerate(results):
-        friendly_name = get_friendly_file_type(extension)
-        percentage = (count / total_count) * 100 if total_count > 0 else 0
+    for i, (extension, count) in enumerate(extension_counts.items()):
+        # Manejar extensiones nulas o vacías
+        if extension == 'sin_extension':
+            friendly_name = "Sin extensión"
+            display_name = "Sin extensión"
+        else:
+            friendly_name = get_friendly_file_type(extension)
+            # Crear nombre que incluya tanto la extensión como el nombre amigable
+            if extension.lower() != friendly_name.lower():
+                display_name = f"{friendly_name} (.{extension.lower()})"
+            else:
+                display_name = friendly_name
+        
+        # Calcular porcentaje exacto
+        percentage = (count / total_count) * 100
         
         stats.append({
-            'name': friendly_name,
+            'name': display_name,
+            'extension': extension,
+            'friendly_name': friendly_name,
             'count': count,
             'percentage': round(percentage, 1),
             'color': colors[i % len(colors)]
         })
-
+    
     # Ordenar por cantidad descendente
     stats.sort(key=lambda x: x['count'], reverse=True)
+    
+    # Ajustar porcentajes para que sumen exactamente 100%
+    if stats:
+        # Calcular porcentajes sin redondear primero
+        total_count = sum(stat['count'] for stat in stats)
+        for stat in stats:
+            stat['percentage'] = (stat['count'] / total_count) * 100
+        
+        # Redondear todos excepto el último
+        for i in range(len(stats) - 1):
+            stats[i]['percentage'] = round(stats[i]['percentage'], 1)
+        
+        # Calcular el último porcentaje para que sume exactamente 100%
+        total_rounded = sum(stat['percentage'] for stat in stats[:-1])
+        stats[-1]['percentage'] = round(100 - total_rounded, 1)
+    
     return stats
 
 

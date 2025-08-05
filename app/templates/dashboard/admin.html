@@ -468,18 +468,36 @@
         <div class="h-72">
           <canvas id="fileTypesGeneralChart"></canvas>
         </div>
-        <div class="mt-6 space-y-2">
-          {% for type in file_types_general %}
-          <div class="flex items-center justify-between">
-            <div class="flex items-center">
-              <span class="inline-block w-3 h-3 rounded-full mr-2" style="background-color: {{ type.color }};"></span>
-              <span class="text-sm text-gray-600">{{ type.name }}</span>
-            </div>
-            <div class="text-sm font-medium">
-              {{ type.count }} ({{ type.percentage }}%)
+        <div class="mt-6">
+          <!-- Resumen total -->
+          {% set total_files = file_types_general|sum(attribute='count') %}
+          <div class="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-green-800">Total de archivos en el sistema:</span>
+              <span class="text-sm font-bold text-green-900">{{ total_files }}</span>
             </div>
           </div>
-          {% endfor %}
+          
+          <!-- Separador -->
+          <div class="border-t border-gray-200 my-3"></div>
+          
+          <!-- Lista de tipos -->
+          <div class="space-y-2">
+            {% for type in file_types_general %}
+            <div class="flex items-center justify-between py-2 hover:bg-gray-50 rounded px-2">
+              <div class="flex items-center">
+                <span class="inline-block w-3 h-3 rounded-full mr-2" style="background-color: {{ type.color }};"></span>
+                <div class="flex flex-col">
+                  <span class="text-sm text-gray-700 font-medium">{{ type.name }}</span>
+                  <span class="text-xs text-gray-500">{{ type.count }} archivo{{ 's' if type.count != 1 else '' }}</span>
+                </div>
+              </div>
+              <div class="text-sm font-medium text-gray-900">
+                {{ type.percentage }}%
+              </div>
+            </div>
+            {% endfor %}
+          </div>
         </div>
       </div>
     </div>
@@ -896,17 +914,46 @@ function initializeDashboard() {
             return;
         }
 
+        // Agregar resumen total
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200';
+        summaryDiv.innerHTML = `
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-blue-800">Total de archivos en este período:</span>
+                <span class="text-sm font-bold text-blue-900">${totalCount}</span>
+            </div>
+        `;
+        legendContainer.appendChild(summaryDiv);
+
+        // Agregar separador
+        const separator = document.createElement('div');
+        separator.className = 'border-t border-gray-200 my-3';
+        legendContainer.appendChild(separator);
+
         data.forEach(type => {
             const legendItem = document.createElement('div');
-            legendItem.className = 'flex items-center justify-between';
+            legendItem.className = 'flex items-center justify-between py-2 hover:bg-gray-50 rounded px-2';
             const percentage = totalCount > 0 ? (type.count / totalCount) * 100 : 0;
+            
+            // Extraer información de extensión si está disponible
+            let displayName = type.name;
+            let extensionInfo = '';
+            
+            if (type.extension) {
+                displayName = type.friendly_name || type.name;
+                extensionInfo = ` <span class="text-xs text-gray-500">(.${type.extension.toLowerCase()})</span>`;
+            }
+            
             legendItem.innerHTML = `
                 <div class="flex items-center">
                     <span class="inline-block w-3 h-3 rounded-full mr-2" style="background-color: ${type.color};"></span>
-                    <span class="text-sm text-gray-600">${getFriendlyFileName(type.name)}</span>
+                    <div class="flex flex-col">
+                        <span class="text-sm text-gray-700 font-medium">${displayName}${extensionInfo}</span>
+                        <span class="text-xs text-gray-500">${type.count} archivo${type.count !== 1 ? 's' : ''}</span>
+                    </div>
                 </div>
-                <div class="text-sm font-medium">
-                    ${type.count} (${percentage.toFixed(1)}%)
+                <div class="text-sm font-medium text-gray-900">
+                    ${percentage.toFixed(1)}%
                 </div>
             `;
             legendContainer.appendChild(legendItem);

@@ -1122,3 +1122,28 @@ def dropbox_config_status():
                          dropbox_status=dropbox_status,
                          todas_configuradas=status['all_configured'],
                          connection_status=status['connection']) 
+
+@bp.route('/debug/file-extensions')
+@login_required
+@role_required('admin')
+def debug_file_extensions_route():
+    """Ruta temporal para debug de extensiones de archivo"""
+    from app.utils.dashboard_stats import debug_file_extensions, get_file_types_stats
+    
+    # Ejecutar debug
+    results = debug_file_extensions()
+    
+    # Obtener estadísticas generales
+    general_stats = get_file_types_stats()
+    
+    # Obtener estadísticas del mes actual
+    from app.utils.dashboard_stats import calculate_period_dates
+    start_date, end_date = calculate_period_dates('month')
+    month_stats = get_file_types_stats(start_date, end_date)
+    
+    return jsonify({
+        'debug_results': [(str(ext), count) for ext, count in results],
+        'general_stats': general_stats,
+        'month_stats': month_stats,
+        'total_files': sum([count for _, count in results])
+    }) 
