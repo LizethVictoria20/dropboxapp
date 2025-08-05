@@ -305,6 +305,8 @@ def crear_usuario():
 @bp.route('/listar_usuarios')
 def listar_usuarios():
     """Vista para listar usuarios con paginación"""
+    from app.utils.countries import get_countries_list, get_nationalities_list
+    
     page = request.args.get('page', 1, type=int)
     per_page = 10  # Mostrar 10 usuarios por página
     
@@ -317,9 +319,15 @@ def listar_usuarios():
     
     usuarios = pagination.items
     
+    # Obtener listas de países y nacionalidades
+    countries = get_countries_list()
+    nationalities = get_nationalities_list()
+    
     return render_template('listar_usuarios.html', 
                          usuarios=usuarios, 
-                         pagination=pagination)
+                         pagination=pagination,
+                         countries=countries,
+                         nationalities=nationalities)
 
 @bp.route('/get_user/<int:user_id>')
 def get_user(user_id):

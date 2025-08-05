@@ -701,13 +701,16 @@ Inmigración OK{% endblock %} {% block styles %}
               >
                 Nacionalidad
               </label>
-              <input
-                type="text"
+              <select
                 id="nacionality"
                 name="nacionality"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                placeholder="Mexicana"
-              />
+              >
+                <option value="">Seleccionar nacionalidad</option>
+                {% for code, nationality in nationalities %}
+                <option value="{{ nationality }}">{{ nationality }}</option>
+                {% endfor %}
+              </select>
             </div>
 
             <!-- País -->
@@ -718,13 +721,16 @@ Inmigración OK{% endblock %} {% block styles %}
               >
                 País
               </label>
-              <input
-                type="text"
+              <select
                 id="country"
                 name="country"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                placeholder="México"
-              />
+              >
+                <option value="">Seleccionar país</option>
+                {% for code, country in countries %}
+                <option value="{{ country }}">{{ country }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
         </div>
@@ -1278,13 +1284,16 @@ Inmigración OK{% endblock %} {% block styles %}
                     >
                       Nacionalidad
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="nacionality"
                       id="edit-nationality"
                       class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
-                      placeholder="Tu nacionalidad"
-                    />
+                    >
+                      <option value="">Seleccionar nacionalidad</option>
+                      {% for code, nationality in nationalities %}
+                      <option value="{{ nationality }}">{{ nationality }}</option>
+                      {% endfor %}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -1370,6 +1379,25 @@ Inmigración OK{% endblock %} {% block styles %}
                       class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
                       placeholder="Tu código postal"
                     />
+                  </div>
+
+                  <div class="space-y-2">
+                    <label
+                      for="edit-country"
+                      class="block text-sm font-medium text-text"
+                    >
+                      País
+                    </label>
+                    <select
+                      name="country"
+                      id="edit-country"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+                    >
+                      <option value="">Seleccionar país</option>
+                      {% for code, country in countries %}
+                      <option value="{{ country }}">{{ country }}</option>
+                      {% endfor %}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -2053,6 +2081,8 @@ Inmigración OK{% endblock %} {% block styles %}
           document.getElementById("edit-address").value = user.direccion || "";
           document.getElementById("edit-nationality").value =
             user.nacionality || "";
+          document.getElementById("edit-country").value =
+            user.country || "";
           // Seleccionar el radio button correspondiente al rol
           const roleRadio = document.querySelector(
             `input[name="rol"][value="${user.rol}"]`
