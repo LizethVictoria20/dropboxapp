@@ -2879,8 +2879,6 @@ def ocultar_carpeta():
         # Registrar actividad
         current_user.registrar_actividad('folder_hidden', f'Carpeta "{carpeta_nombre}" ocultada de la interfaz')
         
-        flash(f"Carpeta '{carpeta_nombre}' ocultada correctamente.", "success")
-        
     except Exception as e:
         print(f"ERROR | Error ocultando carpeta: {e}")
         flash(f"Error ocultando carpeta: {e}", "error")
