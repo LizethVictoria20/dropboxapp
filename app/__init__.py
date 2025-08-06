@@ -60,7 +60,6 @@ def create_app(config_name=None):
             }), 401
         else:
             # Para requests normales, redirigir al login
-            flash('Por favor inicia sesión para acceder a esta página.', 'info')
             return redirect(url_for('auth.login'))
     
     @login_manager.user_loader

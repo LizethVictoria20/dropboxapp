@@ -180,7 +180,9 @@ def filtra_carpetas_ocultas(estructura, usuario_id, prefix=""):
         sub_prefix = f"{prefix}/{subcarpeta}".replace('//', '/')
         carpeta_path = sub_prefix.replace('//', '/')
         
-        if carpeta_path in rutas_visibles:
+        # Mostrar la carpeta si está en la BD O si tiene contenido (archivos o subcarpetas)
+        # Esto permite mostrar carpetas nuevas que se crean automáticamente
+        if carpeta_path in rutas_visibles or contenido.get("_archivos") or contenido.get("_subcarpetas"):
             nueva_estructura["_subcarpetas"][subcarpeta] = filtra_carpetas_ocultas(
                 contenido, usuario_id, sub_prefix
             )
@@ -826,6 +828,8 @@ def subir_archivo():
                 es_publica=True
             )
             db.session.add(carpeta_cat)
+            db.session.commit()  # Commit inmediato para asegurar que se guarde
+            print("Carpeta categoría guardada en BD:", ruta_categoria)
             
         except dropbox.exceptions.ApiError as e:
             if "conflict" not in str(e):
@@ -846,6 +850,8 @@ def subir_archivo():
                 es_publica=True
             )
             db.session.add(carpeta_subcat)
+            db.session.commit()  # Commit inmediato para asegurar que se guarde
+            print("Carpeta subcategoría guardada en BD:", ruta_subcat)
             
         except dropbox.exceptions.ApiError as e:
             if "conflict" not in str(e):
@@ -2222,6 +2228,19 @@ def subir_archivo_rapido():
             if "not_found" in str(e):
                 print(f"Creando carpeta destino: {carpeta_destino_completa}")
                 dbx.files_create_folder_v2(carpeta_destino_completa)
+                
+                # Guardar carpeta en la base de datos
+                from app.models import Folder
+                carpeta_nombre = carpeta_destino_completa.split('/')[-1]
+                nueva_carpeta = Folder(
+                    name=carpeta_nombre,
+                    user_id=getattr(usuario, "id", None),
+                    dropbox_path=carpeta_destino_completa,
+                    es_publica=True
+                )
+                db.session.add(nueva_carpeta)
+                db.session.commit()
+                print(f"Carpeta destino creada y registrada en BD: {carpeta_destino_completa}")
             else:
                 raise e
 
