@@ -1057,7 +1057,66 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
     console.log("✅ Modal de eliminación de carpeta abierto");
   };
 
-  console.log("✅ openRenameModal y confirmarEliminarCarpeta definidas globalmente en usuario_carpetas.html");
+  // Definir confirmarOcultarCarpeta para que esté disponible
+  window.confirmarOcultarCarpeta = function (
+    carpeta,
+    carpetaPadre,
+    usuarioId
+  ) {
+    console.log("🔧 confirmarOcultarCarpeta (usuario_carpetas) llamado con:", {
+      carpeta,
+      carpetaPadre,
+      usuarioId,
+    });
+
+    // Configurar el modal de confirmación
+    const modal = document.getElementById("deleteConfirmModal");
+    const itemName = document.getElementById("deleteItemName");
+    const itemDescription = document.getElementById("deleteItemDescription");
+    const form = document.getElementById("deleteConfirmForm");
+    const usuarioIdInput = document.getElementById("deleteUsuarioId");
+    const carpetaActualInput = document.getElementById("deleteCarpetaActual");
+    const itemNombreInput = document.getElementById("deleteItemNombre");
+    const itemTipoInput = document.getElementById("deleteItemTipo");
+
+    if (!modal || !itemName || !itemDescription || !form) {
+      console.error("❌ Elementos del modal de eliminación no encontrados");
+      alert(
+        "Error: No se pudo abrir el modal de confirmación. Recarga la página e intenta de nuevo."
+      );
+      return;
+    }
+
+    // Configurar el contenido del modal
+    itemName.textContent = `"${carpeta}"`;
+    itemDescription.textContent =
+      "Esta carpeta será ocultada de la interfaz pero permanecerá en Dropbox.";
+
+    // Configurar el formulario
+    usuarioIdInput.value = usuarioId;
+    carpetaActualInput.value = carpetaPadre;
+    itemNombreInput.value = carpeta;
+    itemTipoInput.value = "carpeta";
+
+    // Configurar la acción del formulario para ocultar
+    form.action = '{{ url_for("listar_dropbox.ocultar_carpeta") }}';
+
+    // Ocultar todos los menús antes de mostrar el modal
+    window.hideAllMenus();
+
+    // Agregar campo de redirección al formulario
+    const redirectInput = document.createElement('input');
+    redirectInput.type = 'hidden';
+    redirectInput.name = 'redirect_url';
+    redirectInput.value = window.location.href;
+    form.appendChild(redirectInput);
+
+    // Mostrar el modal
+    modal.classList.remove("hidden");
+    console.log("✅ Modal de ocultación de carpeta abierto");
+  };
+
+  console.log("✅ openRenameModal, confirmarEliminarCarpeta y confirmarOcultarCarpeta definidas globalmente en usuario_carpetas.html");
 
   // Variables globales necesarias para openMoveModal
   window.ESTRUCTURAS_USUARIOS = {{ estructuras_usuarios_json|safe }};

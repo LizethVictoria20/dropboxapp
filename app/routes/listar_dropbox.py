@@ -153,6 +153,43 @@ def filtra_archivos_ocultos(estructura, usuario_id, prefix=""):
     
     return nueva_estructura
 
+def filtra_carpetas_ocultas(estructura, usuario_id, prefix=""):
+    """
+    Filtra las carpetas ocultas de la estructura basándose en la base de datos.
+    Las carpetas que están en la BD son visibles, las que no están están ocultas.
+    - estructura: dict con formato {'_archivos': [...], '_subcarpetas': { ... }}
+    - usuario_id: ID del usuario para filtrar carpetas ocultas
+    - prefix: path base actual para construir rutas completas
+    """
+    from app.models import Folder
+    
+    if not estructura:
+        return estructura
+    
+    nueva_estructura = {"_archivos": [], "_subcarpetas": {}}
+    
+    # Obtener todas las carpetas visibles del usuario (las que están en la BD)
+    carpetas_visibles = Folder.query.filter_by(user_id=usuario_id).all()
+    rutas_visibles = {carpeta.dropbox_path for carpeta in carpetas_visibles}
+    
+    # Filtrar archivos: mostrar todos los archivos (no se filtran por carpetas)
+    nueva_estructura["_archivos"] = estructura.get("_archivos", [])
+    
+    # Procesar subcarpetas recursivamente
+    for subcarpeta, contenido in estructura.get("_subcarpetas", {}).items():
+        sub_prefix = f"{prefix}/{subcarpeta}".replace('//', '/')
+        carpeta_path = sub_prefix.replace('//', '/')
+        
+        if carpeta_path in rutas_visibles:
+            nueva_estructura["_subcarpetas"][subcarpeta] = filtra_carpetas_ocultas(
+                contenido, usuario_id, sub_prefix
+            )
+            print(f"DEBUG | Carpeta visible mostrada: {subcarpeta} - {carpeta_path}")
+        else:
+            print(f"DEBUG | Carpeta oculta filtrada: {subcarpeta} - {carpeta_path}")
+    
+    return nueva_estructura
+
 def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
     """
     Recorta el árbol (estructura) dejando solo las subcarpetas cuya ruta esté en rutas_visibles.
@@ -263,6 +300,10 @@ def carpetas_dropbox():
                 print(f"DEBUG | Filtrando archivos ocultos para usuario {user.id} en carpetas_dropbox")
                 estructura = filtra_archivos_ocultos(estructura, user.id, path)
                 
+                # Filtrar carpetas ocultas de la estructura (exactamente como archivos)
+                print(f"DEBUG | Filtrando carpetas ocultas para usuario {user.id} en carpetas_dropbox")
+                estructura = filtra_carpetas_ocultas(estructura, user.id, path)
+                
             except Exception as e:
                 user_identifier = user.email if hasattr(user, 'email') else user.nombre
                 print(f"Error obteniendo estructura para usuario {user_identifier}: {e}")
@@ -274,18 +315,16 @@ def carpetas_dropbox():
             if current_user.rol == "cliente":
                 # Para clientes, solo mostrar carpetas públicas
                 print("🔧 Filtrando carpetas para cliente - solo mostrar públicas")
-                carpetas_publicas = Folder.query.filter_by(user_id=user.id, es_publica=True).all()
-                rutas_visibles = set(f.dropbox_path for f in carpetas_publicas)
-                user_identifier = user.email if hasattr(user, 'email') else user.nombre
-                estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user_identifier)
+                # No aplicar filtra_arbol_por_rutas porque ya se aplicó filtra_carpetas_ocultas
+                pass
             elif current_user.rol == "lector":
                 # Para lectores, mostrar todas las carpetas sin filtrar
+                # No aplicar filtra_arbol_por_rutas porque ya se aplicó filtra_carpetas_ocultas
                 pass
             elif current_user.rol != "admin" and current_user.rol != "superadmin":
                 # Para otros roles, solo mostrar carpetas públicas
-                rutas_visibles = set(folders_por_ruta.keys())
-                user_identifier = user.email if hasattr(user, 'email') else user.nombre
-                estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, user_identifier)
+                # No aplicar filtra_arbol_por_rutas porque ya se aplicó filtra_carpetas_ocultas
+                pass
             
             estructuras_usuarios[user.id] = estructura
 
@@ -332,16 +371,46 @@ def obtener_info_carpeta(ruta):
     """Endpoint para obtener información de una carpeta específica"""
     from app.models import Folder
     
+    # Verificar permisos del usuario actual
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        return jsonify({"error": "Sesión expirada"}), 401
+    
     # Buscar la carpeta en la base de datos
     carpeta = Folder.query.filter_by(dropbox_path=f"/{ruta}").first()
     
+    # Aplicar filtro de permisos según el rol
     if carpeta:
-        return jsonify({
-            'existe': True,
-            'es_publica': carpeta.es_publica,
-            'nombre': carpeta.name,
-            'usuario_id': carpeta.user_id
-        })
+        # Verificar si el usuario actual puede ver esta carpeta
+        puede_ver = False
+        
+        if current_user.rol == "cliente":
+            # Cliente solo puede ver carpetas públicas de su cuenta
+            puede_ver = carpeta.es_publica and carpeta.user_id == current_user.id
+        elif current_user.rol == "lector":
+            # Lector puede ver todas las carpetas
+            puede_ver = True
+        elif current_user.rol == "admin" or current_user.rol == "superadmin":
+            # Admin puede ver todas las carpetas
+            puede_ver = True
+        else:
+            # Otros roles solo pueden ver carpetas públicas
+            puede_ver = carpeta.es_publica
+        
+        if puede_ver:
+            return jsonify({
+                'existe': True,
+                'es_publica': carpeta.es_publica,
+                'nombre': carpeta.name,
+                'usuario_id': carpeta.user_id
+            })
+        else:
+            # Carpeta existe pero no tiene permisos para verla
+            return jsonify({
+                'existe': False,
+                'es_publica': True,  # Por defecto pública si no tiene permisos
+                'nombre': ruta.split('/')[-1] if '/' in ruta else ruta,
+                'usuario_id': None
+            })
     else:
         return jsonify({
             'existe': False,
@@ -2253,6 +2322,10 @@ def ver_usuario_carpetas(usuario_id):
             print(f"DEBUG | Filtrando archivos ocultos para usuario {usuario.id}")
             estructura = filtra_archivos_ocultos(estructura, usuario.id, path)
             
+            # Filtrar carpetas ocultas de la estructura (exactamente como archivos)
+            print(f"DEBUG | Filtrando carpetas ocultas para usuario {usuario.id}")
+            estructura = filtra_carpetas_ocultas(estructura, usuario.id, path)
+            
         except Exception as e:
             print(f"Error obteniendo estructura para usuario {usuario.email}: {e}")
             estructura = {"_subcarpetas": {}, "_archivos": []}
@@ -2262,6 +2335,7 @@ def ver_usuario_carpetas(usuario_id):
             flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
             return redirect(url_for("auth.login"))
         
+        # Aplicar filtro de carpetas ocultas según el rol del usuario
         if current_user.rol == "cliente":
             if current_user.id != usuario.id:
                 # Cliente intentando ver carpetas de otro cliente - no permitir
@@ -2271,29 +2345,41 @@ def ver_usuario_carpetas(usuario_id):
             else:
                 # Cliente viendo sus propias carpetas - solo mostrar públicas
                 print("✅ Cliente viendo sus propias carpetas - solo mostrar públicas")
-                folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
-                rutas_visibles = set(f.dropbox_path for f in folders)
-                estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, usuario.email)
+                # No aplicar filtra_arbol_por_rutas porque ya se aplicó filtra_carpetas_ocultas
+                pass
         elif current_user.rol == "lector":
             # Lector puede ver todas las carpetas de todos los usuarios
             print("✅ Lector - puede ver todas las carpetas")
+            # No aplicar filtra_arbol_por_rutas porque ya se aplicó filtra_carpetas_ocultas
             pass
         elif current_user.rol == "admin" or current_user.rol == "superadmin":
             # Admin puede ver todas las carpetas
             print("✅ Admin/Superadmin - puede ver todas las carpetas")
+            # No aplicar filtra_arbol_por_rutas porque ya se aplicó filtra_carpetas_ocultas
             pass
         else:
             # Otros roles - solo mostrar carpetas públicas
             print("⚠️ Otro rol - solo mostrar carpetas públicas")
-            folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
-            rutas_visibles = set(f.dropbox_path for f in folders)
-            estructura = filtra_arbol_por_rutas(estructura, rutas_visibles, path, usuario.email)
+            # No aplicar filtra_arbol_por_rutas porque ya se aplicó filtra_carpetas_ocultas
+            pass
         
         # Guardar la estructura en el diccionario (misma lógica que carpetas_dropbox)
         estructuras_usuarios[usuario.id] = estructura
         
-        # Carpetas de este usuario
-        folders = Folder.query.filter_by(user_id=usuario.id).all()
+        # Carpetas de este usuario - filtrar según permisos del usuario actual
+        if current_user.rol == "cliente":
+            # Cliente solo ve carpetas públicas
+            folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
+        elif current_user.rol == "lector":
+            # Lector ve todas las carpetas del usuario
+            folders = Folder.query.filter_by(user_id=usuario.id).all()
+        elif current_user.rol == "admin" or current_user.rol == "superadmin":
+            # Admin ve todas las carpetas del usuario
+            folders = Folder.query.filter_by(user_id=usuario.id).all()
+        else:
+            # Otros roles solo ven carpetas públicas
+            folders = Folder.query.filter_by(user_id=usuario.id, es_publica=True).all()
+        
         folders_por_ruta = {f.dropbox_path: f for f in folders}
         
         return render_template(
@@ -2661,6 +2747,149 @@ def renombrar_carpeta():
     redirect_url_final = url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_int)
     print(f"🔧 Redirigiendo a usuario específico: /usuario/{usuario_id_int}/carpetas")
     return redirect(redirect_url_final)
+
+@bp.route('/ocultar_carpeta', methods=['POST'])
+@login_required
+def ocultar_carpeta():
+    """Oculta una carpeta eliminándola solo de la base de datos, manteniéndola en Dropbox"""
+    from app.models import Folder, User, Beneficiario
+    
+    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+        return redirect(url_for("auth.login"))
+    
+    # Verificar permisos del lector
+    if current_user.rol == 'lector' and not current_user.puede_eliminar_archivos():
+        flash("No tienes permisos para ocultar carpetas.", "error")
+        redirect_url = request.form.get("redirect_url", "")
+        if redirect_url and "/usuario/" in redirect_url:
+            return redirect(redirect_url)
+        else:
+            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
+    try:
+        # Obtener datos del formulario
+        carpeta_nombre = request.form.get("item_nombre") or request.form.get("carpeta_nombre")
+        carpeta_actual = request.form.get("carpeta_actual")
+        redirect_url = request.form.get("redirect_url", "")
+        
+        print(f"DEBUG | Datos recibidos para ocultar carpeta:")
+        print(f"DEBUG | carpeta_nombre: {carpeta_nombre}")
+        print(f"DEBUG | carpeta_actual: {carpeta_actual}")
+        print(f"DEBUG | redirect_url: {redirect_url}")
+        print(f"DEBUG | Todos los datos del formulario: {dict(request.form)}")
+        
+        if not carpeta_nombre:
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # Obtener el usuario para construir la ruta base
+        try:
+            usuario_id_int = int(request.form.get("usuario_id"))
+            usuario = User.query.get(usuario_id_int)
+            if not usuario:
+                # Intentar buscar como beneficiario
+                usuario = Beneficiario.query.get(usuario_id_int)
+            
+            if not usuario:
+                print(f"DEBUG | Usuario no encontrado con ID: {usuario_id_int}")
+                flash("Usuario no encontrado.", "error")
+                if redirect_url and "/usuario/" in redirect_url:
+                    return redirect(redirect_url)
+                else:
+                    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+                
+        except (ValueError, TypeError):
+            print(f"DEBUG | usuario_id inválido: {request.form.get('usuario_id')}")
+            flash("ID de usuario inválido.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+        # Construir la ruta base del usuario
+        if hasattr(usuario, 'dropbox_folder_path') and usuario.dropbox_folder_path:
+            # Si es un User, usar su dropbox_folder_path
+            ruta_base = usuario.dropbox_folder_path
+        elif hasattr(usuario, 'ruta_base') and usuario.ruta_base:
+            # Si es un Beneficiario, usar su ruta_base
+            ruta_base = usuario.ruta_base
+        else:
+            print(f"DEBUG | No se encontró ruta base para usuario: {usuario_id_int}")
+            flash("No se encontró la ruta base del usuario.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+        print(f"DEBUG | ruta_base: {ruta_base}")
+        
+        # Construir la ruta completa de la carpeta
+        if carpeta_actual:
+            # Si hay carpeta_actual, construir la ruta completa
+            carpeta_path = f"{carpeta_actual}/{carpeta_nombre}".replace('//', '/')
+        else:
+            # Si carpeta_actual está vacío, la carpeta está en la raíz del usuario
+            carpeta_path = f"{ruta_base}/{carpeta_nombre}".replace('//', '/')
+        
+        print(f"DEBUG | carpeta_path construido: {carpeta_path}")
+        
+        # Buscar la carpeta en la base de datos
+        carpeta_bd = Folder.query.filter_by(dropbox_path=carpeta_path).first()
+        
+        # Si no se encuentra con la ruta exacta, buscar de manera más flexible
+        if not carpeta_bd:
+            print(f"DEBUG | Carpeta no encontrada con ruta exacta: {carpeta_path}")
+            
+            # Buscar por nombre y usuario
+            carpetas_del_usuario = Folder.query.filter_by(user_id=usuario_id_int).all()
+            print(f"DEBUG | Carpetas del usuario {usuario_id_int}: {len(carpetas_del_usuario)}")
+            
+            for carpeta in carpetas_del_usuario:
+                print(f"DEBUG | Carpeta en BD: {carpeta.name} - {carpeta.dropbox_path}")
+                if carpeta.name == carpeta_nombre:
+                    print(f"DEBUG | Carpeta encontrada por nombre: {carpeta.name}")
+                    carpeta_bd = carpeta
+                    break
+            
+            # Si aún no se encuentra, buscar por nombre en cualquier ruta
+            if not carpeta_bd:
+                carpeta_bd = Folder.query.filter_by(name=carpeta_nombre).first()
+                if carpeta_bd:
+                    print(f"DEBUG | Carpeta encontrada por nombre en cualquier ruta: {carpeta_bd.name} - {carpeta_bd.dropbox_path}")
+        
+        if not carpeta_bd:
+            print(f"DEBUG | Carpeta no encontrada en BD después de búsqueda flexible: {carpeta_nombre}")
+            flash("Carpeta no encontrada en la base de datos.", "error")
+            if redirect_url and "/usuario/" in redirect_url:
+                return redirect(redirect_url)
+            else:
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+        # Ocultar la carpeta (eliminar solo de la base de datos)
+        # La carpeta permanece en Dropbox pero se oculta de la interfaz
+        db.session.delete(carpeta_bd)
+        db.session.commit()
+        print(f"DEBUG | Carpeta ocultada de BD: {carpeta_bd.name}")
+        print(f"DEBUG | Carpeta mantenida en Dropbox: {carpeta_path}")
+        
+        # Registrar actividad
+        current_user.registrar_actividad('folder_hidden', f'Carpeta "{carpeta_nombre}" ocultada de la interfaz')
+        
+        flash(f"Carpeta '{carpeta_nombre}' ocultada correctamente.", "success")
+        
+    except Exception as e:
+        print(f"ERROR | Error ocultando carpeta: {e}")
+        flash(f"Error ocultando carpeta: {e}", "error")
+    
+    # Redirigir a la URL apropiada
+    if redirect_url and "/usuario/" in redirect_url:
+        return redirect(redirect_url)
+    else:
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
 @bp.route('/eliminar_carpeta', methods=['POST'])
 @login_required

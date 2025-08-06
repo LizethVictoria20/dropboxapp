@@ -1362,7 +1362,7 @@ block content %}
                         </svg>
                         Modificar nombre
                       </button>
-                      <button onclick="confirmarEliminarCarpeta('${carpeta}', '${parent}', '${usuarioId}')"
+                      <button onclick="confirmarOcultarCarpeta('${carpeta}', '${parent}', '${usuarioId}')"
                               class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100 transition-colors duration-150">
                         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -2280,13 +2280,13 @@ block content %}
     }
   };
 
-  // Función para confirmar eliminación de carpeta
-  window.confirmarEliminarCarpeta = function (
+  // Función para confirmar ocultación de carpeta
+  window.confirmarOcultarCarpeta = function (
     carpeta,
     carpetaPadre,
     usuarioId
   ) {
-    console.log("🔧 confirmarEliminarCarpeta llamado con:", {
+    console.log("🔧 confirmarOcultarCarpeta llamado con:", {
       carpeta,
       carpetaPadre,
       usuarioId,
@@ -2313,7 +2313,7 @@ block content %}
     // Configurar el contenido del modal
     itemName.textContent = `"${carpeta}"`;
     itemDescription.textContent =
-      "Esta carpeta y todo su contenido serán eliminados permanentemente de Dropbox y no se podrán recuperar.";
+      "Esta carpeta será ocultada de la interfaz pero permanecerá en Dropbox.";
 
     // Configurar el formulario
     usuarioIdInput.value = usuarioId;
@@ -2321,8 +2321,8 @@ block content %}
     itemNombreInput.value = carpeta;
     itemTipoInput.value = "carpeta";
 
-    // Configurar la acción del formulario
-    form.action = '{{ url_for("listar_dropbox.eliminar_carpeta") }}';
+    // Configurar la acción del formulario para ocultar
+    form.action = '{{ url_for("listar_dropbox.ocultar_carpeta") }}';
 
     // Ocultar todos los menús antes de mostrar el modal
     window.hideAllMenus();

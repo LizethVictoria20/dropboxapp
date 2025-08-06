@@ -190,7 +190,20 @@ def obtener_carpetas_usuario_json(usuario_id):
         return jsonify({"error": "No tienes permisos"}), 403
     
     usuario = User.query.get_or_404(usuario_id)
-    carpetas = Folder.query.filter_by(user_id=usuario_id).all()
+    
+    # Aplicar filtro de carpetas según el rol del usuario actual
+    if current_user.rol == "cliente":
+        # Cliente solo ve carpetas públicas
+        carpetas = Folder.query.filter_by(user_id=usuario_id, es_publica=True).all()
+    elif current_user.rol == "lector":
+        # Lector ve todas las carpetas
+        carpetas = Folder.query.filter_by(user_id=usuario_id).all()
+    elif current_user.rol == "admin" or current_user.rol == "superadmin":
+        # Admin ve todas las carpetas
+        carpetas = Folder.query.filter_by(user_id=usuario_id).all()
+    else:
+        # Otros roles solo ven carpetas públicas
+        carpetas = Folder.query.filter_by(user_id=usuario_id, es_publica=True).all()
     
     carpetas_data = []
     for carpeta in carpetas:
