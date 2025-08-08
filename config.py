@@ -15,9 +15,13 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     
-    # Configuración de archivos
-    MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB
+    # Configuración de archivos - Aumentado a 1GB
+    MAX_CONTENT_LENGTH = 1024 * 1024 * 1024  # 1GB
     UPLOAD_FOLDER = 'uploads'
+    
+    # Configuración adicional para archivos grandes
+    MAX_CONTENT_PATH = None
+    SEND_FILE_MAX_AGE_DEFAULT = 0
     
     # Configuración de Dropbox
     DROPBOX_APP_KEY = os.environ.get('DROPBOX_APP_KEY')
