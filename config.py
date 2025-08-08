@@ -16,7 +16,7 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
     
     # Configuración de archivos
-    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
+    MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB
     UPLOAD_FOLDER = 'uploads'
     
     # Configuración de Dropbox
