@@ -421,7 +421,7 @@ def get_dashboard_stats(period='month'):
     total_clients = User.query.filter_by(rol='cliente').count()
     total_files = Archivo.query.count()
     total_folders = Folder.query.count()
-    total_beneficiaries = User.query.filter_by(es_beneficiario=True).count()
+    total_beneficiaries = Beneficiario.query.count()
     
     # Estadísticas del período
     if start_date and end_date:
@@ -445,12 +445,18 @@ def get_dashboard_stats(period='month'):
             Folder.fecha_creacion >= start_date,
             Folder.fecha_creacion <= end_date
         ).count()
+        
+        new_beneficiaries_period = Beneficiario.query.filter(
+            Beneficiario.fecha_creacion >= start_date,
+            Beneficiario.fecha_creacion <= end_date
+        ).count()
     else:
         # Para 'total', usar todos los datos
         new_users_period = total_users
         new_clients_period = total_clients
         new_files_period = total_files
         new_folders_period = total_folders
+        new_beneficiaries_period = total_beneficiaries
     
     return {
         'total_users': total_users,
@@ -461,7 +467,8 @@ def get_dashboard_stats(period='month'):
         'new_users_period': new_users_period,
         'new_clients_period': new_clients_period,
         'new_files_period': new_files_period,
-        'new_folders_period': new_folders_period
+        'new_folders_period': new_folders_period,
+        'new_beneficiaries_period': new_beneficiaries_period
     }
 
 

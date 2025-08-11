@@ -1491,7 +1491,6 @@ def renombrar_archivo():
     archivo = Archivo.query.filter_by(dropbox_path=old_path).first()
     if not archivo:
         print(f"DEBUG | Archivo no encontrado en la base para path: {old_path}")
-        flash("Archivo no encontrado en la base de datos.", "error")
         
         # En caso de error, intentar redirigir al usuario específico si es posible
         try:
@@ -1506,7 +1505,6 @@ def renombrar_archivo():
         dbx.files_move_v2(old_path, new_path, allow_shared_folder=True, autorename=True)
     except Exception as e:
         print(f"DEBUG | Error renombrando en Dropbox: {e}")
-        flash(f"Error renombrando en Dropbox: {e}", "error")
         
         # En caso de error, intentar redirigir al usuario específico si es posible
         try:
@@ -2542,7 +2540,6 @@ def eliminar_archivo():
         
         if not archivo_bd:
             print(f"DEBUG | Archivo no encontrado en BD después de búsqueda flexible: {archivo_nombre}")
-            flash("Archivo no encontrado en la base de datos.", "error")
             if redirect_url and "/usuario/" in redirect_url:
                 return redirect(redirect_url)
             else:
@@ -2725,7 +2722,6 @@ def renombrar_carpeta():
                 
         except Exception as e:
             print(f"DEBUG | Error renombrando carpeta virtual en Dropbox: {e}")
-            flash(f"Error renombrando carpeta en Dropbox: {e}", "error")
             if redirect_url and "/usuario/" in redirect_url:
                 return redirect(redirect_url)
             else:
@@ -2745,7 +2741,6 @@ def renombrar_carpeta():
         dbx.files_move_v2(old_path, new_path, allow_shared_folder=True, autorename=True)
     except Exception as e:
         print(f"DEBUG | Error renombrando carpeta en Dropbox: {e}")
-        flash(f"Error renombrando carpeta en Dropbox: {e}", "error")
         if redirect_url and "/usuario/" in redirect_url:
             return redirect(redirect_url)
         else:

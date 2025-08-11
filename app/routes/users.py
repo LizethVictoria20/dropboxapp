@@ -431,6 +431,43 @@ def update_user():
             # Limpiar permisos si no es lector
             user.lector_extra_permissions = None
         
+        # Procesar cambio de contraseña (si se proporciona)
+        new_password = request.form.get('password')
+        password_confirm = request.form.get('password_confirm')
+        
+        if new_password or password_confirm:
+            # Si se proporciona alguna contraseña, ambas son requeridas
+            if not new_password or not password_confirm:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"success": False, "error": "Debe completar ambos campos de contraseña"})
+                flash('Debe completar ambos campos de contraseña', 'error')
+                return redirect(url_for('users.listar_usuarios'))
+            
+            # Validar que las contraseñas coincidan
+            if new_password != password_confirm:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"success": False, "error": "Las contraseñas no coinciden"})
+                flash('Las contraseñas no coinciden', 'error')
+                return redirect(url_for('users.listar_usuarios'))
+            
+            # Validar longitud mínima
+            if len(new_password) < 6:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"success": False, "error": "La contraseña debe tener al menos 6 caracteres"})
+                flash('La contraseña debe tener al menos 6 caracteres', 'error')
+                return redirect(url_for('users.listar_usuarios'))
+            
+            # Actualizar contraseña
+            user.set_password(new_password)
+            
+            # Registrar actividad de cambio de contraseña
+            from app.utils.activity_logger import log_user_activity
+            log_user_activity(
+                user_id=user.id,
+                accion='change_password',
+                descripcion=f'Contraseña cambiada por administrador {current_user.email}'
+            )
+        
         # Procesar fecha de nacimiento
         fecha_nacimiento_str = request.form.get('fecha_nacimiento')
         if fecha_nacimiento_str:
@@ -438,6 +475,8 @@ def update_user():
                 fecha_nacimiento = datetime.strptime(fecha_nacimiento_str, '%Y-%m-%d').date()
                 user.fecha_nacimiento = fecha_nacimiento
             except ValueError:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"success": False, "error": "Formato de fecha de nacimiento inválido"})
                 flash('Formato de fecha de nacimiento inválido', 'error')
                 return redirect(url_for('users.listar_usuarios'))
         
@@ -451,12 +490,24 @@ def update_user():
         
         # Registrar la actividad de actualización
         from app.utils.activity_logger import log_profile_update
+        fields_updated = ['email', 'nombre', 'apellido', 'telefono', 'ciudad', 'estado', 'direccion', 'codigo_postal', 'nacionality', 'country', 'rol', 'activo', 'fecha_nacimiento']
+        if new_password:
+            fields_updated.append('password')
+        
         log_profile_update(
             user_id=user.id,
-            fields_updated=['email', 'nombre', 'apellido', 'telefono', 'ciudad', 'estado', 'direccion', 'codigo_postal', 'nacionality', 'country', 'rol', 'activo', 'fecha_nacimiento']
+            fields_updated=fields_updated
         )
         
-        flash(f'Usuario {user.nombre or user.email} actualizado exitosamente', 'success')
+        # Mensaje de éxito personalizado
+        success_message = f'Usuario {user.nombre or user.email} actualizado exitosamente'
+        if new_password:
+            success_message += ' (incluye cambio de contraseña)'
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"success": True, "message": success_message})
+        
+        flash(success_message, 'success')
         
     except Exception as e:
         db.session.rollback()

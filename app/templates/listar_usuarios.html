@@ -2368,6 +2368,28 @@ Inmigración OK{% endblock %} {% block styles %}
         return;
       }
 
+      // Validación de contraseñas
+      const newPassword = document.getElementById("edit-password").value;
+      const confirmPassword = document.getElementById("edit-password-confirm").value;
+
+      // Si se proporcionó alguna contraseña, validar ambas
+      if (newPassword || confirmPassword) {
+        if (!newPassword || !confirmPassword) {
+          alert("Debe completar ambos campos de contraseña o dejar ambos vacíos");
+          return;
+        }
+
+        if (newPassword !== confirmPassword) {
+          alert("Las contraseñas no coinciden");
+          return;
+        }
+
+        if (newPassword.length < 6) {
+          alert("La contraseña debe tener al menos 6 caracteres");
+          return;
+        }
+      }
+
       // Verificar que si el rol es lector, al menos un permiso esté seleccionado
       if (selectedRole.value === "lector") {
         const permisosSeleccionados = document.querySelectorAll(
