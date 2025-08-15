@@ -161,6 +161,17 @@ def register():
                     from app.dropbox_utils import create_dropbox_folder
                     path = f"/{user.email}"
                     create_dropbox_folder(path)
+                    
+                    # SINCRONIZACIÓN: Crear entrada de carpeta raíz en la BD después de obtener el user.id
+                    from app.models import Folder
+                    carpeta_raiz = Folder(
+                        name=user.email.split('@')[0],  # Usar parte del email como nombre
+                        user_id=user.id,
+                        dropbox_path=path,
+                        es_publica=True
+                    )
+                    db.session.add(carpeta_raiz)
+                    print(f"INFO | Carpeta raíz creada en BD para cliente registrado {user.id}: {path}")
                     user.dropbox_folder_path = path
                     db.session.commit()
                 except Exception as e:

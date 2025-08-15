@@ -118,61 +118,113 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
 
 def filtra_archivos_ocultos(estructura, usuario_id, prefix=""):
     """
-    Filtra los archivos ocultos de la estructura basándose en la base de datos.
-    Los archivos que están en la BD son visibles, los que no están están ocultos.
+    Filtra los archivos ocultos de la estructura basándose en la base de datos Y la ruta del usuario.
+    SEGURIDAD: Solo muestra archivos dentro del dropbox_folder_path del usuario específico.
     - estructura: dict con formato {'_archivos': [...], '_subcarpetas': { ... }}
     - usuario_id: ID del usuario para filtrar archivos ocultos
     - prefix: path base actual para construir rutas completas
     """
-    from app.models import Archivo
+    from app.models import Archivo, User
     
     if not estructura:
         return estructura
     
     nueva_estructura = {"_archivos": [], "_subcarpetas": {}}
     
-    # Obtener todos los archivos visibles del usuario (los que están en la BD)
+    # SEGURIDAD: Obtener la ruta base del usuario para verificar que solo vea sus archivos
+    usuario = User.query.get(usuario_id)
+    if not usuario:
+        print(f"DEBUG | Usuario {usuario_id} no encontrado para filtrar archivos, retornando estructura vacía")
+        return nueva_estructura
+    
+    user_base_path = usuario.dropbox_folder_path
+    if not user_base_path:
+        user_base_path = f"/{usuario.email}"
+        print(f"DEBUG | Usuario {usuario_id} sin dropbox_folder_path para archivos, usando email: {user_base_path}")
+    
+    # Normalizar rutas
+    user_base_path = user_base_path.rstrip('/')
+    prefix_normalized = prefix.rstrip('/')
+    
+    # VALIDACIÓN DE SEGURIDAD: Verificar que el prefix esté dentro de la ruta del usuario
+    if not prefix_normalized.startswith(user_base_path):
+        print(f"DEBUG | SEGURIDAD: Prefix {prefix_normalized} no está dentro de {user_base_path} para archivos, retornando vacío")
+        return nueva_estructura
+    
+    # Obtener archivos visibles del usuario en la BD
     archivos_visibles = Archivo.query.filter_by(usuario_id=usuario_id).all()
     rutas_visibles = {archivo.dropbox_path for archivo in archivos_visibles}
     
-    # Filtrar archivos: solo mostrar los que están en la BD (visibles)
+    # Filtrar archivos: mostrar archivos que están en la BD O todos los archivos dentro de la ruta del usuario
     for archivo_nombre in estructura.get("_archivos", []):
         archivo_path = f"{prefix}/{archivo_nombre}".replace('//', '/')
-        if archivo_path in rutas_visibles:
+        
+        # VALIDACIÓN DE SEGURIDAD: Solo mostrar archivos dentro de la ruta del usuario
+        if not archivo_path.startswith(user_base_path):
+            print(f"DEBUG | SEGURIDAD: Archivo {archivo_path} no está dentro de {user_base_path}, saltando")
+            continue
+            
+        # Mostrar el archivo si está en la BD O está dentro de la ruta del usuario
+        if archivo_path in rutas_visibles or archivo_path.startswith(user_base_path):
             nueva_estructura["_archivos"].append(archivo_nombre)
-            print(f"DEBUG | Archivo visible mostrado: {archivo_nombre}")
+            print(f"DEBUG | Archivo visible mostrado para usuario {usuario_id}: {archivo_nombre}")
         else:
-            print(f"DEBUG | Archivo oculto filtrado: {archivo_nombre} - {archivo_path}")
+            print(f"DEBUG | Archivo oculto filtrado para usuario {usuario_id}: {archivo_nombre} - {archivo_path}")
     
     # Procesar subcarpetas recursivamente
     for subcarpeta, contenido in estructura.get("_subcarpetas", {}).items():
         sub_prefix = f"{prefix}/{subcarpeta}".replace('//', '/')
-        nueva_estructura["_subcarpetas"][subcarpeta] = filtra_archivos_ocultos(
-            contenido, usuario_id, sub_prefix
-        )
+        
+        # VALIDACIÓN DE SEGURIDAD: Solo procesar subcarpetas dentro de la ruta del usuario
+        if sub_prefix.startswith(user_base_path):
+            nueva_estructura["_subcarpetas"][subcarpeta] = filtra_archivos_ocultos(
+                contenido, usuario_id, sub_prefix
+            )
+        else:
+            print(f"DEBUG | SEGURIDAD: Subcarpeta {sub_prefix} no está dentro de {user_base_path}, saltando")
     
     return nueva_estructura
 
 def filtra_carpetas_ocultas(estructura, usuario_id, prefix=""):
     """
-    Filtra las carpetas ocultas de la estructura basándose en la base de datos.
-    Las carpetas que están en la BD son visibles, las que no están están ocultas.
+    Filtra las carpetas ocultas de la estructura basándose en la base de datos Y la ruta del usuario.
+    SEGURIDAD: Solo muestra carpetas dentro del dropbox_folder_path del usuario específico.
     - estructura: dict con formato {'_archivos': [...], '_subcarpetas': { ... }}
     - usuario_id: ID del usuario para filtrar carpetas ocultas
     - prefix: path base actual para construir rutas completas
     """
-    from app.models import Folder
+    from app.models import Folder, User
     
     if not estructura:
         return estructura
     
     nueva_estructura = {"_archivos": [], "_subcarpetas": {}}
     
-    # Obtener todas las carpetas visibles del usuario (las que están en la BD)
+    # SEGURIDAD: Obtener la ruta base del usuario para verificar que solo vea sus carpetas
+    usuario = User.query.get(usuario_id)
+    if not usuario:
+        print(f"DEBUG | Usuario {usuario_id} no encontrado, retornando estructura vacía")
+        return nueva_estructura
+    
+    user_base_path = usuario.dropbox_folder_path
+    if not user_base_path:
+        user_base_path = f"/{usuario.email}"
+        print(f"DEBUG | Usuario {usuario_id} sin dropbox_folder_path, usando email: {user_base_path}")
+    
+    # Normalizar rutas
+    user_base_path = user_base_path.rstrip('/')
+    prefix_normalized = prefix.rstrip('/')
+    
+    # VALIDACIÓN DE SEGURIDAD: Verificar que el prefix esté dentro de la ruta del usuario
+    if not prefix_normalized.startswith(user_base_path):
+        print(f"DEBUG | SEGURIDAD: Prefix {prefix_normalized} no está dentro de {user_base_path}, retornando vacío")
+        return nueva_estructura
+    
+    # Obtener carpetas visibles del usuario en la BD
     carpetas_visibles = Folder.query.filter_by(user_id=usuario_id).all()
     rutas_visibles = {carpeta.dropbox_path for carpeta in carpetas_visibles}
     
-    # Filtrar archivos: mostrar todos los archivos (no se filtran por carpetas)
+    # Filtrar archivos: mostrar todos los archivos dentro de la ruta del usuario
     nueva_estructura["_archivos"] = estructura.get("_archivos", [])
     
     # Procesar subcarpetas recursivamente
@@ -180,15 +232,21 @@ def filtra_carpetas_ocultas(estructura, usuario_id, prefix=""):
         sub_prefix = f"{prefix}/{subcarpeta}".replace('//', '/')
         carpeta_path = sub_prefix.replace('//', '/')
         
-        # Mostrar la carpeta si está en la BD O si tiene contenido (archivos o subcarpetas)
-        # Esto permite mostrar carpetas nuevas que se crean automáticamente
-        if carpeta_path in rutas_visibles or contenido.get("_archivos") or contenido.get("_subcarpetas"):
+        # VALIDACIÓN DE SEGURIDAD: Solo procesar carpetas dentro de la ruta del usuario
+        if not carpeta_path.startswith(user_base_path):
+            print(f"DEBUG | SEGURIDAD: Carpeta {carpeta_path} no está dentro de {user_base_path}, saltando")
+            continue
+        
+        # Mostrar la carpeta si:
+        # 1. Está en la BD del usuario, O
+        # 2. Tiene contenido (archivos o subcarpetas) Y está dentro de la ruta del usuario
+        if carpeta_path in rutas_visibles or (contenido.get("_archivos") or contenido.get("_subcarpetas")):
             nueva_estructura["_subcarpetas"][subcarpeta] = filtra_carpetas_ocultas(
                 contenido, usuario_id, sub_prefix
             )
-            print(f"DEBUG | Carpeta visible mostrada: {subcarpeta} - {carpeta_path}")
+            print(f"DEBUG | Carpeta visible mostrada para usuario {usuario_id}: {subcarpeta} - {carpeta_path}")
         else:
-            print(f"DEBUG | Carpeta oculta filtrada: {subcarpeta} - {carpeta_path}")
+            print(f"DEBUG | Carpeta oculta filtrada para usuario {usuario_id}: {subcarpeta} - {carpeta_path}")
     
     return nueva_estructura
 

@@ -286,13 +286,28 @@ def crear_usuario():
                 path = f"/{email}"
                 create_dropbox_folder(path)
                 user.dropbox_folder_path = path
+                
+                # Agregar usuario a la BD primero para obtener el ID
+                db.session.add(user)
+                db.session.commit()
+                
+                # SINCRONIZACIÓN: Crear entrada de carpeta raíz en la BD
+                from app.models import Folder
+                carpeta_raiz = Folder(
+                    name=email.split('@')[0],  # Usar parte del email como nombre
+                    user_id=user.id,
+                    dropbox_path=path,
+                    es_publica=True
+                )
+                db.session.add(carpeta_raiz)
+                print(f"INFO | Carpeta raíz creada en BD para usuario {user.id}: {path}")
+                
             except Exception as e:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return jsonify({"success": False, "error": f"Error al crear carpeta en Dropbox: {str(e)}"})
                 flash(f'Error al crear carpeta en Dropbox: {str(e)}', 'warning')
             
-            # Guardar usuario en la base de datos
-            db.session.add(user)
+            # El usuario y carpeta raíz ya fueron agregados, hacer commit final
             db.session.commit()
             
             # Registrar la actividad de creación de usuario
