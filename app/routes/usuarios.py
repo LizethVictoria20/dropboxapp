@@ -3,7 +3,7 @@ from app.dropbox_utils import get_dbx
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from app.models import User, Folder, Archivo, UserActivityLog
+from app.models import User, Folder, Archivo, UserActivityLog, Beneficiario, FolderPermiso
 from app import db
 from sqlalchemy import or_
 import dropbox
@@ -448,14 +448,23 @@ def eliminar_usuario(usuario_id):
                 if "not_found" not in str(e):
                     print(f"Error eliminando carpeta de usuario: {e}")
         
-        # Eliminar registros de la base de datos
-        # Eliminar archivos
+        # Eliminar registros de la base de datos respetando dependencias
+        # 1) Eliminar permisos asociados a las carpetas del usuario
+        carpetas_usuario = Folder.query.with_entities(Folder.id).filter_by(user_id=usuario_id).all()
+        carpeta_ids = [c.id for c in carpetas_usuario]
+        if carpeta_ids:
+            FolderPermiso.query.filter(FolderPermiso.folder_id.in_(carpeta_ids)).delete(synchronize_session=False)
+
+        # 2) Eliminar archivos del usuario
         Archivo.query.filter_by(usuario_id=usuario_id).delete()
-        
-        # Eliminar carpetas
+
+        # 3) Eliminar carpetas del usuario
         Folder.query.filter_by(user_id=usuario_id).delete()
-        
-        # Eliminar actividades del usuario
+
+        # 4) Eliminar beneficiarios asociados al titular (clave foránea a user.id)
+        Beneficiario.query.filter_by(titular_id=usuario_id).delete()
+
+        # 5) Eliminar actividades del usuario
         UserActivityLog.query.filter_by(user_id=usuario_id).delete()
         
         # Eliminar el usuario
