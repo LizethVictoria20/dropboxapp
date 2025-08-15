@@ -394,3 +394,52 @@ def change_user_role(user_id):
     
     flash(f'Rol actualizado a {new_role}.', 'success')
     return redirect(url_for('main.listar_usuarios_admin'))
+
+@bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """Restablecer contraseña vía JSON (usado desde la pantalla de login).
+
+    Espera JSON con:
+    - email: str
+    - nueva_contrasena: str
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        email = (data.get('email') or '').strip().lower()
+        nueva_contrasena = data.get('nueva_contrasena')
+
+        if not email or not nueva_contrasena:
+            return jsonify({
+                'success': False,
+                'message': 'Email y nueva contraseña son requeridos.'
+            }), 400
+
+        if len(nueva_contrasena) < 6:
+            return jsonify({
+                'success': False,
+                'message': 'La nueva contraseña debe tener al menos 6 caracteres.'
+            }), 400
+
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': 'Usuario no encontrado.'
+            }), 404
+
+        user.set_password(nueva_contrasena)
+        db.session.commit()
+
+        # Registrar actividad del usuario afectado
+        try:
+            registrar_actividad(user, 'password_reset', 'Contraseña restablecida desde la pantalla de login')
+        except Exception:
+            # No bloquear por errores de logging
+            pass
+
+        return jsonify({'success': True, 'message': 'Contraseña actualizada correctamente.'})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f"Error en reset-password: {e}")
+        return jsonify({'success': False, 'message': 'Error interno del servidor.'}), 500
