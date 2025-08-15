@@ -480,7 +480,6 @@ def eliminar_usuario(usuario_id):
         
         db.session.commit()
         
-        flash(f"Usuario '{usuario.email}' eliminado exitosamente junto con todas sus carpetas y archivos.", "success")
         return redirect(url_for('usuarios.lista_usuarios'))
         
     except Exception as e:
