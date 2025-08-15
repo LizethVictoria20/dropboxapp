@@ -603,30 +603,12 @@
                   <div class="space-y-2">
                     <label for="nacionalidadInput" class="block text-sm font-medium text-text">Nacionalidad</label>
                     <select id="nacionalidadInput" name="nacionalidad" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm">
-                      <option value="">-- Seleccionar país --</option>
-                      <option value="Colombia" {% if user.nacionality == 'Colombia' %}selected{% endif %}>Colombia</option>
-                      <option value="Estados Unidos" {% if user.nacionality == 'Estados Unidos' %}selected{% endif %}>Estados Unidos</option>
-                      <option value="México" {% if user.nacionality == 'México' %}selected{% endif %}>México</option>
-                      <option value="España" {% if user.nacionality == 'España' %}selected{% endif %}>España</option>
-                      <option value="Venezuela" {% if user.nacionality == 'Venezuela' %}selected{% endif %}>Venezuela</option>
-                      <option value="Argentina" {% if user.nacionality == 'Argentina' %}selected{% endif %}>Argentina</option>
-                      <option value="Chile" {% if user.nacionality == 'Chile' %}selected{% endif %}>Chile</option>
-                      <option value="Perú" {% if user.nacionality == 'Perú' %}selected{% endif %}>Perú</option>
-                      <option value="Ecuador" {% if user.nacionality == 'Ecuador' %}selected{% endif %}>Ecuador</option>
-                      <option value="Brasil" {% if user.nacionality == 'Brasil' %}selected{% endif %}>Brasil</option>
-                      <option value="Uruguay" {% if user.nacionality == 'Uruguay' %}selected{% endif %}>Uruguay</option>
-                      <option value="Paraguay" {% if user.nacionality == 'Paraguay' %}selected{% endif %}>Paraguay</option>
-                      <option value="Bolivia" {% if user.nacionality == 'Bolivia' %}selected{% endif %}>Bolivia</option>
-                      <option value="Canadá" {% if user.nacionality == 'Canadá' %}selected{% endif %}>Canadá</option>
-                      <option value="Reino Unido" {% if user.nacionality == 'Reino Unido' %}selected{% endif %}>Reino Unido</option>
-                      <option value="Francia" {% if user.nacionality == 'Francia' %}selected{% endif %}>Francia</option>
-                      <option value="Alemania" {% if user.nacionality == 'Alemania' %}selected{% endif %}>Alemania</option>
-                      <option value="Italia" {% if user.nacionality == 'Italia' %}selected{% endif %}>Italia</option>
-                      <option value="China" {% if user.nacionality == 'China' %}selected{% endif %}>China</option>
-                      <option value="Japón" {% if user.nacionality == 'Japón' %}selected{% endif %}>Japón</option>
-                      <option value="Corea del Sur" {% if user.nacionality == 'Corea del Sur' %}selected{% endif %}>Corea del Sur</option>
-                      <option value="India" {% if user.nacionality == 'India' %}selected{% endif %}>India</option>
-                      <option value="Otro" {% if user.nacionality and user.nacionality not in ['Colombia', 'Estados Unidos', 'México', 'España', 'Venezuela', 'Argentina', 'Chile', 'Perú', 'Ecuador', 'Brasil', 'Uruguay', 'Paraguay', 'Bolivia', 'Canadá', 'Reino Unido', 'Francia', 'Alemania', 'Italia', 'China', 'Japón', 'Corea del Sur', 'India'] %}selected{% endif %}>Otro</option>
+                      <option value="">-- Seleccionar nacionalidad --</option>
+                      {% if nationalities %}
+                        {% for value, label in nationalities %}
+                          <option value="{{ value }}" {% if user.nacionality == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      {% endif %}
                     </select>
                   </div>
                 </div>

@@ -411,10 +411,14 @@ def profile():
         .paginate(page=page_activity, per_page=per_page_activity, error_out=False)
     
     form = ProfileForm()
+    # Listas para selects
+    from app.utils.countries import get_nationalities_list
+    nationalities = get_nationalities_list()
     
     return render_template('profile/view.html',
                          user=current_user,
                          form=form,
+                         nationalities=nationalities,
                          total_archivos=total_archivos,
                          total_carpetas=total_carpetas,
                          actividades_recientes=actividades_recientes,
