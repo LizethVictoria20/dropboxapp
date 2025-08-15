@@ -66,6 +66,15 @@ def crear_beneficiario():
             fecha_nac = request.form.get("fecha_nacimiento")
             titular_id = request.form.get("titular_id")
             
+            # DEBUG: Ver exactamente qué datos llegan del formulario
+            print(f"🔍 DEBUG crear_beneficiario - Datos recibidos:")
+            print(f"   nombre: {repr(nombre)}")
+            print(f"   email: {repr(email)}")
+            print(f"   fecha_nac: {repr(fecha_nac)}")
+            print(f"   titular_id: {repr(titular_id)}")
+            print(f"   request.form completo: {dict(request.form)}")
+            print(f"   Headers: {dict(request.headers)}")
+            
             # Validaciones básicas
             if not nombre or not email or not titular_id:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -75,6 +84,19 @@ def crear_beneficiario():
                     }), 400
                 else:
                     flash("Todos los campos son obligatorios", "error")
+                    return redirect(url_for("users.crear_beneficiario"))
+            
+            # VALIDACIÓN: Detectar y rechazar nombres automáticos problemáticos
+            if nombre and nombre.strip().lower().startswith('beneficiario'):
+                error_msg = f"Error: El nombre '{nombre}' parece ser un valor automático. Por favor, ingresa un nombre real."
+                print(f"❌ {error_msg}")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False, 
+                        'error': error_msg
+                    }), 400
+                else:
+                    flash(error_msg, "error")
                     return redirect(url_for("users.crear_beneficiario"))
             
             # Verificar que el titular existe

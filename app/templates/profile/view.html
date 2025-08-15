@@ -273,7 +273,7 @@
                     <li class="py-4 flex items-center justify-between">
                       <div>
                         <p class="text-base font-semibold text-text">
-                          {{ b.nombre }} {{ b.lastname }}
+                          {{ b.nombre }}{% if b.lastname %} {{ b.lastname }}{% endif %}
                         </p>
                         <p class="text-sm text-text-secondary">
                           {{ b.nationality }} – {{
@@ -283,7 +283,7 @@
                       <button
                         type="button"
                         class="text-sm font-medium text-primary hover:underline"
-                        onclick="openEditBeneficiaryModal({{ b.id }}, '{{ b.nombre }}', '{{ b.lastname }}', '{{ b.nationality }}', '{{ b.fecha_nacimiento.strftime('%Y-%m-%d') if b.fecha_nacimiento }}')"
+                        onclick="openEditBeneficiaryModal({{ b.id }}, '{{ b.nombre }}', '{{ b.lastname or '' }}', '{{ b.nationality }}', '{{ b.fecha_nacimiento.strftime('%Y-%m-%d') if b.fecha_nacimiento }}')"
                       >
                         Editar
                       </button>

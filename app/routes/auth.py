@@ -209,6 +209,24 @@ def add_beneficiary(user_id):
         email = request.form.get('email')
         fecha_nacimiento = request.form.get('fecha_nacimiento')
         
+        # DEBUG: Ver exactamente qué datos llegan del formulario en add_beneficiary
+        print(f"🔍 DEBUG add_beneficiary - Datos recibidos:")
+        print(f"   nombre: {repr(nombre)}")
+        print(f"   email: {repr(email)}")
+        print(f"   fecha_nacimiento: {repr(fecha_nacimiento)}")
+        print(f"   request.form completo: {dict(request.form)}")
+        print(f"   request.method: {request.method}")
+        
+        # VALIDACIÓN: Detectar y rechazar nombres automáticos problemáticos
+        if nombre and nombre.strip().lower().startswith('beneficiario'):
+            error_msg = f"Error: El nombre '{nombre}' parece ser un valor automático. Por favor, ingresa un nombre real."
+            print(f"❌ {error_msg}")
+            flash(error_msg, 'error')
+            return render_template('add_beneficiaries.html', 
+                                user=user, 
+                                beneficiarios=Beneficiario.query.filter_by(titular_id=user.id).all(),
+                                form=form)
+        
         if nombre and email:
             try:
                 beneficiario = Beneficiario(
@@ -218,17 +236,20 @@ def add_beneficiary(user_id):
                     titular_id=user.id
                 )
                 
-                # Crear carpeta en Dropbox para el beneficiario
-                try:
-                    from app.dropbox_utils import create_dropbox_folder
-                    path_ben = f"{user.dropbox_folder_path}/{nombre}_{beneficiario.id}"
-                    create_dropbox_folder(path_ben)
-                    beneficiario.dropbox_folder_path = path_ben
-                except Exception as e:
-                    print(f"Error creando carpeta Dropbox para beneficiario: {e}")
-                
+                # Primero guardar para asegurar que beneficiario.id no sea None
                 db.session.add(beneficiario)
                 db.session.commit()
+                
+                # Crear carpeta en Dropbox para el beneficiario usando solo el nombre (sin ID)
+                try:
+                    from app.dropbox_utils import create_dropbox_folder
+                    path_ben = f"{user.dropbox_folder_path}/{nombre}"
+                    create_dropbox_folder(path_ben)
+                    beneficiario.dropbox_folder_path = path_ben
+                    db.session.commit()
+                except Exception as e:
+                    print(f"Error creando carpeta Dropbox para beneficiario: {e}")
+                    # No crítico: la creación del beneficiario ya fue confirmada
                 
                 flash(f'Beneficiario {nombre} agregado exitosamente.', 'success')
                 
