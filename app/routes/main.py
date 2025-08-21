@@ -433,6 +433,34 @@ def profile_update():
     try:
         data = request.get_json()
         
+        # Validación temprana de cambio de contraseña (antes de cualquier actualización)
+        intento_cambio_password = any([
+            bool(data.get('old_password')),
+            bool(data.get('new_password')),
+            bool(data.get('confirm_password'))
+        ])
+        
+        if intento_cambio_password:
+            old_password = data.get('old_password') or ''
+            new_password = data.get('new_password') or ''
+            confirm_password = data.get('confirm_password') or ''
+            
+            # Todos los campos requeridos
+            if not old_password or not new_password or not confirm_password:
+                return jsonify({'error': 'Para cambiar la contraseña, completa los tres campos.'}), 400
+            
+            # Validar contraseña actual
+            if not current_user.check_password(old_password):
+                return jsonify({'error': 'La contraseña actual es incorrecta'}), 400
+            
+            # Validar coincidencia
+            if new_password != confirm_password:
+                return jsonify({'error': 'La nueva contraseña y la confirmación no coinciden'}), 400
+            
+            # Validar longitud mínima
+            if len(new_password) < 6:
+                return jsonify({'error': 'La nueva contraseña debe tener al menos 6 caracteres.'}), 400
+        
         # Actualizar información personal
         if 'nombre' in data:
             current_user.nombre = data['nombre']
@@ -459,14 +487,8 @@ def profile_update():
         if 'pais' in data:
             current_user.country = data['pais']
         
-        # Cambiar contraseña si se proporcionó
-        if data.get('old_password') and data.get('new_password') and data.get('confirm_password'):
-            if not current_user.check_password(data['old_password']):
-                return jsonify({'error': 'La contraseña actual es incorrecta'}), 400
-            
-            if data['new_password'] != data['confirm_password']:
-                return jsonify({'error': 'La nueva contraseña y la confirmación no coinciden'}), 400
-            
+        # Cambiar contraseña si se validó intento de cambio
+        if intento_cambio_password:
             current_user.set_password(data['new_password'])
             message = 'Perfil y contraseña actualizados exitosamente. Serás redirigido al login.'
         else:

@@ -1443,6 +1443,24 @@ block content %}
     ).textContent = `Editando información de ${nombreUsuario}`;
     document.getElementById("editarUsuarioId").value = usuarioId;
     document.getElementById("modalEditar").classList.remove("hidden");
+    
+    // Agregar event listeners para limpiar estilos de error en campos de contraseña
+    const newPasswordField = document.getElementById("new_password");
+    const confirmPasswordField = document.getElementById("confirm_password");
+    
+    const clearPasswordErrors = () => {
+      if (newPasswordField) newPasswordField.style.borderColor = "";
+      if (confirmPasswordField) confirmPasswordField.style.borderColor = "";
+    };
+    
+    if (newPasswordField) {
+      newPasswordField.removeEventListener("input", clearPasswordErrors);
+      newPasswordField.addEventListener("input", clearPasswordErrors);
+    }
+    if (confirmPasswordField) {
+      confirmPasswordField.removeEventListener("input", clearPasswordErrors);
+      confirmPasswordField.addEventListener("input", clearPasswordErrors);
+    }
 
     // Cargar datos del usuario
     fetch(`/usuarios/${usuarioId}/datos-json`)
@@ -1510,7 +1528,50 @@ block content %}
       const newPassword = document.getElementById("new_password").value;
       const confirmPassword = document.getElementById("confirm_password").value;
 
-      // Primero actualizar información del usuario
+      // VALIDACIÓN TEMPRANA: Si hay contraseñas, validarlas ANTES de actualizar usuario
+      if (newPassword || confirmPassword) {
+        if (!newPassword || !confirmPassword) {
+          alert("Si deseas cambiar la contraseña, debes completar ambos campos");
+          const newPasswordField = document.getElementById("new_password");
+          const confirmPasswordField = document.getElementById("confirm_password");
+          if (newPasswordField) {
+            newPasswordField.style.borderColor = "#ef4444";
+            newPasswordField.focus();
+          }
+          if (confirmPasswordField) {
+            confirmPasswordField.style.borderColor = "#ef4444";
+          }
+          return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+          alert("Las contraseñas no coinciden");
+          const newPasswordField = document.getElementById("new_password");
+          const confirmPasswordField = document.getElementById("confirm_password");
+          if (newPasswordField) {
+            newPasswordField.value = "";
+            newPasswordField.style.borderColor = "#ef4444";
+            newPasswordField.focus();
+          }
+          if (confirmPasswordField) {
+            confirmPasswordField.value = "";
+            confirmPasswordField.style.borderColor = "#ef4444";
+          }
+          return;
+        }
+        
+        if (newPassword.length < 6) {
+          alert("La contraseña debe tener al menos 6 caracteres");
+          const newPasswordField = document.getElementById("new_password");
+          if (newPasswordField) {
+            newPasswordField.style.borderColor = "#ef4444";
+            newPasswordField.focus();
+          }
+          return;
+        }
+      }
+
+      // Solo si las validaciones pasaron, actualizar información del usuario
       fetch(`/usuarios/${usuarioId}/editar`, {
         method: "POST",
         headers: {
@@ -1521,17 +1582,8 @@ block content %}
         .then((response) => response.json())
         .then((data) => {
           if (data.success) {
-            // Si hay contraseña nueva, cambiarla también
+            // Si hay contraseña nueva, cambiarla también (ya validada arriba)
             if (newPassword && confirmPassword) {
-              if (newPassword !== confirmPassword) {
-                alert("Las contraseñas no coinciden");
-                return;
-              }
-              if (newPassword.length < 6) {
-                alert("La contraseña debe tener al menos 6 caracteres");
-                return;
-              }
-
               const passwordData = new FormData();
               passwordData.append("new_password", newPassword);
               passwordData.append("confirm_password", confirmPassword);
@@ -1572,7 +1624,19 @@ block content %}
             cerrarModalEditar();
             location.reload(); // Recargar para ver cambios
           } else {
+            // Error en cambio de contraseña - mostrar error y limpiar campos
             alert("Error al cambiar contraseña: " + passwordData.error);
+            const newPasswordField = document.getElementById("new_password");
+            const confirmPasswordField = document.getElementById("confirm_password");
+            if (newPasswordField) {
+              newPasswordField.value = "";
+              newPasswordField.style.borderColor = "#ef4444";
+              newPasswordField.focus();
+            }
+            if (confirmPasswordField) {
+              confirmPasswordField.value = "";
+              confirmPasswordField.style.borderColor = "#ef4444";
+            }
           }
         })
         .catch((error) => {

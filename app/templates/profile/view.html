@@ -1053,10 +1053,26 @@
     if (securityTabActive && (oldPassword || newPassword || confirmPassword)) {
       if (!oldPassword || !newPassword || !confirmPassword) {
         showMessage("Para cambiar la contraseña, debes completar los campos de Contraseña Actual, Nueva Contraseña y Confirmar Nueva Contraseña.", "error");
+        const np = document.getElementById("newPassword");
+        const cp = document.getElementById("confirmPassword");
+        if (np) np.classList.add("border-red-500");
+        if (cp) cp.classList.add("border-red-500");
+        if (np) np.focus();
         return;
       }
       if (newPassword !== confirmPassword) {
         showMessage("La nueva contraseña y la confirmación de contraseña no coinciden.", "error");
+        const np = document.getElementById("newPassword");
+        const cp = document.getElementById("confirmPassword");
+        if (np) {
+          np.value = "";
+          np.classList.add("border-red-500");
+          np.focus();
+        }
+        if (cp) {
+          cp.value = "";
+          cp.classList.add("border-red-500");
+        }
         return;
       }
     }
@@ -1087,6 +1103,20 @@
         }
       } else {
         showMessage(result.error || "Ocurrió un error al actualizar el perfil.", "error");
+        // Si el backend reporta contraseñas no coincidentes, limpiar y enfocar nuevamente
+        if (result && typeof result.error === 'string' && result.error.toLowerCase().includes('no coinciden')) {
+          const np = document.getElementById("newPassword");
+          const cp = document.getElementById("confirmPassword");
+          if (np) {
+            np.value = "";
+            np.classList.add("border-red-500");
+            np.focus();
+          }
+          if (cp) {
+            cp.value = "";
+            cp.classList.add("border-red-500");
+          }
+        }
       }
     } catch (error) {
       console.error("Error:", error);
@@ -1305,6 +1335,16 @@
     
     loadActivityPage(currentPage, parseInt(perPage));
   };
+    // Limpiar estilos de error en tiempo real cuando el usuario escribe nuevamente
+    const npInput = document.getElementById("newPassword");
+    const cpInput = document.getElementById("confirmPassword");
+    const clearPasswordErrors = () => {
+      if (npInput) npInput.classList.remove("border-red-500");
+      if (cpInput) cpInput.classList.remove("border-red-500");
+      hideMessage();
+    };
+    if (npInput) npInput.addEventListener("input", clearPasswordErrors);
+    if (cpInput) cpInput.addEventListener("input", clearPasswordErrors);
 });
 </script>
 
