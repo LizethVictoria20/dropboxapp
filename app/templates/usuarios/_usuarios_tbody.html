@@ -1,0 +1,197 @@
+{% for u in usuarios %}
+        <!-- Fila de tabla en escritorio -->
+        <tr
+          class="border-b last:border-0 hover:bg-blue-50 transition hidden md:table-row"
+        >
+          <td class="flex items-center gap-3 py-3 px-6">
+            <span
+              class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-primary-dark font-bold text-lg"
+            >
+              {{ (u.nombre or u.email)[0]|upper }}
+            </span>
+            <div>
+              <div class="font-semibold text-gray-900">
+                {{ u.nombre or u.email.split('@')[0] }}
+              </div>
+              <div class="text-xs text-gray-500">
+                @{{ u.email.split('@')[0] }}
+              </div>
+            </div>
+          </td>
+          <td class="px-2">{{ u.email }}</td>
+          <td class="px-2">
+            {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %} {% if
+            ncarpetas > 0 %}
+            <span
+              class="bg-blue-100 text-primary-dark px-2.5 py-1 rounded-full text-xs font-semibold"
+            >
+              {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
+            </span>
+            {% else %}
+            <span
+              class="bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs"
+              >Sin carpetas</span
+            >
+            {% endif %}
+          </td>
+          <td class="px-2 text-right">
+            <div class="relative" x-data="{ open: false }">
+              <button
+                @click="open = !open"
+                class="p-2 rounded hover:bg-gray-100 group relative"
+              >
+                <i class="fas fa-ellipsis-v text-gray-400"></i>
+              </button>
+
+              <!-- Menú desplegable de acciones -->
+              <div
+                x-show="open"
+                @click.away="open = false"
+                x-transition:enter="transition ease-out duration-100"
+                x-transition:enter-start="transform opacity-0 scale-95"
+                x-transition:enter-end="transform opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-75"
+                x-transition:leave-start="transform opacity-100 scale-100"
+                x-transition:leave-end="transform opacity-0 scale-95"
+                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+              >
+                <!-- Ver Carpetas -->
+                <a
+                  href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
+                  class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-folder-open mr-3 text-blue-500"></i>
+                  Ver Carpetas
+                </a>
+
+                <!-- Ver Historial -->
+                <button
+                  onclick="abrirModalHistorial({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-history mr-3 text-green-500"></i>
+                  Ver Historial
+                </button>
+
+                <!-- Importar Archivo -->
+                <button
+                  onclick="abrirModalImportar({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-upload mr-3 text-purple-500"></i>
+                  Importar Archivo
+                </button>
+
+                <!-- Editar Usuario -->
+                <button
+                  onclick="abrirModalEditar({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <i class="fas fa-edit mr-3 text-yellow-500"></i>
+                  Editar Usuario
+                </button>
+
+                <!-- Separador -->
+                <div class="border-t border-gray-100"></div>
+
+                <!-- Eliminar Usuario -->
+                <button
+                  onclick="confirmarEliminarUsuario({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                >
+                  <i class="fas fa-trash mr-3"></i>
+                  Eliminar Usuario
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Tarjeta en móvil -->
+        <tr class="md:hidden">
+          <td colspan="5" class="p-4">
+            <div
+              class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-2 hover:bg-blue-50 transition"
+            >
+              <div class="flex items-center gap-3 mb-2">
+                <span
+                  class="w-10 h-10 rounded-full bg-blue-100 text-primary-dark font-bold text-lg flex items-center justify-center"
+                >
+                  {{ (u.nombre or u.email)[0]|upper }}
+                </span>
+                <div>
+                  <div class="font-semibold text-gray-900 text-base">
+                    {{ u.nombre or u.email.split('@')[0] }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    @{{ u.email.split('@')[0] }}
+                  </div>
+                </div>
+              </div>
+              <div class="text-sm text-gray-700">
+                <p><strong>Email:</strong> {{ u.email }}</p>
+                <p>
+                  <strong>Carpetas:</strong>
+                  {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %} {% if
+                  ncarpetas > 0 %}
+                  <span
+                    class="inline-block bg-blue-100 text-primary-dark px-2.5 py-1 rounded-full text-xs font-semibold"
+                  >
+                    {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
+                  </span>
+                  {% else %}
+                  <span
+                    class="inline-block bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs"
+                    >Sin carpetas</span
+                  >
+                  {% endif %}
+                </p>
+                <p>
+                  <strong>Creación:</strong>
+                  <span
+                    class="inline-block text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
+                  >
+                    {{ u.fecha_creacion.strftime('%Y-%m-%d') if u.fecha_creacion
+                    else '' }}
+                  </span>
+                </p>
+              </div>
+
+              <!-- Acciones en móvil -->
+              <div class="flex flex-wrap gap-2 mt-3">
+                <a
+                  href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100"
+                >
+                  <i class="fas fa-folder-open mr-2"></i> Ver Carpetas
+                </a>
+                <button
+                  onclick="abrirModalHistorial({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-green-50 text-green-700 hover:bg-green-100"
+                >
+                  <i class="fas fa-history mr-2"></i> Historial
+                </button>
+                <button
+                  onclick="abrirModalImportar({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100"
+                >
+                  <i class="fas fa-upload mr-2"></i> Importar
+                </button>
+                <button
+                  onclick="abrirModalEditar({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                >
+                  <i class="fas fa-edit mr-2"></i> Editar
+                </button>
+                <button
+                  onclick="confirmarEliminarUsuario({{ u.id }}, '{{ u.nombre or u.email }}')"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-red-700 hover:bg-red-100"
+                >
+                  <i class="fas fa-trash mr-2"></i> Eliminar
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+{% endfor %}
+

@@ -1,6 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, jsonify, current_app, url_for, flash
 from flask_login import login_required, current_user
 from app import db
+from sqlalchemy import or_
 from app.models import Beneficiario, User, UserActivityLog, Archivo, Folder
 from app.dropbox_utils import create_dropbox_folder
 from app.routes.listar_dropbox import obtener_estructura_dropbox
@@ -369,13 +370,19 @@ def listar_usuarios():
     
     page = request.args.get('page', 1, type=int)
     per_page = 10  # Mostrar 10 usuarios por página
+    q = (request.args.get('q') or '').strip()
     
     # Obtener usuarios paginados (excluyendo clientes)
-    pagination = User.query.filter(User.rol != 'cliente').paginate(
-        page=page, 
-        per_page=per_page, 
-        error_out=False
-    )
+    query = User.query.filter(User.rol != 'cliente')
+    if q:
+        query = query.filter(
+            or_(
+                User.nombre.ilike(f'%{q}%'),
+                User.apellido.ilike(f'%{q}%'),
+                User.email.ilike(f'%{q}%')
+            )
+        )
+    pagination = query.order_by(User.nombre).paginate(page=page, per_page=per_page, error_out=False)
     
     usuarios = pagination.items
     
@@ -383,11 +390,17 @@ def listar_usuarios():
     countries = get_countries_list()
     nationalities = get_nationalities_list()
     
+    # Render completo si no es AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Devolver solo el tbody renderizado
+        return render_template('usuarios/_users_table_body.html', usuarios=usuarios)
+
     return render_template('listar_usuarios.html', 
                          usuarios=usuarios, 
                          pagination=pagination,
                          countries=countries,
-                         nationalities=nationalities)
+                         nationalities=nationalities,
+                         q=q)
 
 @bp.route('/get_user/<int:user_id>')
 def get_user(user_id):

@@ -45,6 +45,14 @@ def lista_usuarios():
         u.id: Folder.query.filter_by(user_id=u.id).count() for u in usuarios
     }
 
+    # Para AJAX (búsqueda en vivo) devolver solo el tbody renderizado
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render_template(
+            "usuarios/_usuarios_tbody.html",
+            usuarios=usuarios,
+            carpetas_por_usuario=carpetas_por_usuario,
+        )
+
     return render_template(
         "lista_usuarios.html",
         usuarios=usuarios,

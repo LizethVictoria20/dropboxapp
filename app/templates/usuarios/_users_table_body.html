@@ -1,0 +1,81 @@
+{% for usuario in usuarios %}
+<tr class="hover:bg-gray-50">
+  <td class="px-6 py-4 whitespace-nowrap">
+    <div class="flex items-center">
+      <div class="flex-shrink-0 h-10 w-10">
+        <div class="h-10 w-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+          <span class="text-white font-medium text-sm">
+            {{ usuario.nombre[0] if usuario.nombre else usuario.email[0].upper() }}
+          </span>
+        </div>
+      </div>
+      <div class="ml-4">
+        <div class="text-sm font-medium text-gray-900">{{ usuario.nombre_completo }}</div>
+        <div class="text-sm text-gray-500">ID: {{ usuario.id }}</div>
+      </div>
+    </div>
+  </td>
+  <td class="px-6 py-4 whitespace-nowrap">
+    <div class="text-sm text-gray-900">{{ usuario.email }}</div>
+  </td>
+  <td class="px-6 py-4 whitespace-nowrap">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.rol == 'superadmin' %}bg-purple-100 text-purple-800 {% elif usuario.rol == 'admin' %}bg-red-100 text-red-800 {% elif usuario.rol == 'lector' %}bg-blue-100 text-blue-800 {% else %}bg-green-100 text-green-800{% endif %}">
+      {% if usuario.rol == 'superadmin' %}
+      <i class="fas fa-crown mr-1"></i>
+      {% elif usuario.rol == 'admin' %}
+      <i class="fas fa-user-shield mr-1"></i>
+      {% elif usuario.rol == 'lector' %}
+      <i class="fas fa-eye mr-1"></i>
+      {% else %}
+      <i class="fas fa-user mr-1"></i>
+      {% endif %} {{ usuario.rol|title }}
+    </span>
+    {% if usuario.rol == 'lector' and usuario.lector_extra_permissions %}
+    <div class="mt-1">
+      <span class="text-xs text-gray-500">Permisos adicionales</span>
+      <div class="flex flex-wrap gap-1 mt-1">
+        {% set permisos = usuario.lector_extra_permissions|from_json %}
+        {% for permiso in permisos %}
+        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+          {{ permiso|replace('_', ' ')|title }}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </td>
+  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+    {{ usuario.fecha_registro.strftime('%d/%m/%Y') if usuario.fecha_registro else 'N/A' }}
+  </td>
+  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+    <div class="relative">
+      <button onclick="toggleUserMenu('user-menu-{{ usuario.id }}', event)" class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary rounded-full p-1">
+        <i class="fas fa-ellipsis-v"></i>
+      </button>
+
+      <div id="user-menu-{{ usuario.id }}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed">
+        <div class="py-1">
+          <button onclick="closeUserMenu('user-menu-{{ usuario.id }}'); openHistoryModal({{ usuario.id }})" class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+            <i class="fas fa-history mr-3 text-gray-400 group-hover:text-gray-500"></i>
+            Ver historial
+          </button>
+
+          <button onclick="closeUserMenu('user-menu-{{ usuario.id }}'); openEditModal({{ usuario.id }})" class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+            <i class="fas fa-edit mr-3 text-gray-400 group-hover:text-blue-500"></i>
+            Editar
+          </button>
+
+          <div class="border-t border-gray-100 my-1"></div>
+          <div class="border-t border-gray-100 my-1"></div>
+
+          <button onclick="closeUserMenu('user-menu-{{ usuario.id }}'); confirmDeleteUser({{ usuario.id }}, '{{ usuario.nombre_completo or usuario.email }}')" class="group flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700">
+            <i class="fas fa-trash mr-3 text-red-400 group-hover:text-red-500"></i>
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  </td>
+</tr>
+{% endfor %}
+

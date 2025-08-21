@@ -45,6 +45,54 @@ block content %}
         >{{ pagination.total }} clientes</span
       >
     </div>
+
+  <script>
+    (function () {
+      const input = document.querySelector('input[name="q"]');
+      const tbody = document.getElementById('clientes-table-body');
+      let debounceTimer = null;
+      let currentController = null;
+
+      function buildUrl(query) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('q', query || '');
+        url.searchParams.set('page', '1');
+        return url.toString();
+      }
+
+      async function fetchUsuarios(query) {
+        try {
+          const url = buildUrl(query);
+          // Actualizar la URL visible sin recargar
+          window.history.replaceState({}, '', url);
+
+          // Cancelar petición anterior si existe
+          if (currentController) {
+            currentController.abort();
+          }
+          currentController = new AbortController();
+
+          const res = await fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-store' },
+            credentials: 'same-origin',
+            signal: currentController.signal
+          });
+          const html = await res.text();
+          tbody.innerHTML = html;
+        } catch (e) {
+          if (e.name !== 'AbortError') {
+            console.error('Error buscando clientes:', e);
+          }
+        }
+      }
+
+      input.addEventListener('input', function (e) {
+        const q = e.target.value.trim();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchUsuarios(q), 300);
+      });
+    })();
+  </script>
     <table class="min-w-full text-sm text-gray-700">
       <thead>
         <tr class="border-b text-gray-500">
@@ -54,7 +102,7 @@ block content %}
           <th class="py-3 px-2 text-right">ACCIONES</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="clientes-table-body">
         {% for u in usuarios %}
         <!-- Fila de tabla en escritorio -->
         <tr
