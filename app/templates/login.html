@@ -397,7 +397,7 @@
           recuperarContrasenaModal.classList.add("hidden");
         });
 
-        formRecuperarContrasena.addEventListener("submit", function (e) {
+        formRecuperarContrasena.addEventListener("submit", async function (e) {
           e.preventDefault();
           const email = document
             .getElementById("emailRecuperacion")
@@ -421,6 +421,34 @@
                 Por favor, ingresa un correo electrónico válido.
             </div>
         `;
+            return;
+          }
+
+          // Validar contra backend si el correo existe antes de enviar email
+          try {
+            const resp = await fetch("/auth/check-email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email })
+            });
+            const data = await resp.json();
+            if (!data.success || !data.exists) {
+              mensajeRecuperacion.classList.remove("hidden");
+              mensajeRecuperacion.innerHTML = `
+                <div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl">
+                    El correo no está registrado.
+                </div>
+              `;
+              return;
+            }
+          } catch (err) {
+            console.error("Error verificando correo:", err);
+            mensajeRecuperacion.classList.remove("hidden");
+            mensajeRecuperacion.innerHTML = `
+              <div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl">
+                  No se pudo verificar el correo. Intenta nuevamente.
+              </div>
+            `;
             return;
           }
 

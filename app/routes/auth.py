@@ -395,6 +395,26 @@ def change_user_role(user_id):
     flash(f'Rol actualizado a {new_role}.', 'success')
     return redirect(url_for('main.listar_usuarios_admin'))
 
+@bp.route('/check-email', methods=['POST'])
+def check_email():
+    """Verificar si un correo está registrado.
+
+    Espera JSON con:
+    - email: str
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        email = (data.get('email') or '').strip().lower()
+
+        if not email:
+            return jsonify({'success': False, 'exists': False, 'message': 'Email requerido.'}), 200
+
+        user = User.query.filter_by(email=email).first()
+        return jsonify({'success': True, 'exists': bool(user)})
+    except Exception as e:
+        current_app.logger.exception(f"Error en check-email: {e}")
+        return jsonify({'success': False, 'exists': False, 'message': 'Error interno del servidor.'}), 200
+
 @bp.route('/reset-password', methods=['POST'])
 def reset_password():
     """Restablecer contraseña vía JSON (usado desde la pantalla de login).
