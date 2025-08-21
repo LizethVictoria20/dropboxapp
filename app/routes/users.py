@@ -242,7 +242,9 @@ def crear_usuario():
             nacionality = request.form.get('nacionality')
             country = request.form.get('country')
             rol = request.form.get('rol')
-            activo = request.form.get('activo') == 'on'
+            # Si el campo 'activo' no viene en el formulario, por defecto dejar activo=True
+            activo_value = request.form.get('activo')
+            activo = True if activo_value is None else (activo_value == 'on')
             
             # Validaciones básicas
             if not email or not password:

@@ -359,7 +359,9 @@ def editar_usuario(usuario_id):
     direccion = request.form.get('direccion')
     codigo_postal = request.form.get('codigo_postal')
     rol = request.form.get('rol')
-    activo = request.form.get('activo') == 'on'
+    # Por defecto, si no llega el campo 'activo', dejar al usuario ACTIVO
+    activo_value = request.form.get('activo')
+    activo = True if activo_value is None else (activo_value == 'on')
     
     # Validar email único
     if email != usuario.email:

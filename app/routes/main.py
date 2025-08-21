@@ -889,7 +889,9 @@ def api_usuario_actualizar(usuario_id):
         
         # Roles y estado
         rol = request.form.get('rol', 'admin')
-        activo = request.form.get('activo') == 'on'
+        # Si 'activo' no llega en el formulario, por defecto mantener al usuario ACTIVO
+        activo_value = request.form.get('activo')
+        activo = True if activo_value is None else (activo_value == 'on')
         
         # Contraseña (opcional)
         password = request.form.get('password', '').strip()
