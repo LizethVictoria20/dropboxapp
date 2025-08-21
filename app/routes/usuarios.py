@@ -494,5 +494,4 @@ def eliminar_usuario(usuario_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f"Error al eliminar usuario: {str(e)}", "error")
         return redirect(url_for('usuarios.lista_usuarios'))
