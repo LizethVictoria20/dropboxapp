@@ -541,7 +541,6 @@ def editar_beneficiario():
         # Registrar actividad
         current_user.registrar_actividad('beneficiary_update', f'Actualizó beneficiario {name} {lastname}')
         
-        flash('Beneficiario actualizado exitosamente', 'success')
         return redirect(url_for('main.profile'))
         
     except Exception as e:

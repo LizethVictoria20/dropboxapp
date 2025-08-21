@@ -2741,7 +2741,6 @@ def renombrar_carpeta():
         
         if not carpetas_hijas:
             print(f"DEBUG | No se encontraron carpetas hijas para: /{carpeta_nombre_actual}/")
-            flash("Carpeta no encontrada en la base de datos.", "error")
             if redirect_url and "/usuario/" in redirect_url:
                 return redirect(redirect_url)
             else:
@@ -2787,7 +2786,6 @@ def renombrar_carpeta():
     
     if not carpeta:
         print(f"DEBUG | Carpeta no encontrada en la base para path: {old_path}")
-        flash("Carpeta no encontrada en la base de datos.", "error")
         if redirect_url and "/usuario/" in redirect_url:
             return redirect(redirect_url)
         else:
@@ -2935,7 +2933,6 @@ def ocultar_carpeta():
         
         if not carpeta_bd:
             print(f"DEBUG | Carpeta no encontrada en BD después de búsqueda flexible: {carpeta_nombre}")
-            flash("Carpeta no encontrada en la base de datos.", "error")
             if redirect_url and "/usuario/" in redirect_url:
                 return redirect(redirect_url)
             else:
