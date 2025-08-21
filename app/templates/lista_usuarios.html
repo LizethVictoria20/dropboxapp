@@ -4,14 +4,14 @@ block content %}
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
-      <h1 class="text-3xl font-bold text-primary-dark">Lista de Usuarios</h1>
-      <p class="text-gray-500 mt-1">Gestiona los usuarios del sistema</p>
+      <h1 class="text-3xl font-bold text-primary-dark">Lista de Clientes</h1>
+      <p class="text-gray-500 mt-1">Gestiona los clientes del sistema</p>
     </div>
     <button
       onclick="abrirModalCrearUsuario()"
       class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition"
     >
-      + Agregar usuario
+      + Agregar cliente
     </button>
   </div>
 
@@ -38,7 +38,7 @@ block content %}
   >
     <div class="px-6 py-3 border-b bg-blue-50 flex items-center">
       <div class="flex items-center gap-2 text-primary-dark font-semibold">
-        <i class="fas fa-users"></i> Usuarios {{ rol|capitalize }}s
+        <i class="fas fa-users"></i> {{ rol|capitalize }}s
       </div>
       <span
         class="ml-auto text-xs font-bold bg-blue-100 text-primary-dark px-3 py-1 rounded-full"
@@ -518,8 +518,8 @@ block content %}
   >
     <div class="flex items-center justify-between p-6 border-b">
       <div>
-        <h3 class="text-xl font-semibold text-gray-900">Crear Nuevo Usuario</h3>
-        <p class="text-sm text-gray-500">Completa la información del nuevo usuario</p>
+        <h3 class="text-xl font-semibold text-gray-900">Crear Nuevo Cliente</h3>
+        <p class="text-sm text-gray-500">Completa la información del nuevo cliente</p>
       </div>
       <button
         onclick="cerrarModalCrearUsuario()"
