@@ -144,6 +144,8 @@ def register():
                     estado=form.state.data,
                     direccion=form.address.data,
                     codigo_postal=form.zip_code.data,
+                    document_type=form.document_type.data,
+                    document_number=form.document_number.data,
                     nacionality=form.nationality.data,
                     country=dict(countries)[form.country.data] if form.country.data else None,  # Usar nombre del país
                     fecha_nacimiento=form.date_of_birth.data,

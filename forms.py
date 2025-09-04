@@ -92,6 +92,15 @@ class ClienteRegistrationForm(BaseForm):
     city = StringField('Ciudad', validators=[DataRequired(), Length(max=64)])
     state = StringField('Estado', validators=[DataRequired(), Length(max=64)])
     address = StringField('Dirección', validators=[DataRequired(), Length(max=255)])
+    document_type = SelectField('Tipo de documento', validators=[DataRequired()], choices=[
+        ('', 'Selecciona un tipo de documento'),
+        ('cedula', 'Cédula'),
+        ('pasaporte', 'Pasaporte'),
+        ('nie', 'NIE'),
+        ('dni', 'DNI'),
+        ('otro', 'Otro')
+    ])
+    document_number = StringField('Número de documento', validators=[DataRequired(), Length(max=50)])
     nationality = SelectField('Nacionalidad', validators=[DataRequired()], choices=[])
     country = SelectField('País', validators=[DataRequired()], choices=[])
     date_of_birth = DateField('Fecha de nacimiento', validators=[DataRequired()])
