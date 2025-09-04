@@ -21,7 +21,7 @@ def obtener_estado_archivo():
     if not dropbox_path:
         return jsonify({'success': False, 'error': 'Parámetro path requerido'}), 400
     archivo = Archivo.query.filter_by(dropbox_path=dropbox_path).first()
-    estado = archivo.estado if archivo and archivo.estado else 'en_revision'
+    estado = archivo.estado if archivo and archivo.estado else None
     return jsonify({'success': True, 'estado': estado})
 
 @bp.route('/api/archivo/estado', methods=['POST'])
@@ -80,7 +80,7 @@ def api_mis_archivos():
                 'nombre': a.nombre,
                 'categoria': a.categoria,
                 'subcategoria': a.subcategoria,
-                'estado': a.estado or 'en_revision',
+                'estado': a.estado,
                 'dropbox_path': a.dropbox_path
             })
         return jsonify({'success': True, 'archivos': datos})

@@ -237,7 +237,7 @@ class Archivo(db.Model):
     tamano = db.Column(db.Integer, nullable=True)  # tamaño del archivo en bytes (opcional)
     extension = db.Column(db.String(20), nullable=True)  # extensión (ej: pdf, jpg)
     descripcion = db.Column(db.String(255), nullable=True)  # descripción opcional del archivo
-    estado = db.Column(db.String(20), nullable=True, default='en_revision')
+    estado = db.Column(db.String(20), nullable=True)
 
     # Relación con usuario (opcional, solo si manejas usuarios)
     usuario_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
