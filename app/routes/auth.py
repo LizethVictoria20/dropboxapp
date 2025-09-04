@@ -134,18 +134,31 @@ def register():
     if request.method == 'POST':
         if form.validate_on_submit():
             try:
+                # Normalización básica
+                email = (form.email.data or '').strip().lower()
+                telefono = (form.telephone.data or '').strip()
+                document_number = (form.document_number.data or '').strip().upper()
+                if User.query.filter_by(email=email).first():
+                    errors['email'] = 'Ese correo electrónico ya está registrado.'
+                    raise ValueError('duplicate_email')
+                if telefono and User.query.filter_by(telefono=telefono).first():
+                    errors['telephone'] = 'Ese número de teléfono ya está registrado.'
+                    raise ValueError('duplicate_phone')
+                if document_number and User.query.filter_by(document_number=document_number).first():
+                    errors['document_number'] = 'Ese número de documento ya está registrado.'
+                    raise ValueError('duplicate_doc')
                 # Crear el usuario cliente
                 user = User(
-                    email=form.email.data,
+                    email=email,
                     nombre=form.name.data,
                     apellido=form.lastname.data,
-                    telefono=form.telephone.data,
+                    telefono=telefono,
                     ciudad=form.city.data,
                     estado=form.state.data,
                     direccion=form.address.data,
                     codigo_postal=form.zip_code.data,
                     document_type=form.document_type.data,
-                    document_number=form.document_number.data,
+                    document_number=document_number,
                     nacionality=form.nationality.data,
                     country=dict(countries)[form.country.data] if form.country.data else None,  # Usar nombre del país
                     fecha_nacimiento=form.date_of_birth.data,
@@ -192,7 +205,10 @@ def register():
                 
             except Exception as e:
                 db.session.rollback()
-                errors['general'] = f"Error al crear la cuenta: {str(e)}"
+                if str(e) in ['duplicate_email', 'duplicate_phone', 'duplicate_doc']:
+                    pass
+                else:
+                    errors['general'] = f"Error al crear la cuenta: {str(e)}"
         else:
             # Errores de validación del formulario
             for field, field_errors in form.errors.items():

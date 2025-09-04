@@ -117,7 +117,23 @@ class ClienteRegistrationForm(BaseForm):
     def validate_email(self, field):
         user_with_email = User.query.filter_by(email=field.data).first()
         if user_with_email:
-            raise ValidationError('Ese correo electrónico ya está registrado.')
+            raise ValidationError('Correo electrónico ya está registrado.')
+
+    def validate_telephone(self, field):
+        if not field.data:
+            return
+        telefono = (field.data or '').strip()
+        user_with_phone = User.query.filter_by(telefono=telefono).first()
+        if user_with_phone:
+            raise ValidationError('Número de teléfono ya está registrado.')
+
+    def validate_document_number(self, field):
+        if not field.data:
+            return
+        doc = (field.data or '').strip().upper()
+        user_with_doc = User.query.filter_by(document_number=doc).first()
+        if user_with_doc:
+            raise ValidationError('Número de documento ya está registrado.')
 
 class GeneralForm(BaseForm):
     pass

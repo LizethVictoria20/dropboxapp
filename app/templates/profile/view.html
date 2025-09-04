@@ -226,19 +226,34 @@
                         </div>
                       </div>
                     </div>
-
+                    <!-- Identificación -->
+                    <div class="border-b border-gray-100 pb-3">
+                      <div class="flex">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Identificación
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                          <p class="text-base text-text">
+                            {{ user.document_number }}
+                          </p>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                     <!-- Ultimo Acceso -->
                     <div class="border-b border-gray-100 pb-3">
                       <div class="flex">
                         <div class="w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
-                            Ultimo Acceso
+                            Acceso
                           </h4>
                         </div>
                         <div class="w-2/3">
                           <p class="text-base text-text">
                             <span class="text-sm font-medium text-gray-700">
-                              <i class="far fa-clock mr-1 text-primary"></i>
                               {% if last_login_colombia %} {{
                               last_login_colombia.strftime('%Y-%m-%d %H:%M') }}
                               {% else %} Nunca {% endif %}
