@@ -37,6 +37,19 @@
       </div>
 
       <div class="grid grid-cols-1 gap-8">
+        <!-- Estados de mis archivos -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="px-5 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+            <div class="flex items-center">
+              <i class="fas fa-file-alt text-accent mr-2"></i>
+              <h3 class="text-lg font-semibold font-montserrat text-primary-dark">Estados de mis archivos</h3>
+            </div>
+            <button type="button" id="refreshEstadosBtn" class="text-sm text-primary hover:underline">Actualizar</button>
+          </div>
+          <div class="p-5" id="listaEstadosArchivos">
+            <p class="text-sm text-text-secondary">Cargando estados...</p>
+          </div>
+        </div>
         <div
           class="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden"
         >
@@ -1186,6 +1199,53 @@
       }
     });
   }
+
+  // Cargar estados de archivos del usuario
+  function estadoBadge(estado) {
+    const mapa = {
+      'validado': { cls: 'bg-green-100 text-green-700', label: 'Validado' },
+      'rechazado': { cls: 'bg-red-100 text-red-700', label: 'Rechazado' },
+      'en_revision': { cls: 'bg-yellow-100 text-yellow-700', label: 'En revisión' }
+    };
+    const info = mapa[estado] || mapa['en_revision'];
+    return `<span class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${info.cls}">${info.label}</span>`;
+  }
+
+  async function cargarEstadosArchivos() {
+    const cont = document.getElementById('listaEstadosArchivos');
+    if (!cont) return;
+    cont.innerHTML = '<p class="text-sm text-text-secondary">Cargando estados...</p>';
+    try {
+      const resp = await fetch('/api/mis-archivos');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      if (!data.success) throw new Error('Error');
+
+      if (!data.archivos || data.archivos.length === 0) {
+        cont.innerHTML = '<p class="text-sm text-text-secondary">Aún no tienes archivos registrados.</p>';
+        return;
+      }
+
+      const items = data.archivos.map(a => {
+        return `<li class="py-2 flex items-center justify-between border-b border-gray-50">
+          <div class="flex items-center">
+            <i class="far fa-file text-blue-500 mr-2"></i>
+            <span class="text-sm text-text">${a.nombre}</span>
+            ${estadoBadge(a.estado)}
+          </div>
+          <span class="text-xs text-gray-400">${a.categoria || ''}${a.subcategoria ? ' · ' + a.subcategoria : ''}</span>
+        </li>`;
+      }).join('');
+
+      cont.innerHTML = `<ul class="divide-y divide-gray-100">${items}</ul>`;
+    } catch (e) {
+      cont.innerHTML = '<p class="text-sm text-red-600">No se pudieron cargar los estados en este momento.</p>';
+    }
+  }
+
+  const refreshBtn = document.getElementById('refreshEstadosBtn');
+  if (refreshBtn) refreshBtn.addEventListener('click', cargarEstadosArchivos);
+  cargarEstadosArchivos();
 
   // Función para cargar página de actividad dinámicamente
   window.loadActivityPage = function(page, perPage) {

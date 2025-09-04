@@ -10,6 +10,82 @@ from datetime import datetime
 from app.dropbox_utils import get_dbx, get_valid_dropbox_token
 
 bp = Blueprint("listar_dropbox", __name__)
+@bp.route('/api/archivo/estado', methods=['GET'])
+@login_required
+def obtener_estado_archivo():
+    """Obtiene el estado de un archivo por dropbox_path"""
+    from app.models import Archivo
+    dropbox_path = request.args.get('path')
+    if dropbox_path:
+        dropbox_path = str(dropbox_path).replace('//', '/').rstrip('/')
+    if not dropbox_path:
+        return jsonify({'success': False, 'error': 'Parámetro path requerido'}), 400
+    archivo = Archivo.query.filter_by(dropbox_path=dropbox_path).first()
+    estado = archivo.estado if archivo and archivo.estado else 'en_revision'
+    return jsonify({'success': True, 'estado': estado})
+
+@bp.route('/api/archivo/estado', methods=['POST'])
+@login_required
+def actualizar_estado_archivo():
+    """Actualiza el estado de un archivo. Requiere permisos de admin/cliente o lector con permiso de modificar."""
+    from app.models import Archivo, User
+    data = request.get_json(silent=True) or {}
+    dropbox_path = data.get('path')
+    nuevo_estado = data.get('estado')
+    if not dropbox_path or not nuevo_estado:
+        return jsonify({'success': False, 'error': 'path y estado son requeridos'}), 400
+    if nuevo_estado not in ['en_revision', 'validado', 'rechazado']:
+        return jsonify({'success': False, 'error': 'Estado inválido'}), 400
+
+    # Permisos: admin, cliente dueño, o lector con permiso de modificar
+    if not current_user.is_authenticated or not hasattr(current_user, 'rol'):
+        return jsonify({'success': False, 'error': 'No autorizado'}), 401
+
+    # Normalizar path (evitar dobles //)
+    dropbox_path = str(dropbox_path).replace('//', '/').rstrip('/')
+    archivo = Archivo.query.filter_by(dropbox_path=dropbox_path).first()
+    if not archivo:
+        # Crear registro mínimo si no existe
+        usuario_email = dropbox_path.strip('/').split('/')[0]
+        user = User.query.filter_by(email=usuario_email).first()
+        archivo = Archivo(
+            nombre=dropbox_path.split('/')[-1],
+            categoria='',
+            subcategoria='',
+            dropbox_path=dropbox_path,
+            usuario_id=user.id if user else None
+        )
+        db.session.add(archivo)
+
+    # Si es cliente, solo puede cambiar estado de sus archivos
+    if current_user.rol == 'cliente' and archivo.usuario_id and archivo.usuario_id != current_user.id:
+        return jsonify({'success': False, 'error': 'Sin permisos para modificar este archivo'}), 403
+    if current_user.rol == 'lector' and not current_user.puede_modificar_archivos():
+        return jsonify({'success': False, 'error': 'Sin permisos'}), 403
+
+    archivo.estado = nuevo_estado
+    db.session.commit()
+    return jsonify({'success': True})
+
+@bp.route('/api/mis-archivos', methods=['GET'])
+@login_required
+def api_mis_archivos():
+    """Devuelve archivos del usuario actual con su estado"""
+    try:
+        archivos = Archivo.query.filter_by(usuario_id=current_user.id).order_by(Archivo.fecha_subida.desc()).limit(50).all()
+        datos = []
+        for a in archivos:
+            datos.append({
+                'id': a.id,
+                'nombre': a.nombre,
+                'categoria': a.categoria,
+                'subcategoria': a.subcategoria,
+                'estado': a.estado or 'en_revision',
+                'dropbox_path': a.dropbox_path
+            })
+        return jsonify({'success': True, 'archivos': datos})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def obtener_carpetas_dropbox_estructura(path="", dbx=None):
     if dbx is None:
@@ -950,7 +1026,7 @@ def subir_archivo():
 
         # Guardar en la base de datos
         nuevo_archivo = Archivo(
-            nombre=archivo.filename,
+            nombre=nombre_final,
             categoria=categoria,
             subcategoria=subcategoria,
             dropbox_path=dropbox_dest,

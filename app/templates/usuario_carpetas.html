@@ -236,6 +236,38 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   </div>
 </div>
 
+<!-- Modal para cambiar estado de archivo -->
+<div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-gray-900">Cambiar estado del archivo</h3>
+      <button onclick="closeStatusModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <p id="statusFileName" class="text-sm text-gray-600 mb-4"></p>
+    <div class="space-y-3">
+      <label class="flex items-center space-x-3">
+        <input type="radio" name="estadoArchivo" value="en_revision" class="text-blue-600" checked />
+        <span>En proceso de revisión</span>
+      </label>
+      <label class="flex items-center space-x-3">
+        <input type="radio" name="estadoArchivo" value="validado" class="text-green-600" />
+        <span>Validado</span>
+      </label>
+      <label class="flex items-center space-x-3">
+        <input type="radio" name="estadoArchivo" value="rechazado" class="text-red-600" />
+        <span>Rechazado</span>
+      </label>
+    </div>
+    <div class="flex justify-end space-x-3 mt-6">
+      <button onclick="closeStatusModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+      <button onclick="saveStatus()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+    </div>
+  </div>
+  <input type="hidden" id="statusFilePath" />
+  <input type="hidden" id="statusFileIdForBadge" />
+</div>
 <!-- Modal para crear carpeta -->
 <div
   id="createFolderModal"
@@ -1623,6 +1655,75 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   };
 
   console.log("✅ openMoveModal definida en usuario_carpetas.html");
+
+  // Estado de archivo
+  window.openStatusModal = function(filename, parentPath, usuarioId) {
+    const modal = document.getElementById('statusModal');
+    const fullPath = `/${"{{ usuario.email }}"}/${parentPath ? parentPath + '/' : ''}${filename}`.replace(/\/+/g, '/');
+    document.getElementById('statusFileName').textContent = filename;
+    document.getElementById('statusFilePath').value = fullPath;
+    const badgeId = `status-badge-${(parentPath || '').replaceAll('/', '-').replaceAll('\\\\', '-')}-${filename.replaceAll('/', '-').replaceAll('\\\\', '-')}`;
+    document.getElementById('statusFileIdForBadge').value = badgeId;
+    // Cargar estado actual
+    fetch(`/api/archivo/estado?path=${encodeURIComponent(fullPath)}`)
+      .then(r => r.json())
+      .then(d => {
+        const estado = d && d.estado ? d.estado : 'en_revision';
+        document.querySelectorAll('input[name="estadoArchivo"]').forEach(r => r.checked = (r.value === estado));
+      }).catch(() => {});
+    modal.classList.remove('hidden');
+  };
+
+  window.closeStatusModal = function() {
+    document.getElementById('statusModal').classList.add('hidden');
+  };
+
+  window.saveStatus = function() {
+    const path = document.getElementById('statusFilePath').value;
+    const estado = document.querySelector('input[name="estadoArchivo"]:checked').value;
+    fetch('/api/archivo/estado', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, estado })
+    }).then(r => r.json()).then(d => {
+      if (d && d.success) {
+        const badgeId = document.getElementById('statusFileIdForBadge').value;
+        const badge = document.getElementById(badgeId);
+        if (badge) {
+          badge.dataset.filePath = path;
+          badge.classList.remove('hidden');
+          badge.textContent = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'En revisión');
+          badge.className = `ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${estado === 'validado' ? 'bg-green-100 text-green-700' : estado === 'rechazado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`;
+        }
+        closeStatusModal();
+      }
+    }).catch(() => {
+      closeStatusModal();
+    });
+  };
+
+  // Inicializar badges de estado al cargar/recargar la página
+  function initStatusBadges() {
+    const badges = Array.from(document.querySelectorAll('span[id^="status-badge-"][data-file-path]'));
+    if (!badges.length) return;
+    badges.forEach(badge => {
+      const filePath = badge.dataset.filePath;
+      if (!filePath) return;
+      fetch(`/api/archivo/estado?path=${encodeURIComponent(filePath)}`)
+        .then(r => r.json())
+        .then(d => {
+          const estado = (d && d.estado) ? d.estado : 'en_revision';
+          badge.classList.remove('hidden');
+          badge.textContent = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'En revisión');
+          badge.className = `ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${estado === 'validado' ? 'bg-green-100 text-green-700' : estado === 'rechazado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`;
+        })
+        .catch(() => {
+          // Si falla, mantener oculto
+        });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initStatusBadges);
 
   // Definir renderDestinoTreeExpandible primero
   window.renderDestinoTreeExpandible = function (tree, path) {

@@ -3012,6 +3012,25 @@ block content %}
   console.log('- openCreateFolderModal:', typeof window.openCreateFolderModal);
   console.log('- openRenameModal:', typeof window.openRenameModal);
   console.log('- openMoveModal:', typeof window.openMoveModal);
+  // Inicializar badges de estado al cargar/recargar la página
+  function initStatusBadgesDropboxes() {
+    const badges = Array.from(document.querySelectorAll('span[id^="status-badge-"][data-file-path]'));
+    if (!badges.length) return;
+    badges.forEach(badge => {
+      const filePath = badge.dataset.filePath;
+      if (!filePath) return;
+      fetch(`/api/archivo/estado?path=${encodeURIComponent(filePath)}`)
+        .then(r => r.json())
+        .then(d => {
+          const estado = (d && d.estado) ? d.estado : 'en_revision';
+          badge.classList.remove('hidden');
+          badge.textContent = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'En revisión');
+          badge.className = `ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${estado === 'validado' ? 'bg-green-100 text-green-700' : estado === 'rechazado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`;
+        })
+        .catch(() => {});
+    });
+  }
+  document.addEventListener('DOMContentLoaded', initStatusBadgesDropboxes);
 </script>
 
 {% endblock %}

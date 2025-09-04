@@ -26,6 +26,7 @@ folders_por_ruta={}, usuario_email="") %}
         </svg>
       </div>
       <span class="text-gray-700 font-medium">{{ archivo }}</span>
+      <span id="status-badge-{{ (parent.replace('/', '-').replace('\\', '-')) ~ '-' ~ (archivo.replace('/', '-').replace('\\', '-')) }}" data-file-path="/{{ usuario_email }}/{{ (parent + '/' if parent else '') }}{{ archivo }}" class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
     </div>
 
     {# Mostrar menú de tres puntos para todos los usuarios autenticados #} {% if
@@ -140,6 +141,20 @@ folders_por_ruta={}, usuario_email="") %}
               />
             </svg>
             Renombrar
+          </button>
+          <button
+            onclick="openStatusModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
+            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+          >
+            <svg
+              class="w-4 h-4 inline mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7 20h10a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Estado
           </button>
           {% if usuario_actual.rol == 'admin' or usuario_actual.rol == 'cliente'
           or (usuario_actual.rol == 'lector' and
