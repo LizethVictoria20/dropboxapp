@@ -852,7 +852,7 @@ def subir_archivo():
     # Obtener datos del formulario
     usuario_id = request.form.get("usuario_id")
     categoria = request.form.get("categoria")
-    subcategoria = request.form.get("subcategoria")
+    subcategoria = (request.form.get("subcategoria") or "").strip()
     archivo = request.files.get("archivo")
     
     print("usuario_id recibido:", usuario_id)
@@ -861,7 +861,7 @@ def subir_archivo():
     print("Archivo recibido:", archivo.filename if archivo else None)
 
     # Validar campos obligatorios
-    if not (usuario_id and categoria and subcategoria and archivo):
+    if not (usuario_id and categoria and archivo):
         print("ERROR: Faltan campos obligatorios")
         flash("Completa todos los campos obligatorios", "error")
         return redirect(url_for("listar_dropbox.subir_archivo"))
@@ -948,7 +948,7 @@ def subir_archivo():
                 db.session.commit()
                 print("Ruta raíz guardada en DB:", carpeta_usuario)
 
-        # Crear categoría y subcategoría
+        # Crear carpeta de categoría únicamente
         ruta_categoria = f"{carpeta_usuario}/{categoria}"
         try:
             dbx.files_create_folder_v2(ruta_categoria)
@@ -971,27 +971,7 @@ def subir_archivo():
                 raise e
             print("La carpeta categoría ya existía:", ruta_categoria)
             
-        ruta_subcat = f"{ruta_categoria}/{subcategoria}"
-        try:
-            dbx.files_create_folder_v2(ruta_subcat)
-            print("Carpeta subcategoría creada:", ruta_subcat)
-            
-            # Guardar carpeta subcategoría en la base de datos
-            carpeta_subcat = Folder(
-                name=subcategoria,
-                user_id=getattr(usuario, "id", None),
-                dropbox_path=ruta_subcat,
-                es_publica=True
-            )
-            db.session.add(carpeta_subcat)
-            db.session.commit()  # Commit inmediato para asegurar que se guarde
-            print("Carpeta subcategoría guardada en BD:", ruta_subcat)
-            
-        except dropbox.exceptions.ApiError as e:
-            if "conflict" not in str(e):
-                print("ERROR al crear carpeta subcategoría:", e)
-                raise e
-            print("La carpeta subcategoría ya existía:", ruta_subcat)
+        # Subcategoría eliminada del flujo
 
         # Generar nombre final del archivo
         nombre_evidencia = categoria.upper().replace(" ", "_")
@@ -1020,7 +1000,7 @@ def subir_archivo():
         print("DEBUG | Nombre final para guardar/subir:", nombre_final)
 
         # Subir archivo con nombre final
-        dropbox_dest = f"{ruta_subcat}/{nombre_final}"
+        dropbox_dest = f"{ruta_categoria}/{nombre_final}"
         dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
         print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
 
@@ -1028,7 +1008,7 @@ def subir_archivo():
         nuevo_archivo = Archivo(
             nombre=nombre_final,
             categoria=categoria,
-            subcategoria=subcategoria,
+            subcategoria="",
             dropbox_path=dropbox_dest,
             usuario_id=getattr(usuario, "id", None)
         )
@@ -1037,7 +1017,7 @@ def subir_archivo():
         print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
 
         # Registrar actividad
-        current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a {categoria}/{subcategoria}')
+        current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a {categoria}')
 
         # Redirección correcta según si es AJAX o no
         redirect_url = url_for("listar_dropbox.carpetas_dropbox")
@@ -1085,7 +1065,7 @@ def mover_archivo(archivo_nombre, carpeta_actual):
     # POST: procesar movimiento
     usuario_id = request.form.get("usuario_id")
     categoria = request.form.get("categoria")
-    subcategoria = request.form.get("subcategoria")
+    subcategoria = (request.form.get("subcategoria") or "").strip()
     usuario = User.query.get(usuario_id)
     if not usuario:
         flash("Selecciona un usuario válido.", "error")
@@ -1107,26 +1087,19 @@ def mover_archivo(archivo_nombre, carpeta_actual):
     except dropbox.exceptions.ApiError as e:
         if "conflict" not in str(e):
             raise e
-    ruta_subcat = f"{ruta_categoria}/{subcategoria}"
-    try:
-        dbx.files_create_folder_v2(ruta_subcat)
-    except dropbox.exceptions.ApiError as e:
-        if "conflict" not in str(e):
-            raise e
-
-    # Mover archivo en Dropbox
-    nuevo_destino = f"{ruta_subcat}/{archivo.nombre}"
+    # Mover archivo en Dropbox a categoría (sin subcategoría)
+    nuevo_destino = f"{ruta_categoria}/{archivo.nombre}"
     dbx.files_move_v2(archivo.dropbox_path, nuevo_destino, allow_shared_folder=True, autorename=True)
 
     # Actualiza en BD
     archivo.dropbox_path = nuevo_destino
     archivo.categoria = categoria
-    archivo.subcategoria = subcategoria
+    archivo.subcategoria = ""
     archivo.usuario_id = usuario.id
     db.session.commit()
     
     # Registrar actividad
-    current_user.registrar_actividad('file_moved', f'Archivo "{archivo_nombre}" movido a {categoria}/{subcategoria}')
+    current_user.registrar_actividad('file_moved', f'Archivo "{archivo_nombre}" movido a {categoria}')
     
     flash("Archivo movido correctamente.", "success")
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
@@ -2407,13 +2380,11 @@ def subir_archivo_rapido():
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"success": True, "redirectUrl": redirect_url})
         else:
-            flash("Archivo subido exitosamente a la carpeta seleccionada.", "success")
             return redirect(redirect_url)
 
     except Exception as e:
         print(f"ERROR general en subida rápida de archivo: {e}")
         db.session.rollback()
-        flash(f"Error al subir archivo: {str(e)}", "error")
         
         # En caso de error, intentar redirigir al usuario específico si es posible
         try:

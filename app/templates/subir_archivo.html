@@ -304,39 +304,8 @@ styles %}
           </div>
         </div>
 
-        <!-- Subcategory Selection -->
-        <div class="mt-4" id="subcategoria-container" style="display: none">
-          <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <label
-              for="subcategoria"
-              class="block text-base font-medium text-text mb-2 flex items-center"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4 mr-2 text-primary"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-              Subcategoría
-            </label>
-            <select
-              id="subcategoria"
-              name="subcategoria"
-              class="block w-full pl-3 pr-10 py-3 text-base border-2 border-blue-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm rounded-md bg-white shadow-sm"
-            >
-              <option value="">Selecciona primero una categoría</option>
-              <!-- Dynamic content will be added here -->
-            </select>
-          </div>
-        </div>
+        <!-- Subcategory Selection (eliminado) -->
+        <input type="hidden" name="subcategoria" value="" />
 
         <!-- Action Buttons -->
         <div class="mt-6 flex justify-end space-x-3">
@@ -525,28 +494,17 @@ styles %}
 <script>
   // Simulated data - replace with actual template variables
   const categorias = {
-    "Documentos personales": [
-      "Pasaporte",
-      "Documento de identidad",
-      "Licencia de conducir",
-      "Permiso de residencia",
-      "Certificado de nacimiento",
-    ],
-    "Documentos financieros": [
-      "Factura",
-      "Recibo de pago",
-      "Estado de cuenta bancario",
-      "Documento fiscal",
-      "Nómina",
-    ],
-    "Documentos legales": ["Contrato", "Poder notarial", "Certificado legal"],
-    "Otros documentos": [
-      "Documento médico",
-      "Documento educativo",
-      "Documento de propiedad",
-      "Documento técnico",
-      "Otro",
-    ],
+    "Fotografías": [],
+    "Chats": [],
+    "Certificado de defunción": [],
+    "Certificado o acta de matrimonio": [],
+    "Certificado de nacimiento": [],
+    "Biométricos": [],
+    "Certificados o recomendaciones medicas": [],
+    "Articulo de noticia": [],
+    "Declaración juramentada": [],
+    "Reporte policial": [],
+    "Video / mensaje de voz": []
   };
 
   // File name update function
@@ -578,10 +536,8 @@ styles %}
     const dropZone = document.getElementById("dropZone");
     const fileInput = document.getElementById("archivo");
     const categoriaSelect = document.getElementById("categoria");
-    const subcategoriaSelect = document.getElementById("subcategoria");
-    const subcategoriaContainer = document.getElementById(
-      "subcategoria-container"
-    );
+    const subcategoriaSelect = null;
+    const subcategoriaContainer = null;
 
     // Populate categories
     for (const cat in categorias) {
@@ -591,36 +547,7 @@ styles %}
       categoriaSelect.appendChild(opt);
     }
 
-    // Category change handler
-    categoriaSelect.addEventListener("change", function () {
-      const cat = this.value;
-      subcategoriaSelect.innerHTML = "";
-
-      if (categorias[cat]) {
-        subcategoriaContainer.style.display = "block";
-        subcategoriaSelect.required = true;
-
-        const emptyOpt = document.createElement("option");
-        emptyOpt.value = "";
-        emptyOpt.innerText = "-- Selecciona una subcategoría --";
-        subcategoriaSelect.appendChild(emptyOpt);
-
-        categorias[cat].forEach(function (subcat) {
-          const opt = document.createElement("option");
-          opt.value = subcat;
-          opt.innerText = subcat;
-          subcategoriaSelect.appendChild(opt);
-        });
-      } else {
-        subcategoriaContainer.style.display = "none";
-        subcategoriaSelect.required = false;
-
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.innerText = "Selecciona primero una categoría";
-        subcategoriaSelect.appendChild(opt);
-      }
-    });
+    // Sin subcategorías: no hay manejador
 
     // Drag and drop functionality
     ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
