@@ -81,29 +81,7 @@ folders_por_ruta={}, usuario_email="") %}
             Ver archivo
           </button>
 
-          {# Opciones de modificación solo para usuarios con permisos #} {% if
-          usuario_actual.rol == 'admin' or usuario_actual.rol == 'cliente' or
-          (usuario_actual.rol == 'lector' and
-          usuario_actual.puede_modificar_archivos()) %}
-          <button
-            onclick="openMoveModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}', event)"
-            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
-          >
-            <svg
-              class="w-4 h-4 inline mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-              />
-            </svg>
-            Mover archivo
-          </button>
+          {# Descargar disponible para todos los usuarios autenticados #}
           <button
             onclick="descargarArchivo('', '/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', '{{ archivo }}')"
             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
@@ -122,6 +100,28 @@ folders_por_ruta={}, usuario_email="") %}
               />
             </svg>
             Descargar
+          </button>
+
+          {# Opciones de modificación solo para admin o lector con permisos (oculto para clientes) #}
+          {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+          <button
+            onclick="openMoveModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}', event)"
+            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+          >
+            <svg
+              class="w-4 h-4 inline mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+              />
+            </svg>
+            Mover archivo
           </button>
           <button
             onclick="openRenameModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}', 'archivo')"
@@ -156,9 +156,9 @@ folders_por_ruta={}, usuario_email="") %}
             </svg>
             Estado
           </button>
-          {% if usuario_actual.rol == 'admin' or usuario_actual.rol == 'cliente'
-          or (usuario_actual.rol == 'lector' and
-          usuario_actual.puede_eliminar_archivos()) %}
+          {% endif %}
+
+          {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_eliminar_archivos()) %}
           <button
             onclick="confirmarEliminarArchivo('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
             class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100 transition-colors duration-150"
@@ -178,7 +178,7 @@ folders_por_ruta={}, usuario_email="") %}
             </svg>
             Eliminar
           </button>
-          {% endif %} {% endif %}
+          {% endif %}
         </div>
       </div>
     </div>
@@ -319,6 +319,7 @@ folders_por_ruta={}, usuario_email="") %}
                 Subir archivo
               </button>
               {% endif %}
+              {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
               <button
                 onclick="openRenameModal('{{ carpeta }}', '{{ parent }}', '{{ usuario_id }}', 'carpeta')"
                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
@@ -338,9 +339,8 @@ folders_por_ruta={}, usuario_email="") %}
                 </svg>
                 Modificar nombre
               </button>
-              {% if usuario_actual.rol == 'admin' or usuario_actual.rol ==
-              'cliente' or (usuario_actual.rol == 'lector' and
-              usuario_actual.puede_eliminar_archivos()) %}
+              {% endif %}
+              {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_eliminar_archivos()) %}
               <button
                 onclick="confirmarOcultarCarpeta('{{ carpeta }}', '{{ parent }}', '{{ usuario_id }}')"
                 class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100 transition-colors duration-150"
