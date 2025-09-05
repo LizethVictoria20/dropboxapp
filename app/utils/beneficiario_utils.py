@@ -375,7 +375,7 @@ def verify_folder_exists(folder_path):
         logger.error(f"Error general verificando carpeta {folder_path}: {e}")
         return False
 
-def create_beneficiario_simple(nombre, email, fecha_nacimiento, titular_id):
+def create_beneficiario_simple(nombre, email, fecha_nacimiento, titular_id, document_type=None, document_number=None):
     """
     Crea un beneficiario de manera simple sin manejo complejo de carpetas.
     Esta función evita completamente los conflictos de transacciones.
@@ -395,7 +395,9 @@ def create_beneficiario_simple(nombre, email, fecha_nacimiento, titular_id):
             nombre=nombre,
             email=email,
             fecha_nacimiento=fecha_nacimiento,
-            titular_id=titular_id
+            titular_id=titular_id,
+            document_type=document_type,
+            document_number=document_number
         )
         
         db.session.add(beneficiario)

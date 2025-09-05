@@ -142,6 +142,15 @@ class BeneficiarioForm(BaseForm):
     nombre = StringField('Nombre', validators=[DataRequired(), Length(max=120)])
     email = StringField('Correo electrónico', validators=[DataRequired(), Email()])
     fecha_nacimiento = DateField('Fecha de nacimiento', validators=[Optional()])
+    document_type = SelectField('Tipo de documento', validators=[DataRequired()], choices=[
+        ('', 'Selecciona un tipo de documento'),
+        ('cedula', 'Cédula'),
+        ('pasaporte', 'Pasaporte'),
+        ('nie', 'NIE'),
+        ('dni', 'DNI'),
+        ('otro', 'Otro')
+    ])
+    document_number = StringField('Número de documento', validators=[DataRequired(), Length(max=50)])
     
     def validate_email(self, field):
         # Validación personalizada si es necesaria

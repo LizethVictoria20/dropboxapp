@@ -66,6 +66,8 @@ def crear_beneficiario():
             email = request.form.get("email")
             fecha_nac = request.form.get("fecha_nacimiento")
             titular_id = request.form.get("titular_id")
+            document_type = (request.form.get("document_type") or '').strip()
+            document_number = (request.form.get("document_number") or '').strip()
             
             # DEBUG: Ver exactamente qué datos llegan del formulario
             print(f"🔍 DEBUG crear_beneficiario - Datos recibidos:")
@@ -77,7 +79,7 @@ def crear_beneficiario():
             print(f"   Headers: {dict(request.headers)}")
             
             # Validaciones básicas
-            if not nombre or not email or not titular_id:
+            if not nombre or not email or not titular_id or not document_type or not document_number:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return jsonify({
                         'success': False, 
@@ -87,18 +89,7 @@ def crear_beneficiario():
                     flash("Todos los campos son obligatorios", "error")
                     return redirect(url_for("users.crear_beneficiario"))
             
-            # VALIDACIÓN: Detectar y rechazar nombres automáticos problemáticos
-            if nombre and nombre.strip().lower().startswith('beneficiario'):
-                error_msg = f"Error: El nombre '{nombre}' parece ser un valor automático. Por favor, ingresa un nombre real."
-                print(f"❌ {error_msg}")
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return jsonify({
-                        'success': False, 
-                        'error': error_msg
-                    }), 400
-                else:
-                    flash(error_msg, "error")
-                    return redirect(url_for("users.crear_beneficiario"))
+            # Nota: se permite cualquier nombre de beneficiario, incluyendo los que comiencen por 'Beneficiario'
             
             # Verificar que el titular existe
             titular = User.query.get(titular_id)
@@ -135,7 +126,9 @@ def crear_beneficiario():
                 nombre=nombre,
                 email=email,
                 fecha_nacimiento=fecha_nacimiento,
-                titular_id=int(titular_id)
+                titular_id=int(titular_id),
+                document_type=document_type,
+                document_number=document_number
             )
             
             print(f"📋 Resultado de crear beneficiario: {result}")

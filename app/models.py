@@ -188,6 +188,8 @@ class Beneficiario(db.Model):
     titular_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     dropbox_folder_path = db.Column(db.String, nullable=True)
     nationality = db.Column(db.String(100), nullable=True)
+    document_type = db.Column(db.String(30), nullable=True)
+    document_number = db.Column(db.String(50), nullable=True)
     
     titular = db.relationship('User', backref=db.backref('beneficiarios_ben', lazy=True))
 

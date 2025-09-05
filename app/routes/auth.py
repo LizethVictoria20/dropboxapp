@@ -226,32 +226,30 @@ def add_beneficiary(user_id):
         nombre = request.form.get('nombre')
         email = request.form.get('email')
         fecha_nacimiento = request.form.get('fecha_nacimiento')
+        document_type = (request.form.get('document_type') or '').strip()
+        document_number = (request.form.get('document_number') or '').strip()
         
         # DEBUG: Ver exactamente qué datos llegan del formulario en add_beneficiary
         print(f"🔍 DEBUG add_beneficiary - Datos recibidos:")
         print(f"   nombre: {repr(nombre)}")
         print(f"   email: {repr(email)}")
         print(f"   fecha_nacimiento: {repr(fecha_nacimiento)}")
+        print(f"   document_type: {repr(document_type)}")
+        print(f"   document_number: {repr(document_number)}")
         print(f"   request.form completo: {dict(request.form)}")
         print(f"   request.method: {request.method}")
         
-        # VALIDACIÓN: Detectar y rechazar nombres automáticos problemáticos
-        if nombre and nombre.strip().lower().startswith('beneficiario'):
-            error_msg = f"Error: El nombre '{nombre}' parece ser un valor automático. Por favor, ingresa un nombre real."
-            print(f"❌ {error_msg}")
-            flash(error_msg, 'error')
-            return render_template('add_beneficiaries.html', 
-                                user=user, 
-                                beneficiarios=Beneficiario.query.filter_by(titular_id=user.id).all(),
-                                form=form)
+        # Nota: se permite cualquier nombre de beneficiario, incluyendo los que comiencen por 'Beneficiario'
         
-        if nombre and email:
+        if nombre and email and document_type and document_number:
             try:
                 beneficiario = Beneficiario(
                     nombre=nombre,
                     email=email,
                     fecha_nacimiento=datetime.strptime(fecha_nacimiento, '%Y-%m-%d').date() if fecha_nacimiento else None,
-                    titular_id=user.id
+                    titular_id=user.id,
+                    document_type=document_type,
+                    document_number=document_number
                 )
                 
                 # Primero guardar para asegurar que beneficiario.id no sea None
@@ -274,6 +272,9 @@ def add_beneficiary(user_id):
             except Exception as e:
                 db.session.rollback()
                 flash(f'Error al agregar beneficiario: {str(e)}', 'error')
+        else:
+            if request.method == 'POST':
+                flash('Todos los campos son obligatorios (incluye documento).', 'error')
     
     # Obtener beneficiarios existentes
     beneficiarios = Beneficiario.query.filter_by(titular_id=user.id).all()
