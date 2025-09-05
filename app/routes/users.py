@@ -417,7 +417,8 @@ def get_user(user_id):
                 'rol': user.rol,
                 'activo': user.activo,
                 'fecha_registro': user.fecha_registro.strftime('%d/%m/%Y') if user.fecha_registro else None,
-                'lector_extra_permissions': user.lector_extra_permissions
+                'lector_extra_permissions': user.lector_extra_permissions,
+                'alien_number': user.alien_number
             }
             return jsonify({'success': True, 'user': user_data})
         else:
@@ -448,6 +449,7 @@ def update_user():
         user.codigo_postal = request.form.get('codigo_postal')
         user.nacionality = request.form.get('nacionality')
         user.country = request.form.get('country')
+        user.alien_number = request.form.get('alien_number')
         
         # Validar y actualizar rol
         nuevo_rol = request.form.get('rol')

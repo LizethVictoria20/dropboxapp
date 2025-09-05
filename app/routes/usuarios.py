@@ -247,6 +247,7 @@ def obtener_datos_usuario_json(usuario_id):
         'apellido': usuario.apellido,
         'email': usuario.email,
         'telefono': usuario.telefono,
+        'alien_number': usuario.alien_number,
         'direccion': usuario.direccion,
         'ciudad': usuario.ciudad,
         'estado': usuario.estado,
@@ -367,6 +368,7 @@ def editar_usuario(usuario_id):
     direccion = request.form.get('direccion')
     codigo_postal = request.form.get('codigo_postal')
     rol = request.form.get('rol')
+    alien_number = request.form.get('alien_number')
     # Por defecto, si no llega el campo 'activo', dejar al usuario ACTIVO
     activo_value = request.form.get('activo')
     activo = True if activo_value is None else (activo_value == 'on')
@@ -392,6 +394,7 @@ def editar_usuario(usuario_id):
         usuario.codigo_postal = codigo_postal
         usuario.rol = rol
         usuario.activo = activo
+        usuario.alien_number = alien_number
         
         # Registrar actividad
         actividad = UserActivityLog(

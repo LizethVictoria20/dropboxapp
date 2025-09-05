@@ -2105,6 +2105,8 @@ Inmigración OK{% endblock %} {% block styles %}
           document.getElementById("edit-name").value = user.nombre || "";
           document.getElementById("edit-lastname").value = user.apellido || "";
           document.getElementById("edit-telephone").value = user.telefono || "";
+          const alienField = document.getElementById("edit-alien-number");
+          if (alienField) alienField.value = user.alien_number || "";
           document.getElementById("edit-date_of_birth").value =
             user.fecha_nacimiento || "";
           document.getElementById("edit-city").value = user.ciudad || "";
