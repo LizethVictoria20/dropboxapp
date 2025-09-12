@@ -492,20 +492,8 @@ styles %}
 </div>
 
 <script>
-  // Simulated data - replace with actual template variables
-  const categorias = {
-    "Fotografías": [],
-    "Chats": [],
-    "Certificado de defunción": [],
-    "Certificado o acta de matrimonio": [],
-    "Certificado de nacimiento": [],
-    "Biométricos": [],
-    "Certificados o recomendaciones medicas": [],
-    "Articulo de noticia": [],
-    "Declaración juramentada": [],
-    "Reporte policial": [],
-    "Video / mensaje de voz": []
-  };
+  // Categorías provistas por el backend (incluye "Otros" si está definido)
+  const categorias = {{ categorias_json | safe }};
 
   // File name update function
   function updateFileName(input) {

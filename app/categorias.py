@@ -9,5 +9,6 @@ CATEGORIAS = {
     "Articulo de noticia": [],
     "Declaración juramentada": [],
     "Reporte policial": [],
-    "Video / mensaje de voz": []
+    "Video / mensaje de voz": [],
+    "Otros": []
 }
