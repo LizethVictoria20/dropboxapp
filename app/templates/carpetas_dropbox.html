@@ -3150,7 +3150,7 @@ block content %}
           const estado = (d && d.estado) ? d.estado : null;
           if (estado === 'validado' || estado === 'rechazado' || estado === 'en_revision') {
             badge.classList.remove('hidden');
-            badge.textContent = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'En revisión');
+            badge.textContent = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'Pendiente para revisión');
             badge.className = `ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${estado === 'validado' ? 'bg-green-100 text-green-700' : estado === 'rechazado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`;
           } else {
             badge.classList.add('hidden');

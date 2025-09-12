@@ -1171,7 +1171,8 @@ def subir_archivo():
             categoria=categoria,
             subcategoria="",
             dropbox_path=dropbox_dest,
-            usuario_id=getattr(usuario, "id", None)
+            usuario_id=getattr(usuario, "id", None),
+            estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
         )
         db.session.add(nuevo_archivo)
         db.session.commit()
@@ -1612,7 +1613,8 @@ def mover_archivo_modal():
                             dropbox_path=result_path,
                             categoria=categoria,
                             subcategoria=subcategoria,
-                            usuario_id=usuario.id
+                            usuario_id=usuario.id,
+                            estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
                         )
                         db.session.add(nuevo_archivo)
                         print(f"DEBUG | Nuevo registro creado en BD: {nuevo_archivo.nombre}")
@@ -1866,7 +1868,8 @@ def sincronizar_dropbox_a_bd():
                         categoria=categoria,
                         subcategoria=subcategoria,
                         dropbox_path=dropbox_path,
-                        usuario_id=usuario.id
+                        usuario_id=usuario.id,
+                        estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
                     )
                     db.session.add(nuevo_archivo)
                     nuevos += 1
@@ -1987,7 +1990,8 @@ def sincronizar_usuario(email):
                         categoria=categoria,
                         subcategoria=subcategoria,
                         dropbox_path=dropbox_path,
-                        usuario_id=usuario.id
+                        usuario_id=usuario.id,
+                        estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
                     )
                     db.session.add(nuevo_archivo)
                     archivos_nuevos += 1
@@ -2132,7 +2136,8 @@ def buscar_archivo_especifico():
                     categoria=categoria,
                     subcategoria=subcategoria,
                     dropbox_path=archivo_encontrado.path_display,
-                    usuario_id=usuario.id
+                    usuario_id=usuario.id,
+                    estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
                 )
                 db.session.add(nuevo_archivo)
                 db.session.commit()
@@ -2243,7 +2248,8 @@ def buscar_archivo_dropbox(nombre_archivo):
                     categoria=categoria,
                     subcategoria=subcategoria,
                     dropbox_path=archivo_principal.path_display,
-                    usuario_id=usuario_id
+                    usuario_id=usuario_id,
+                    estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
                 )
                 db.session.add(nuevo_archivo)
                 db.session.commit()
@@ -2535,7 +2541,8 @@ def subir_archivo_rapido():
             categoria="Subida Rápida",  # Categoría genérica
             subcategoria="Directo",     # Subcategoría genérica
             dropbox_path=dropbox_dest,
-            usuario_id=getattr(usuario, "id", None)
+            usuario_id=getattr(usuario, "id", None),
+            estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
         )
         db.session.add(nuevo_archivo)
         db.session.commit()
