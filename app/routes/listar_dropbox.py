@@ -1092,11 +1092,51 @@ def subir_archivo():
             carpeta_usuario = usuario.dropbox_folder_path
             print("Carpeta raíz ya existe:", carpeta_usuario)
         else:
-            carpeta_usuario = f"/{usuario.email}"
+            # Determinar la ruta según el tipo de usuario
+            if isinstance(usuario, User) and not getattr(usuario, "es_beneficiario", False):
+                # TITULAR - usar su email
+                carpeta_usuario = f"/{usuario.email}"
+            elif isinstance(usuario, Beneficiario):
+                # BENEFICIARIO - crear carpeta dentro del titular
+                if hasattr(usuario, "titular") and usuario.titular:
+                    # Asegurar que el titular tenga su carpeta raíz
+                    if not usuario.titular.dropbox_folder_path:
+                        usuario.titular.dropbox_folder_path = f"/{usuario.titular.email}"
+                        try:
+                            dbx.files_create_folder_v2(usuario.titular.dropbox_folder_path)
+                            print("Carpeta raíz del titular creada:", usuario.titular.dropbox_folder_path)
+                        except dropbox.exceptions.ApiError as e:
+                            if "conflict" not in str(e):
+                                print("ERROR al crear carpeta raíz del titular:", e)
+                                raise e
+                        db.session.commit()
+                    
+                    # Crear carpeta del beneficiario dentro del titular
+                    carpeta_usuario = f"{usuario.titular.dropbox_folder_path}/Beneficiarios/{usuario.nombre}"
+                else:
+                    # Fallback si no hay titular
+                    carpeta_usuario = f"/{usuario.email}"
+            else:
+                # Usuario genérico
+                carpeta_usuario = f"/{usuario.email}"
+            
             print("Creando carpeta raíz para usuario:", carpeta_usuario)
             try:
+                # Para beneficiarios, crear primero la carpeta "Beneficiarios" si no existe
+                if isinstance(usuario, Beneficiario) and hasattr(usuario, "titular") and usuario.titular:
+                    carpeta_beneficiarios = f"{usuario.titular.dropbox_folder_path}/Beneficiarios"
+                    try:
+                        dbx.files_create_folder_v2(carpeta_beneficiarios)
+                        print("Carpeta 'Beneficiarios' creada:", carpeta_beneficiarios)
+                    except dropbox.exceptions.ApiError as e:
+                        if "conflict" not in str(e):
+                            print("ERROR al crear carpeta 'Beneficiarios':", e)
+                            raise e
+                        print("La carpeta 'Beneficiarios' ya existía")
+                
+                # Crear la carpeta del usuario/beneficiario
                 dbx.files_create_folder_v2(carpeta_usuario)
-                print("Carpeta raíz creada en Dropbox")
+                print("Carpeta raíz creada en Dropbox:", carpeta_usuario)
             except dropbox.exceptions.ApiError as e:
                 if "conflict" not in str(e):
                     print("ERROR al crear carpeta raíz en Dropbox:", e)
@@ -1104,10 +1144,9 @@ def subir_archivo():
                 print("La carpeta raíz ya existía en Dropbox")
             
             # Guardar ruta en la base de datos
-            if hasattr(usuario, "dropbox_folder_path"):
-                usuario.dropbox_folder_path = carpeta_usuario
-                db.session.commit()
-                print("Ruta raíz guardada en DB:", carpeta_usuario)
+            usuario.dropbox_folder_path = carpeta_usuario
+            db.session.commit()
+            print("Ruta raíz guardada en DB:", carpeta_usuario)
 
         # Crear carpeta de categoría únicamente
         ruta_categoria = f"{carpeta_usuario}/{categoria}"
@@ -1154,7 +1193,7 @@ def subir_archivo():
         if isinstance(usuario, User) and not getattr(usuario, "es_beneficiario", False):
             # TITULAR
             nombre_titular = normaliza(usuario.nombre or usuario.email.split('@')[0])
-            nombre_final = f"{nombre_evidencia}_TITULAR_{nombre_titular}_{nombre_base_normalizado}_{timestamp}{ext}"
+            nombre_final = f"TITULAR_{nombre_titular}_{nombre_base_normalizado}{ext}"
         elif isinstance(usuario, Beneficiario):
             # BENEFICIARIO
             nombre_ben = normaliza(usuario.nombre)
@@ -1162,10 +1201,10 @@ def subir_archivo():
                 nombre_titular = normaliza(usuario.titular.nombre)
             else:
                 nombre_titular = "SIN_TITULAR"
-            nombre_final = f"{nombre_evidencia}_BENEFICIARIO_{nombre_ben}_TITULAR_{nombre_titular}_{nombre_base_normalizado}_{timestamp}{ext}"
+            nombre_final = f"{nombre_ben}_TITULAR_{nombre_titular}_{nombre_base_normalizado}{ext}"
         else:
             # Usuario genérico
-            nombre_final = f"{nombre_evidencia}_SINROL_{normaliza(usuario.nombre or usuario.email.split('@')[0])}_{nombre_base_normalizado}_{timestamp}{ext}"
+            nombre_final = f"{normaliza(usuario.nombre or usuario.email.split('@')[0])}_{nombre_base_normalizado}{ext}"
 
         print("DEBUG | Nombre final para guardar/subir:", nombre_final)
 
@@ -2492,17 +2531,62 @@ def subir_archivo_rapido():
         
         # Construir la ruta completa usando el dropbox_folder_path del usuario
         if hasattr(usuario, 'dropbox_folder_path') and usuario.dropbox_folder_path:
-            # Si es un User, usar su dropbox_folder_path
             ruta_base = usuario.dropbox_folder_path
-        elif hasattr(usuario, 'titular') and usuario.titular and usuario.titular.dropbox_folder_path:
-            # Si es un Beneficiario, usar el dropbox_folder_path de su titular
-            ruta_base = usuario.titular.dropbox_folder_path
         else:
-            # Fallback: usar el email del usuario
-            if hasattr(usuario, 'email'):
+            # Determinar la ruta según el tipo de usuario y crearla si no existe
+            if isinstance(usuario, User) and not getattr(usuario, "es_beneficiario", False):
+                # TITULAR - usar su email
                 ruta_base = f"/{usuario.email}"
+                usuario.dropbox_folder_path = ruta_base
+            elif isinstance(usuario, Beneficiario):
+                # BENEFICIARIO - crear carpeta dentro del titular
+                if hasattr(usuario, "titular") and usuario.titular:
+                    # Asegurar que el titular tenga su carpeta raíz
+                    if not usuario.titular.dropbox_folder_path:
+                        usuario.titular.dropbox_folder_path = f"/{usuario.titular.email}"
+                        try:
+                            dbx.files_create_folder_v2(usuario.titular.dropbox_folder_path)
+                            print("Carpeta raíz del titular creada:", usuario.titular.dropbox_folder_path)
+                        except dropbox.exceptions.ApiError as e:
+                            if "conflict" not in str(e):
+                                raise e
+                        db.session.commit()
+                    
+                    # Crear carpeta del beneficiario dentro del titular
+                    ruta_base = f"{usuario.titular.dropbox_folder_path}/Beneficiarios/{usuario.nombre}"
+                    usuario.dropbox_folder_path = ruta_base
+                else:
+                    # Fallback si no hay titular
+                    ruta_base = f"/{usuario.email}"
+                    usuario.dropbox_folder_path = ruta_base
             else:
-                ruta_base = f"/{usuario.titular.email}" if hasattr(usuario, 'titular') else f"/usuario_{usuario.id}"
+                # Usuario genérico
+                ruta_base = f"/{usuario.email}" if hasattr(usuario, 'email') else f"/usuario_{usuario.id}"
+                usuario.dropbox_folder_path = ruta_base
+            
+            # Crear la estructura de carpetas si no existe
+            try:
+                # Para beneficiarios, crear primero la carpeta "Beneficiarios" si no existe
+                if isinstance(usuario, Beneficiario) and hasattr(usuario, "titular") and usuario.titular:
+                    carpeta_beneficiarios = f"{usuario.titular.dropbox_folder_path}/Beneficiarios"
+                    try:
+                        dbx.files_create_folder_v2(carpeta_beneficiarios)
+                        print("Carpeta 'Beneficiarios' creada:", carpeta_beneficiarios)
+                    except dropbox.exceptions.ApiError as e:
+                        if "conflict" not in str(e):
+                            raise e
+                
+                # Crear la carpeta del usuario/beneficiario
+                dbx.files_create_folder_v2(ruta_base)
+                print("Carpeta raíz creada:", ruta_base)
+            except dropbox.exceptions.ApiError as e:
+                if "conflict" not in str(e):
+                    raise e
+                print("La carpeta raíz ya existía:", ruta_base)
+            
+            # Guardar en la base de datos
+            db.session.commit()
+            print("Ruta guardada en DB:", ruta_base)
         
         # Construir la ruta completa de destino
         if carpeta_destino.startswith("/"):
@@ -2552,16 +2636,14 @@ def subir_archivo_rapido():
                 raise e
 
         # Subir archivo directamente a la carpeta destino (sin sobrescribir)
-        import time
-        timestamp = str(int(time.time()))
         nombre_base = archivo.filename
         ext = ""
         if "." in archivo.filename:
             nombre_base = archivo.filename.rsplit(".", 1)[0]
             ext = "." + archivo.filename.rsplit(".", 1)[1].lower()
         
-        nombre_con_timestamp = f"{normaliza(nombre_base)}_{timestamp}{ext}"
-        dropbox_dest = f"{carpeta_destino_completa}/{nombre_con_timestamp}"
+        nombre_normalizado = f"{normaliza(nombre_base)}{ext}"
+        dropbox_dest = f"{carpeta_destino_completa}/{nombre_normalizado}"
         
         try:
             dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("add"))
@@ -2570,8 +2652,8 @@ def subir_archivo_rapido():
                 # Si hay conflicto, agregar un sufijo adicional
                 import random
                 sufijo_random = str(random.randint(1000, 9999))
-                nombre_con_timestamp = f"{normaliza(nombre_base)}_{timestamp}_{sufijo_random}{ext}"
-                dropbox_dest = f"{carpeta_destino_completa}/{nombre_con_timestamp}"
+                nombre_normalizado = f"{normaliza(nombre_base)}_{sufijo_random}{ext}"
+                dropbox_dest = f"{carpeta_destino_completa}/{nombre_normalizado}"
                 dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("add"))
             else:
                 raise e
@@ -2580,7 +2662,7 @@ def subir_archivo_rapido():
         # Guardar en la base de datos con categoría y subcategoría genéricas
         print(f"🔧 Guardando en BD con ruta: {dropbox_dest}")
         nuevo_archivo = Archivo(
-            nombre=nombre_con_timestamp,  # Usar el nombre con timestamp
+            nombre=nombre_normalizado,  # Usar el nombre normalizado sin timestamp
             categoria="Subida Rápida",  # Categoría genérica
             subcategoria="Directo",     # Subcategoría genérica
             dropbox_path=dropbox_dest,

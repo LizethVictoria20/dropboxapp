@@ -198,6 +198,7 @@ def crear_beneficiario():
 
 
 @bp.route("/listar_beneficiarios")
+@login_required
 def listar_beneficiarios():
     titulares = User.query.filter_by(es_beneficiario=False).all()
     estructuras_titulares = {}
@@ -209,11 +210,17 @@ def listar_beneficiarios():
         for ben in titular.beneficiarios:
             estructuras_beneficiarios[ben.id] = obtener_estructura_dropbox(path=ben.dropbox_folder_path)
 
+    # Obtener todas las carpetas para folders_por_ruta
+    folders = Folder.query.all()
+    folders_por_ruta = {f.dropbox_path: f for f in folders}
+
     return render_template(
         "listar_beneficiarios.html",
         titulares=titulares,
         estructuras_titulares=estructuras_titulares,
-        estructuras_beneficiarios=estructuras_beneficiarios
+        estructuras_beneficiarios=estructuras_beneficiarios,
+        usuario_actual=current_user,
+        folders_por_ruta=folders_por_ruta
     )
 
 
