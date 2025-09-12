@@ -157,7 +157,20 @@ folders_por_ruta={}, usuario_email="") %}
             Estado
           </button>
           {% endif %}
-
+          <button
+            onclick="openCommentsModal('/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', 'archivo')"
+            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+          >
+            <svg
+              class="w-4 h-4 inline mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-8 8h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14l3-2z" />
+            </svg>
+            Comentarios
+          </button>
           {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_eliminar_archivos()) %}
           <button
             onclick="confirmarEliminarArchivo('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
@@ -179,20 +192,6 @@ folders_por_ruta={}, usuario_email="") %}
             Eliminar
           </button>
           {% endif %}
-          <button
-            onclick="openCommentsModal('/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', 'archivo')"
-            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
-          >
-            <svg
-              class="w-4 h-4 inline mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-8 8h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14l3-2z" />
-            </svg>
-            Comentarios
-          </button>
         </div>
       </div>
     </div>
@@ -354,6 +353,20 @@ folders_por_ruta={}, usuario_email="") %}
                 Modificar nombre
               </button>
               {% endif %}
+              <button
+                onclick="openCommentsModal('/{{ usuario_email ~ '/' ~ (parent ~ '/' if parent else '') ~ carpeta }}', 'carpeta')"
+                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+              >
+                <svg
+                  class="w-4 h-4 inline mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-8 8h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14l3-2z" />
+                </svg>
+                Comentarios
+              </button>
               {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_eliminar_archivos()) %}
               <button
                 onclick="confirmarOcultarCarpeta('{{ carpeta }}', '{{ parent }}', '{{ usuario_id }}')"
@@ -375,20 +388,6 @@ folders_por_ruta={}, usuario_email="") %}
                 Eliminar carpeta
               </button>
               {% endif %}
-              <button
-                onclick="openCommentsModal('/{{ usuario_email ~ '/' ~ (parent ~ '/' if parent else '') ~ carpeta }}', 'carpeta')"
-                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
-              >
-                <svg
-                  class="w-4 h-4 inline mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-8 8h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14l3-2z" />
-                </svg>
-                Comentarios
-              </button>
             </div>
           </div>
         </div>
