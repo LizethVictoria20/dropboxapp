@@ -8,8 +8,27 @@ from app import db
 import unicodedata
 from datetime import datetime
 from app.dropbox_utils import get_dbx, get_valid_dropbox_token
+import time
 
 bp = Blueprint("listar_dropbox", __name__)
+
+# Caché simple en memoria para estructuras por usuario (TTL en segundos)
+_estructuras_cache = {}
+_CACHE_TTL_SECONDS = 60
+
+def _get_cached_estructura(user_id):
+    entry = _estructuras_cache.get(user_id)
+    if not entry:
+        return None
+    ts, data = entry
+    if (time.time() - ts) > _CACHE_TTL_SECONDS:
+        # Expirado
+        _estructuras_cache.pop(user_id, None)
+        return None
+    return data
+
+def _set_cached_estructura(user_id, estructura):
+    _estructuras_cache[user_id] = (time.time(), estructura)
 @bp.route('/api/archivo/estado', methods=['GET'])
 @login_required
 def obtener_estado_archivo():
@@ -189,6 +208,80 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
         elif isinstance(entry, dropbox.files.FileMetadata):
             # Es un archivo
             estructura["_archivos"].append(entry.name)
+
+    return estructura
+
+def obtener_estructura_dropbox_recursiva_limitada(path="", dbx=None, max_depth=3, max_entries=10000):
+    """
+    Obtiene la estructura usando UNA llamada recursiva a Dropbox y limita por profundidad.
+    Esto reduce dramáticamente el número de llamadas a la API comparado con listar por nivel.
+
+    - path: ruta base a listar
+    - max_depth: profundidad máxima relativa a path
+    - max_entries: límite de elementos a procesar para evitar respuestas excesivas
+    """
+    if dbx is None:
+        from app.dropbox_utils import get_dbx
+        try:
+            dbx = get_dbx()
+        except Exception as e:
+            print(f"Warning: Error obteniendo cliente Dropbox: {e}")
+            return {"_subcarpetas": {}, "_archivos": []}
+
+    base = (path or "").rstrip("/")
+    try:
+        result = dbx.files_list_folder(base if base != "/" else "", recursive=True)
+    except dropbox.exceptions.ApiError as e:
+        print(f"Error accediendo a Dropbox path '{path}': {e}")
+        return {"_subcarpetas": {}, "_archivos": []}
+
+    # Función auxiliar para crear nodos anidados
+    def ensure_path(root, parts):
+        node = root
+        for p in parts:
+            node = node.setdefault("_subcarpetas", {}).setdefault(p, {"_subcarpetas": {}, "_archivos": []})
+        return node
+
+    estructura = {"_subcarpetas": {}, "_archivos": []}
+    processed = 0
+
+    def handle_entries(entries):
+        nonlocal processed
+        for entry in entries:
+            if processed >= max_entries:
+                break
+            processed += 1
+
+            if not getattr(entry, "path_display", None):
+                continue
+
+            full_path = entry.path_display
+            if base and not full_path.startswith(base + "/") and full_path != base:
+                continue
+
+            rel = full_path[len(base):].lstrip("/") if base else full_path.lstrip("/")
+            if not rel:
+                continue
+            parts = rel.split("/")
+            depth = len(parts) - 1  # 0 = directo dentro de base
+
+            if isinstance(entry, dropbox.files.FolderMetadata):
+                if depth <= max_depth:
+                    ensure_path(estructura, parts)
+            elif isinstance(entry, dropbox.files.FileMetadata):
+                if depth <= max_depth:
+                    # Agregar archivo al nodo padre
+                    parent_parts = parts[:-1]
+                    file_name = parts[-1]
+                    parent_node = ensure_path(estructura, parent_parts) if parent_parts else estructura
+                    parent_node.setdefault("_archivos", []).append(file_name)
+
+    handle_entries(result.entries)
+
+    # Paginación: continuar mientras haya más resultados, respetando max_entries
+    while getattr(result, "has_more", False) and processed < max_entries:
+        result = dbx.files_list_folder_continue(result.cursor)
+        handle_entries(result.entries)
 
     return estructura
 
@@ -429,8 +522,17 @@ def carpetas_dropbox():
 
             path = user.dropbox_folder_path
             try:
-                # Usar la función optimizada con recursión limitada para mejor rendimiento
-                estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
+                # Intentar caché por usuario para evitar recomputar en cada navegación
+                estructura = _get_cached_estructura(user.id)
+                if estructura is None:
+                    # Profundidad según rol para optimizar
+                    if current_user.rol in ["admin", "superadmin", "lector"]:
+                        max_depth = 4
+                    else:
+                        max_depth = 3
+                    # Obtener estructura en una sola pasada recursiva y guardar en caché
+                    estructura = obtener_estructura_dropbox_recursiva_limitada(path=path, dbx=dbx, max_depth=max_depth)
+                    _set_cached_estructura(user.id, estructura)
                 
                 # Filtrar archivos ocultos de la estructura para este usuario
                 print(f"DEBUG | Filtrando archivos ocultos para usuario {user.id} en carpetas_dropbox")
@@ -1014,6 +1116,13 @@ def subir_archivo():
         )
         db.session.add(nuevo_archivo)
         db.session.commit()
+        # Invalidar caché de estructura para el usuario afectado
+        try:
+            afectado_id = getattr(usuario, "id", None)
+            if afectado_id in _estructuras_cache:
+                _estructuras_cache.pop(afectado_id, None)
+        except Exception:
+            pass
         print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
 
         # Registrar actividad
@@ -1081,6 +1190,12 @@ def mover_archivo(archivo_nombre, carpeta_actual):
             raise e
     usuario.dropbox_folder_path = carpeta_usuario
     db.session.commit()
+    # Invalidar caché de estructura para el usuario afectado
+    try:
+        if usuario.id in _estructuras_cache:
+            _estructuras_cache.pop(usuario.id, None)
+    except Exception:
+        pass
     ruta_categoria = f"{carpeta_usuario}/{categoria}"
     try:
         dbx.files_create_folder_v2(ruta_categoria)
