@@ -1134,18 +1134,27 @@ def subir_archivo():
             
         # Subcategoría eliminada del flujo
 
-        # Generar nombre final del archivo
+        # Generar nombre final del archivo incluyendo nombre original y timestamp
+        import time
         nombre_evidencia = categoria.upper().replace(" ", "_")
         nombre_original = archivo.filename
+        nombre_base = nombre_original
         ext = ""
         if "." in nombre_original:
+            nombre_base = nombre_original.rsplit(".", 1)[0]
             ext = "." + nombre_original.rsplit(".", 1)[1].lower()
+        
+        # Normalizar el nombre base del archivo
+        nombre_base_normalizado = normaliza(nombre_base)
+        
+        # Generar timestamp único
+        timestamp = str(int(time.time()))
 
-        # Determinar tipo de usuario y generar nombre
+        # Determinar tipo de usuario y generar nombre único
         if isinstance(usuario, User) and not getattr(usuario, "es_beneficiario", False):
             # TITULAR
             nombre_titular = normaliza(usuario.nombre or usuario.email.split('@')[0])
-            nombre_final = f"{nombre_evidencia}_TITULAR_{nombre_titular}{ext}"
+            nombre_final = f"{nombre_evidencia}_TITULAR_{nombre_titular}_{nombre_base_normalizado}_{timestamp}{ext}"
         elif isinstance(usuario, Beneficiario):
             # BENEFICIARIO
             nombre_ben = normaliza(usuario.nombre)
@@ -1153,16 +1162,29 @@ def subir_archivo():
                 nombre_titular = normaliza(usuario.titular.nombre)
             else:
                 nombre_titular = "SIN_TITULAR"
-            nombre_final = f"{nombre_evidencia}_BENEFICIARIO_{nombre_ben}_TITULAR_{nombre_titular}{ext}"
+            nombre_final = f"{nombre_evidencia}_BENEFICIARIO_{nombre_ben}_TITULAR_{nombre_titular}_{nombre_base_normalizado}_{timestamp}{ext}"
         else:
             # Usuario genérico
-            nombre_final = f"{nombre_evidencia}_SINROL_{normaliza(usuario.nombre or usuario.email.split('@')[0])}{ext}"
+            nombre_final = f"{nombre_evidencia}_SINROL_{normaliza(usuario.nombre or usuario.email.split('@')[0])}_{nombre_base_normalizado}_{timestamp}{ext}"
 
         print("DEBUG | Nombre final para guardar/subir:", nombre_final)
 
-        # Subir archivo con nombre final
+        # Subir archivo con nombre final (sin sobrescribir)
         dropbox_dest = f"{ruta_categoria}/{nombre_final}"
-        dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
+        try:
+            dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("add"))
+        except dropbox.exceptions.ApiError as e:
+            if "conflict" in str(e):
+                # Si hay conflicto, agregar un sufijo adicional
+                import random
+                sufijo_random = str(random.randint(1000, 9999))
+                nombre_sin_ext = nombre_final.rsplit(".", 1)[0] if "." in nombre_final else nombre_final
+                ext_final = "." + nombre_final.rsplit(".", 1)[1] if "." in nombre_final else ""
+                nombre_final = f"{nombre_sin_ext}_{sufijo_random}{ext_final}"
+                dropbox_dest = f"{ruta_categoria}/{nombre_final}"
+                dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("add"))
+            else:
+                raise e
         print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
 
         # Guardar en la base de datos
@@ -2529,15 +2551,36 @@ def subir_archivo_rapido():
             else:
                 raise e
 
-        # Subir archivo directamente a la carpeta destino
-        dropbox_dest = f"{carpeta_destino_completa}/{archivo.filename}"
-        dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("overwrite"))
+        # Subir archivo directamente a la carpeta destino (sin sobrescribir)
+        import time
+        timestamp = str(int(time.time()))
+        nombre_base = archivo.filename
+        ext = ""
+        if "." in archivo.filename:
+            nombre_base = archivo.filename.rsplit(".", 1)[0]
+            ext = "." + archivo.filename.rsplit(".", 1)[1].lower()
+        
+        nombre_con_timestamp = f"{normaliza(nombre_base)}_{timestamp}{ext}"
+        dropbox_dest = f"{carpeta_destino_completa}/{nombre_con_timestamp}"
+        
+        try:
+            dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("add"))
+        except dropbox.exceptions.ApiError as e:
+            if "conflict" in str(e):
+                # Si hay conflicto, agregar un sufijo adicional
+                import random
+                sufijo_random = str(random.randint(1000, 9999))
+                nombre_con_timestamp = f"{normaliza(nombre_base)}_{timestamp}_{sufijo_random}{ext}"
+                dropbox_dest = f"{carpeta_destino_completa}/{nombre_con_timestamp}"
+                dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("add"))
+            else:
+                raise e
         print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
 
         # Guardar en la base de datos con categoría y subcategoría genéricas
         print(f"🔧 Guardando en BD con ruta: {dropbox_dest}")
         nuevo_archivo = Archivo(
-            nombre=archivo.filename,
+            nombre=nombre_con_timestamp,  # Usar el nombre con timestamp
             categoria="Subida Rápida",  # Categoría genérica
             subcategoria="Directo",     # Subcategoría genérica
             dropbox_path=dropbox_dest,
