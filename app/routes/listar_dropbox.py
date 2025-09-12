@@ -3,7 +3,7 @@ import json
 from flask_login import current_user, login_required
 from app.categorias import CATEGORIAS
 import dropbox
-from app.models import Archivo, Beneficiario, Folder, User, Notification
+from app.models import Archivo, Beneficiario, Folder, User, Notification, Comentario
 from app import db
 import unicodedata
 from datetime import datetime
@@ -602,6 +602,65 @@ def carpetas_dropbox():
                              estructuras_usuarios_json="{}",
                              usuarios_emails_json="{}",
                              folders_por_ruta={})
+
+@bp.route('/api/comentarios', methods=['GET'])
+@login_required
+def listar_comentarios():
+    """Lista comentarios por dropbox_path (archivo o carpeta)."""
+    path = request.args.get('path', '').strip()
+    if not path:
+        return jsonify({'success': False, 'error': 'Falta parámetro path'}), 400
+    # Normalizar
+    path = str(path).replace('//', '/').rstrip('/')
+    # Por defecto, listar todos. Si el usuario es cliente, solo mostrar comentarios de admin/superadmin
+    q = Comentario.query.filter_by(dropbox_path=path).order_by(Comentario.fecha_creacion.desc())
+    try:
+        if hasattr(current_user, 'rol') and current_user.rol == 'cliente':
+            q = q.join(User, Comentario.user_id == User.id).filter(User.rol.in_(['admin', 'superadmin']))
+    except Exception:
+        pass
+    comentarios = q.all()
+    data = [
+        {
+            'id': c.id,
+            'user_id': c.user_id,
+            'usuario': getattr(c.usuario, 'email', str(c.user_id)),
+            'contenido': c.contenido,
+            'fecha_creacion': c.fecha_creacion.isoformat(timespec='seconds')
+        } for c in comentarios
+    ]
+    return jsonify({'success': True, 'comentarios': data})
+
+@bp.route('/api/comentarios', methods=['POST'])
+@login_required
+def crear_comentario():
+    """Crea un comentario asociado a un dropbox_path."""
+    # Solo admin o superadmin pueden crear comentarios
+    if not hasattr(current_user, 'rol') or current_user.rol not in ['admin', 'superadmin']:
+        return jsonify({'success': False, 'error': 'No autorizado'}), 403
+    data = request.get_json(silent=True) or {}
+    path = (data.get('path') or '').strip()
+    contenido = (data.get('contenido') or '').strip()
+    tipo = (data.get('tipo') or 'archivo').strip()
+    if not path or not contenido:
+        return jsonify({'success': False, 'error': 'path y contenido son requeridos'}), 400
+    if tipo not in ['archivo', 'carpeta']:
+        tipo = 'archivo'
+    # Normalizar
+    path = str(path).replace('//', '/').rstrip('/')
+    try:
+        comentario = Comentario(
+            user_id=current_user.id,
+            dropbox_path=path,
+            tipo=tipo,
+            contenido=contenido,
+        )
+        db.session.add(comentario)
+        db.session.commit()
+        return jsonify({'success': True, 'id': comentario.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.route("/api/carpeta_info/<path:ruta>")
 @login_required

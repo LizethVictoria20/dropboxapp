@@ -288,6 +288,20 @@ class Notification(db.Model):
     def __repr__(self):
         return f"<Notification {self.titulo} for user {self.user_id}>"
 
+class Comentario(db.Model):
+    """Comentarios asociados a archivos o carpetas por ruta de Dropbox."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    dropbox_path = db.Column(db.String(500), nullable=False)  # ruta completa en Dropbox (archivo o carpeta)
+    tipo = db.Column(db.String(20), nullable=False, default='archivo')  # 'archivo' o 'carpeta'
+    contenido = db.Column(db.Text, nullable=False)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+
+    usuario = db.relationship('User', backref=db.backref('comentarios', lazy=True))
+
+    def __repr__(self):
+        return f"<Comentario {self.id} by {self.user_id} on {self.dropbox_path}>"
+
 class SystemSettings(db.Model):
     """Modelo para configuraciones del sistema"""
     id = db.Column(db.Integer, primary_key=True)
