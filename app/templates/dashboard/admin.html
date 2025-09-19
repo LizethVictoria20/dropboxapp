@@ -403,7 +403,7 @@
                 </div>
                 <div class="ml-4">
                   <div class="text-sm font-medium text-gray-900 truncate max-w-xs">
-                    {{ file.nombre }}
+                    <a href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=user.id) }}" class="hover:underline">{{ file.nombre }}</a>
                   </div>
                 </div>
               </div>
@@ -1254,7 +1254,7 @@ function initializeDashboard() {
                 <i class="fas fa-file text-gray-400"></i>
               </div>
               <div class="ml-4">
-                <div class="text-sm font-medium text-gray-900 truncate max-w-xs">${item.nombre || ''}</div>
+                <div class="text-sm font-medium text-gray-900 truncate max-w-xs"><a href="/usuario/${item.usuario?.id}/carpetas" class="hover:underline">${item.nombre || ''}</a></div>
               </div>
             </div>
           </td>

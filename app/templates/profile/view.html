@@ -226,6 +226,24 @@
                         </div>
                       </div>
                     </div>
+
+                    <!-- Área (si existe) -->
+                    {% if user.area %}
+                    <div class="border-b border-gray-100 pb-3">
+                      <div class="flex">
+                        <div class="w-1/3">
+                          <h4 class="text-sm font-medium text-text-secondary">
+                            Área
+                          </h4>
+                        </div>
+                        <div class="w-2/3">
+                          <p class="text-base text-text">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent mr-2 mb-1">{{ user.area }}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    {% endif %}
                     <!-- Identificación -->
                     <div class="border-b border-gray-100 pb-3">
                       <div class="flex">
@@ -243,7 +261,8 @@
                         </div>
                       </div>
                     </div>
-                    <!-- Alien number -->
+                    <!-- Alien number (solo clientes) -->
+                    {% if user.rol == 'cliente' %}
                     <div class="border-b border-gray-100 pb-3">
                       <div class="flex">
                         <div class="w-1/3">
@@ -256,6 +275,7 @@
                         </div>
                       </div>
                     </div>
+                    {% endif %}
                     <!-- Ultimo Acceso -->
                     <div class="border-b border-gray-100 pb-3">
                       <div class="flex">
@@ -336,6 +356,7 @@
               {% endif %}
 
               <!-- Sección de Otros Datos -->
+              {% if user.rol == 'cliente' %}
               <div
                 class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden md:col-span-2"
               >
@@ -352,7 +373,7 @@
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
-                        d="M17 14v6m-3-3h6M6 10h2m3-3h2M9 21V3m0 18h-1a2 2 0 01-2-2v-1a2 2 0 00-2-2H5a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 002-2V3a1 1 0 011-1h3a1 1 0 011 1v2a2 2 0 002 2h4a2 2 0 012 2v10a2 2 0 01-2 2h-1a2 2 0 00-2 2v1a2 2 0 01-2 2h-1z"
+                        d="M17 14v6m-3-3h6M6 10h2m3-3h2M9 21V3m0 18h-1a2 2 0 01-2-2v-1a2 2 0 00-2-2H5a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 002-2V3a1 1 0 011-1h3a1 1 0 011 1v2a2 2 0 002 2h4a2 2 0 012 2v10a2 2 0 01-2 2h-1z"
                       ></path>
                     </svg>
                     <h3
@@ -463,6 +484,7 @@
                   </div>
                 </div>
               </div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -589,9 +611,11 @@
                 <button type="button" class="tab-button active border-primary text-primary font-medium border-b-2 py-3 px-1" data-tab="personal-tab">
                   Información Personal
                 </button>
+                {% if user.rol == 'cliente' %}
                 <button type="button" class="tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent font-medium border-b-2 py-3 px-1" data-tab="address-tab">
                   Dirección y Ubicación
                 </button>
+                {% endif %}
                 <button type="button" class="tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent font-medium border-b-2 py-3 px-1" data-tab="security-tab">
                   Seguridad
                 </button>
@@ -623,26 +647,18 @@
                     <input type="tel" id="telefonoInput" name="telefono" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Número de teléfono" value="{{ user.telefono if user.telefono else '' }}" />
                   </div>
 
-                  <div class="space-y-2">
-                    <label for="fechaNacimientoInput" class="block text-sm font-medium text-text">Fecha de Nacimiento</label>
-                    <input type="date" id="fechaNacimientoInput" name="fecha_nacimiento" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" value="{{ user.fecha_nacimiento.strftime('%Y-%m-%d') if user.fecha_nacimiento else '' }}" />
-                  </div>
 
+                  {% if user.rol in ['admin','lector','superadmin'] %}
                   <div class="space-y-2">
-                    <label for="nacionalidadInput" class="block text-sm font-medium text-text">Nacionalidad</label>
-                    <select id="nacionalidadInput" name="nacionalidad" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm">
-                      <option value="">-- Seleccionar nacionalidad --</option>
-                      {% if nationalities %}
-                        {% for value, label in nationalities %}
-                          <option value="{{ value }}" {% if user.nacionality == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                      {% endif %}
-                    </select>
+                    <label for="areaInput" class="block text-sm font-medium text-text">Área</label>
+                    <input type="text" id="areaInput" name="area" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Ej. Administración, Jurídico, Operaciones" value="{{ user.area or '' }}" />
                   </div>
+                  {% endif %}
                 </div>
               </div>
 
-              <!-- Pestaña 2: Dirección y Ubicación -->
+              {% if user.rol == 'cliente' %}
+              <!-- Pestaña 2: Dirección y Ubicación (solo cliente) -->
               <div id="address-tab" class="tab-pane hidden">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div class="space-y-2 col-span-2">
@@ -671,6 +687,7 @@
                   </div>
                 </div>
               </div>
+              {% endif %}
 
               <!-- Pestaña 3: Seguridad -->
               <div id="security-tab" class="tab-pane hidden">

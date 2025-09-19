@@ -380,9 +380,12 @@ def dashboard_lector():
 
 @bp.route('/dashboard/admin/profile')
 @login_required
-@role_required('admin')
 def dashboard_admin_profile():
     """Perfil específico para administradores - usa la misma vista que /profile"""
+    # Permitir acceso a administradores y lectores
+    if not (current_user.puede_administrar() or current_user.es_lector()):
+        flash('No tienes permisos para acceder a esta página.', 'error')
+        return redirect(url_for('main.profile'))
     
     current_user.registrar_actividad('profile_view', 'Visualización del perfil de administrador')
     
@@ -486,6 +489,10 @@ def profile():
     """Ver perfil del usuario actual"""
     
     current_user.registrar_actividad('profile_view', 'Visualización del perfil')
+
+    # Si es admin o lector, usar el perfil de administrador
+    if hasattr(current_user, 'puede_administrar') and (current_user.puede_administrar() or (hasattr(current_user, 'es_lector') and current_user.es_lector())):
+        return redirect(url_for('main.dashboard_admin_profile'))
     
     # Contar archivos y carpetas del usuario
     total_archivos = Archivo.query.filter_by(usuario_id=current_user.id).count()
@@ -593,6 +600,10 @@ def profile_update():
         if 'pais' in data:
             current_user.country = data['pais']
         
+        # Guardar área libremente en DB (texto)
+        if 'area' in data:
+            current_user.area = (data.get('area') or '').strip() or None
+
         # Cambiar contraseña si se validó intento de cambio
         if intento_cambio_password:
             current_user.set_password(data['new_password'])

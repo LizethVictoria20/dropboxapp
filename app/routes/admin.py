@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify, Response, current_app
 from flask_login import login_required, current_user
 from app.models import Archivo
 from app.dropbox_utils import descargar_desde_dropbox, generar_enlace_dropbox_temporal
+from app import db
+from app.routes.auth import role_required
 import logging
 
 logger = logging.getLogger(__name__)
@@ -205,3 +207,24 @@ def descargar_archivo():
     except Exception as e:
         logger.error(f"Error descargando archivo: {e}")
         return f"Error: {e}", 500
+
+
+@admin_bp.route('/fix/archivos/estado-en-revision', methods=['POST'])
+@login_required
+@role_required('admin')
+def fix_archivos_estado_en_revision():
+    """Establece estado='en_revision' en archivos sin estado definido (NULL o vacío).
+    Solo para administradores.
+    """
+    try:
+        updated = Archivo.query.filter((Archivo.estado.is_(None)) | (Archivo.estado == '')).update(
+            {Archivo.estado: 'en_revision'}, synchronize_session=False
+        )
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'updated': int(updated or 0)
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
