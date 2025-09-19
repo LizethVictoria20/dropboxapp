@@ -152,8 +152,9 @@ def dashboard_admin():
         'lectores': User.query.filter_by(rol='lector').count()
     }
     
-    # Obtener el período seleccionado (por defecto 'month')
+    # Obtener el período seleccionado (por defecto 'month') y si se debe mostrar todo el historial
     period = request.args.get('period', 'month')
+    show_all = request.args.get('show_all', '0') in ['1', 'true', 'True']
     selected_period = period
     
     # Generar todas las estadísticas
@@ -168,8 +169,8 @@ def dashboard_admin():
     start_date, end_date = calculate_period_dates(period)
     file_types_recent_initial = get_file_types_stats(start_date, end_date)
     
-    # Archivos recientes con usuarios
-    recent_files = get_recent_files_with_users(10)
+    # Archivos recientes con usuarios (soportar mostrar todo)
+    recent_files = get_recent_files_with_users(None if show_all else 10)
     
     # Actividad reciente del sistema
     recent_activity = get_recent_activity(15)
@@ -233,7 +234,112 @@ def dashboard_admin():
                          recent_activity=recent_activity,
                          distribucion_roles=distribucion_roles,
                          usuarios_activos=usuarios_activos,
-                         selected_period=selected_period)
+                         selected_period=selected_period,
+                         show_all=show_all)
+
+
+@bp.route('/api/recent-files')
+@login_required
+def api_recent_files():
+    """Devuelve en JSON el historial de archivos recientes con datos del usuario.
+    Acepta 'limit' (int) o 'all=1' para traer todo.
+    """
+    try:
+        all_param = request.args.get('all', '0') in ['1', 'true', 'True']
+        if all_param:
+            # Modo "traer todo"
+            recent_files = get_recent_files_with_users(None)
+            total_records = db.session.query(func.count(Archivo.id)).scalar() or 0
+            files_data = []
+            for archivo, usuario in recent_files:
+                files_data.append({
+                    'id': archivo.id,
+                    'nombre': archivo.nombre,
+                    'extension': getattr(archivo, 'extension', None),
+                    'tamano': getattr(archivo, 'tamano', None),
+                    'fecha_subida': archivo.fecha_subida.isoformat() if getattr(archivo, 'fecha_subida', None) else None,
+                    'estado': getattr(archivo, 'estado', None),
+                    'dropbox_path': getattr(archivo, 'dropbox_path', None),
+                    'categoria': getattr(archivo, 'categoria', None),
+                    'subcategoria': getattr(archivo, 'subcategoria', None),
+                    'descripcion': getattr(archivo, 'descripcion', None),
+                    'usuario': {
+                        'id': usuario.id,
+                        'username': getattr(usuario, 'username', None),
+                        'email': getattr(usuario, 'email', None),
+                        'nombre': getattr(usuario, 'nombre', None),
+                        'apellido': getattr(usuario, 'apellido', None)
+                    }
+                })
+            return jsonify({
+                'success': True,
+                'count': len(files_data),
+                'files': files_data,
+                'pagination': {
+                    'page': 1,
+                    'per_page': len(files_data) or total_records,
+                    'total': total_records,
+                    'pages': 1,
+                    'has_prev': False,
+                    'has_next': False
+                }
+            })
+
+        # Paginación
+        page = request.args.get('page', 1, type=int) or 1
+        per_page = request.args.get('per_page', 10, type=int) or 10
+        if per_page < 1:
+            per_page = 10
+        if per_page > 100:
+            per_page = 100
+        offset = (page - 1) * per_page
+
+        base_query = db.session.query(Archivo, User).join(
+            User, Archivo.usuario_id == User.id
+        ).order_by(desc(Archivo.fecha_subida))
+
+        total_records = db.session.query(func.count(Archivo.id)).scalar() or 0
+        recent_files = base_query.offset(offset).limit(per_page).all()
+
+        files_data = []
+        for archivo, usuario in recent_files:
+            files_data.append({
+                'id': archivo.id,
+                'nombre': archivo.nombre,
+                'extension': getattr(archivo, 'extension', None),
+                'tamano': getattr(archivo, 'tamano', None),
+                'fecha_subida': archivo.fecha_subida.isoformat() if getattr(archivo, 'fecha_subida', None) else None,
+                'estado': getattr(archivo, 'estado', None),
+                'dropbox_path': getattr(archivo, 'dropbox_path', None),
+                'categoria': getattr(archivo, 'categoria', None),
+                'subcategoria': getattr(archivo, 'subcategoria', None),
+                'descripcion': getattr(archivo, 'descripcion', None),
+                'usuario': {
+                    'id': usuario.id,
+                    'username': getattr(usuario, 'username', None),
+                    'email': getattr(usuario, 'email', None),
+                    'nombre': getattr(usuario, 'nombre', None),
+                    'apellido': getattr(usuario, 'apellido', None)
+                }
+            })
+
+        total_pages = (total_records + per_page - 1) // per_page if per_page else 1
+
+        return jsonify({
+            'success': True,
+            'count': len(files_data),
+            'files': files_data,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total_records,
+                'pages': total_pages,
+                'has_prev': page > 1,
+                'has_next': page < total_pages
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.route('/dashboard/lector')
 @login_required

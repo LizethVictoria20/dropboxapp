@@ -473,11 +473,17 @@ def get_dashboard_stats(period='month'):
 
 
 def get_recent_files_with_users(limit=10):
-    """Obtiene los archivos más recientes con información del usuario"""
-    recent_files = db.session.query(Archivo, User).join(
+    """Obtiene los archivos más recientes con información del usuario.
+    Si limit es None o 0, devuelve todo el historial ordenado por fecha de subida.
+    """
+    query = db.session.query(Archivo, User).join(
         User, Archivo.usuario_id == User.id
-    ).order_by(desc(Archivo.fecha_subida)).limit(limit).all()
+    ).order_by(desc(Archivo.fecha_subida))
     
+    if limit:
+        query = query.limit(limit)
+    
+    recent_files = query.all()
     return recent_files
 
 
