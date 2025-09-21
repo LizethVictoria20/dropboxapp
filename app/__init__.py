@@ -68,7 +68,7 @@ def create_app(config_name=None):
         return User.query.get(int(user_id))
     
     # Registrar blueprints
-    from app.routes import auth, main, folders, listar_dropbox, users, usuarios, web_register, admin
+    from app.routes import auth, main, folders, listar_dropbox, users, usuarios, web_register, admin, tutoriales
     app.register_blueprint(auth.bp)
     app.register_blueprint(main.bp)
     app.register_blueprint(folders.bp)
@@ -77,6 +77,7 @@ def create_app(config_name=None):
     app.register_blueprint(usuarios.bp)
     app.register_blueprint(web_register.bp)
     app.register_blueprint(admin.admin_bp)
+    app.register_blueprint(tutoriales.bp)
     
     # Configurar eventos de SQLAlchemy
     from app.events import setup_events

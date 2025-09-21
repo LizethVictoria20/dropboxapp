@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+{% block title %}Tutoriales - Mi Caso{% endblock %}
+
+{% block content %}
+<div class="space-y-8 max-w-6xl">
+    <!-- Encabezado Principal -->
+    <div class="text-center bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-2xl p-8">
+        <h1 class="text-3xl font-bold mb-2 text-gray-800">Centro de Tutoriales</h1>
+        <p class="text-lg text-gray-600">
+            Guías paso a paso para usar la plataforma "Mi Caso" de manera efectiva
+        </p>
+    </div>
+
+    <!-- Sección de Instructivos -->
+    <div class="grid lg:grid-cols-1 gap-8">
+        <!-- Instructivo 1: Registro -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100 p-6">
+                <div class="flex items-center">
+                    <i class="fas fa-user-plus text-2xl mr-3 text-emerald-600"></i>
+                    <h2 class="text-xl font-bold text-gray-800">INSTRUCTIVO PASO A PASO PARA REGISTRARTE EN LA PLATAFORMA "MI CASO"</h2>
+                </div>
+                <p class="mt-2 text-emerald-700">Sistema de recepción de evidencias y documentos de Inmigración Ok abogados.</p>
+            </div>
+            
+            <div class="p-8">
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-list-check text-emerald-500 mr-2"></i>
+                        Antes de Empezar (Qué Necesitarás):
+                    </h3>
+                    <p class="text-gray-600 mb-4">Para hacer el proceso aún más fácil, asegúrate de tener a mano lo siguiente:</p>
+                    <ul class="space-y-2">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-emerald-400 mt-1 mr-3"></i>
+                            <span class="text-gray-600">Una dirección de correo electrónico válida a la que tengas acceso.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-emerald-400 mt-1 mr-3"></i>
+                            <span class="text-gray-600">Tu información personal básica.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-emerald-400 mt-1 mr-3"></i>
+                            <span class="text-gray-600">Unos minutos de tu tiempo.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-clipboard-list text-emerald-500 mr-2"></i>
+                        Proceso de Registro Detallado:
+                    </h3>
+                    
+                    <div class="space-y-6">
+                        <div class="border-l-4 border-emerald-200 pl-6">
+                            <h4 class="font-bold text-lg text-gray-800 mb-2">
+                                <span class="bg-emerald-100 text-emerald-700 rounded-full w-8 h-8 inline-flex items-center justify-center text-sm mr-2">1</span>
+                                Accede al portal de registro
+                            </h4>
+                            <p class="text-gray-600 mb-2">ingresa en tu navegador la siguiente dirección: <code class="bg-gray-100 px-2 py-1 rounded text-emerald-600">micaso.inmigracionokabogados.com</code> para ir directamente a la página de creación de tu cuenta.</p>
+                            <p class="text-gray-600">Busca y selecciona el botón que diga <strong>"Regístrate"</strong>.</p>
+                        </div>
+
+                        <div class="border-l-4 border-emerald-200 pl-6">
+                            <h4 class="font-bold text-lg text-gray-800 mb-2">
+                                <span class="bg-emerald-100 text-emerald-700 rounded-full w-8 h-8 inline-flex items-center justify-center text-sm mr-2">2</span>
+                                Completa tus datos personales
+                            </h4>
+                            <p class="text-gray-600 mb-3">Ahora verás un formulario. Rellena los siguientes campos con tu información personal:</p>
+                            <ul class="grid grid-cols-1 md:grid-cols-2 gap-2 text-gray-600">
+                                <li class="flex items-center"><i class="fas fa-circle text-xs text-emerald-400 mr-2"></i>Nombres y apellidos</li>
+                                <li class="flex items-center"><i class="fas fa-circle text-xs text-emerald-400 mr-2"></i>Correo Electrónico</li>
+                                <li class="flex items-center"><i class="fas fa-circle text-xs text-emerald-400 mr-2"></i>Teléfono y Código postal</li>
+                                <li class="flex items-center"><i class="fas fa-circle text-xs text-emerald-400 mr-2"></i>Ciudad y Estado</li>
+                                <li class="flex items-center"><i class="fas fa-circle text-xs text-emerald-400 mr-2"></i>Dirección de residencia</li>
+                                <li class="flex items-center"><i class="fas fa-circle text-xs text-emerald-400 mr-2"></i>Nacionalidad y País</li>
+                                <li class="flex items-center"><i class="fas fa-circle text-xs text-emerald-400 mr-2"></i>Tipo y Número de documento</li>
+                                <li class="flex items-center"><i class="fas fa-circle text-xs text-emerald-400 mr-2"></i>Fecha de Nacimiento</li>
+                            </ul>
+                            
+                            <div class="mt-4 p-4 bg-yellow-50 border border-yellow-100 rounded-lg">
+                                <h5 class="font-bold text-yellow-700 mb-2">Luego crea tu contraseña de acceso</h5>
+                                <p class="text-yellow-600 mb-2"><strong>Contraseña:</strong> En este campo, crea una clave personal.</p>
+                                <p class="text-yellow-600 mb-2">Te recomendamos crear una contraseña que combine letras (mayúsculas y minúsculas), números y símbolos (ej: #, $, !) para proteger al máximo la información de tu cuenta.</p>
+                                <p class="text-yellow-600 mb-2"><strong>Confirmar Contraseña:</strong> Vuelve a escribir la misma contraseña en este campo para confirmar que coinciden.</p>
+                                <p class="text-yellow-700 font-medium">Recuerda muy bien esta contraseña, ya que será la llave para ingresar a la plataforma micaso, cada vez que lo necesites.</p>
+                            </div>
+                        </div>
+
+                        <div class="border-l-4 border-emerald-200 pl-6">
+                            <h4 class="font-bold text-lg text-gray-800 mb-2">
+                                <span class="bg-emerald-100 text-emerald-700 rounded-full w-8 h-8 inline-flex items-center justify-center text-sm mr-2">3</span>
+                                Acepta los términos y finaliza el registro
+                            </h4>
+                            <p class="text-gray-600 mb-2">Lee los Términos y Condiciones y la Política de Privacidad. Si estás de acuerdo, marca la casilla de aceptación.</p>
+                            <p class="text-gray-600">Luego haz clic en el botón final <strong>"Crear Cuenta"</strong>.</p>
+                        </div>
+
+                        <div class="border-l-4 border-emerald-200 pl-6">
+                            <h4 class="font-bold text-lg text-gray-800 mb-2">
+                                <span class="bg-emerald-100 text-emerald-700 rounded-full w-8 h-8 inline-flex items-center justify-center text-sm mr-2">4</span>
+                                Registra a tus beneficiarios (Paso opcional)
+                            </h4>
+                            <p class="text-gray-600 mb-3">Ahora verás una ventana para el registro de beneficiarios. En esta sección, podrás añadir a las personas que forman parte de tu proceso migratorio.</p>
+                            <div class="space-y-3">
+                                <div class="p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
+                                    <p class="text-emerald-700"><strong>Si tienes beneficiarios:</strong> Haz clic en el botón "Añadir Beneficiario" y completa la información que se te solicita para cada persona. Puedes repetir este paso para cada beneficiario que necesites registrar. cuando hayas finalizado de registrar tus beneficiarios, haz clic en "Completar Registro". Al completar el registro serás redirigido al login para iniciar sesión.</p>
+                                </div>
+                                <div class="p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                                    <p class="text-slate-700"><strong>Si no tienes beneficiarios:</strong> No te preocupes. Simplemente haz clic en el botón o enlace que diga "Continuar sin beneficiarios" para finalizar.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-l-4 border-emerald-300 pl-6">
+                            <h4 class="font-bold text-lg text-emerald-700 mb-2">
+                                <span class="bg-emerald-200 text-emerald-800 rounded-full w-8 h-8 inline-flex items-center justify-center text-sm mr-2">5</span>
+                                Registro finalizado - Accede al portal
+                            </h4>
+                            <p class="text-emerald-700 mb-2"><strong>¡Felicidades!</strong> Has completado tu registro.</p>
+                            <p class="text-gray-600">Tu cuenta en la plataforma "Mi Caso" ha sido creada y activada con éxito. Ahora puedes iniciar sesión en el portal (con el correo electrónico registrado y la contraseña que creaste), para compartir sus documentos, archivos y evidencias necesarias con nuestro equipo; y así comenzar el proceso de tu caso con nosotros. ¡Estamos aquí para ayudarte en cada paso del camino!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Tutorial 2: Registro -->
+                <div class="bg-gray-50 rounded-xl p-6 text-center">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-play-circle text-emerald-500 mr-2"></i>
+                        Video Tutorial: Proceso de Registro
+                    </h4>
+                    
+                    <!-- OPCIÓN 1: Video de YouTube (descomenta cuando tengas el video) -->
+                    
+                    <div class="w-full aspect-video rounded-lg overflow-hidden shadow-sm">
+                        <iframe 
+                            class="w-full h-full"
+                            src="https://www.youtube.com/embed/lXvzEbyx1Lo" 
+                            title="Video Tutorial - Proceso de Registro"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructivo 2: Cargar Documentos -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-sky-50 to-indigo-50 border-b border-sky-100 p-6">
+                <div class="flex items-center">
+                    <i class="fas fa-cloud-upload-alt text-2xl mr-3 text-sky-600"></i>
+                    <h2 class="text-2xl font-bold text-gray-800">INSTRUCTIVO PASO A PASO PARA CARGAR TUS DOCUMENTOS Y EVIDENCIAS</h2>
+                </div>
+                <p class="mt-2 text-sky-700">EN LA PLATAFORMA "MI CASO"</p>
+                <p class="text-sm text-sky-600">Sistema de recepción de evidencias y documentos de Inmigración Ok abogados.</p>
+            </div>
+            
+            <div class="p-8">
+                <div class="mb-6 p-4 bg-sky-50 border border-sky-100 rounded-lg">
+                    <p class="text-sky-700">Esta guía te mostrará, paso a paso, cómo subir tus archivos a la plataforma "MiCaso". Cargar tus documentos correctamente es uno de los pasos más importantes de tu proceso, y estamos aquí para asegurarnos de que sea una tarea fácil y segura para ti.</p>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-file-check text-sky-500 mr-2"></i>
+                        1: Antes de Empezar: Prepara tus archivos
+                    </h3>
+                    <p class="text-gray-600 mb-4">Para que la carga de tus documentos funcione a la primera, solo necesitas revisar dos cosas rápidas. Piensa en esto como tu lista de verificación personal:</p>
+                    <ul class="space-y-3">
+                        <li class="flex items-start">
+                            <span class="bg-emerald-100 text-emerald-700 rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-1">✓</span>
+                            <div>
+                                <strong class="text-gray-700">Formato Correcto:</strong>
+                                <span class="text-gray-600"> Asegúrate de que tu archivo sea uno de los siguientes tipos: PDF, DOC, DOCX, XLS, XLSX, CSV, JPG, JPEG, PNG, MP4, MOV, MP3, ZIP, TXT, o GIF.</span>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-emerald-100 text-emerald-700 rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-1">✓</span>
+                            <div>
+                                <strong class="text-gray-700">Tamaño Adecuado:</strong>
+                                <span class="text-gray-600"> Verifica que el archivo que vas a subir no pese más de 1 GB. Si es más grande, considera comprimirlo en un archivo ZIP.</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-upload text-sky-500 mr-2"></i>
+                        2: Paso a Paso para cargar tu documento
+                    </h3>
+                    <p class="text-gray-600 mb-4">Sigue estas instrucciones sencillas para enviar tus archivos a nuestro equipo de forma segura.</p>
+                    
+                    <div class="space-y-6">
+                        <div class="border-l-4 border-sky-200 pl-6">
+                            <h4 class="font-bold text-lg text-gray-800 mb-2">Inicia sesión en tu cuenta MiCaso</h4>
+                            <p class="text-gray-600 mb-2">Antes que nada, asegúrate de haber ingresado a la plataforma. Ve a la página principal de MiCaso e inicia sesión con el correo electrónico y la contraseña que registraste al crear tu cuenta.</p>
+                            <div class="p-3 bg-orange-50 border border-orange-100 rounded-lg mt-2">
+                                <p class="text-orange-700 text-sm"><strong>¿Aún no tienes una cuenta?</strong> No te preocupes. Para poder subir documentos, primero debes registrarte. Sigue nuestro Instructivo para registrarte en "MiCaso" y luego regresa de nuevo a este Instructivo.</p>
+                            </div>
+                        </div>
+
+                        <div class="border-l-4 border-sky-200 pl-6">
+                            <h4 class="font-bold text-lg text-gray-800 mb-2">Selecciona el archivo desde tu dispositivo</h4>
+                            <p class="text-gray-600 mb-2">Una vez dentro, busca la pestaña <strong>"Subir"</strong> (ubicada en la parte superior izquierda de la pantalla), para subir archivos y haz clic en el botón <strong>"Examinar archivos"</strong>.</p>
+                            <p class="text-gray-600">Se abrirá una ventana para que busques el documento en tu computadora o teléfono. Encuéntralo y haz doble clic sobre él.</p>
+                        </div>
+
+                        <div class="border-l-4 border-sky-200 pl-6">
+                            <h4 class="font-bold text-lg text-gray-800 mb-2">Indica a quién pertenece el documento</h4>
+                            <p class="text-gray-600 mb-2">Ve al menú desplegable llamado <strong>"¿A quién pertenece este documento?"</strong>.</p>
+                            <p class="text-gray-600">Haz clic en él y elige el nombre de la persona a la que corresponde el archivo (puedes ser tú o uno de tus beneficiarios registrados). Esto nos ayuda a organizar el caso de manera impecable.</p>
+                        </div>
+
+                        <div class="border-l-4 border-sky-200 pl-6">
+                            <h4 class="font-bold text-lg text-gray-800 mb-2">Elige el tipo de evidencia</h4>
+                            <p class="text-gray-600 mb-2">Ahora, haz clic en el menú desplegable <strong>"Elija el tipo de evidencia que desea cargar"</strong>.</p>
+                            <p class="text-gray-600">Selecciona la opción que mejor describa tu archivo (por ejemplo: "Fotografías", "Chats", "Certificado de defunción", etc.). Esto acelera el proceso de revisión.</p>
+                        </div>
+
+                        <div class="border-l-4 border-emerald-200 pl-6">
+                            <h4 class="font-bold text-lg text-emerald-700 mb-2">¡Sube tu archivo!</h4>
+                            <p class="text-gray-600 mb-2">Una vez que hayas completado los pasos anteriores, haz clic en el botón <strong>"Importar Archivo"</strong>.</p>
+                            <p class="text-gray-600">Espera un momento mientras la barra de progreso se completa. <strong>¡No cierres la página hasta que confirmes que la carga ha finalizado!</strong></p>
+                            <div class="p-3 bg-yellow-50 border border-yellow-100 rounded-lg mt-2">
+                                <p class="text-yellow-700 text-sm"><strong>Nota Importante:</strong> Deberás repetir estos pasos (del "b" al "e") para cada uno de los documentos que necesites enviarnos.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-tasks text-sky-500 mr-2"></i>
+                        3: Después de Subir: Entendiendo el estado de tu documento
+                    </h3>
+                    <p class="text-gray-600 mb-4">Una vez cargado, tu documento pasará por diferentes etapas. Podrás ver su estado en la plataforma, si revisas en la pestaña <strong>"Mis Archivos"</strong> y esto es lo que significa cada uno:</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-amber-50 border border-amber-100 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <span class="bg-amber-200 text-amber-800 rounded-full px-3 py-1 text-sm font-medium mr-2">Pendiente de revisión</span>
+                            </div>
+                            <p class="text-amber-700 text-sm">¡Lo recibimos! Tu documento está en la fila y muy pronto será revisado por nuestro equipo. No necesitas hacer nada más por ahora.</p>
+                        </div>
+                        
+                        <div class="p-4 bg-sky-50 border border-sky-100 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <span class="bg-sky-200 text-sky-800 rounded-full px-3 py-1 text-sm font-medium mr-2">En revisión</span>
+                            </div>
+                            <p class="text-sky-700 text-sm">Uno de nuestros especialistas ya está trabajando con tu documento, validando que toda la información sea correcta y útil para tu caso.</p>
+                        </div>
+                        
+                        <div class="p-4 bg-emerald-50 border border-emerald-100 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <span class="bg-emerald-200 text-emerald-800 rounded-full px-3 py-1 text-sm font-medium mr-2">Aprobado</span>
+                            </div>
+                            <p class="text-emerald-700 text-sm">¡Excelente! Tu documento ha sido verificado, aceptado y añadido oficialmente a tu expediente. Es una pieza más completada en el rompecabezas de tu caso.</p>
+                        </div>
+                        
+                        <div class="p-4 bg-rose-50 border border-rose-100 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <span class="bg-rose-200 text-rose-800 rounded-full px-3 py-1 text-sm font-medium mr-2">Rechazado</span>
+                            </div>
+                            <p class="text-rose-700 text-sm">Hubo un inconveniente con el archivo. Puede ser por calidad, información incorrecta o porque no era el documento solicitado. Por favor, revisa los comentarios que nuestro equipo dejó en la plataforma para saber exactamente qué ocurrió y cómo puedes solucionarlo.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-sky-50 border border-sky-100 rounded-lg p-6 text-center">
+                    <h4 class="text-lg font-bold text-gray-800 mb-2">Estamos contigo</h4>
+                    <p class="text-gray-600 mb-2">¡Y eso es todo! Has completado exitosamente el proceso de carga de documentos. Recuerda que subir tus evidencias de forma clara y ordenada es clave para el éxito de tu caso.</p>
+                    <p class="text-gray-600">Si tienes algún problema o duda durante el proceso, no dudes en contactarnos. Estamos aquí para ayudarte.</p>
+                </div>
+
+                <!-- Video Tutorial 3: Carga de Documentos -->
+                <div class="bg-gray-50 rounded-xl p-6 text-center mt-8">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-play-circle text-sky-500 mr-2"></i>
+                        Video Tutorial: Carga de Documentos
+                    </h4>
+                    
+                    <!-- OPCIÓN 1: Video de YouTube (descomenta cuando tengas el video) -->
+                    
+                    <div class="w-full aspect-video rounded-lg overflow-hidden shadow-sm">
+                        <iframe 
+                            class="w-full h-full"
+                            src="https://www.youtube.com/embed/scsAWu-FWzw" 
+                            title="Video Tutorial - Carga de Documentos"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructivo 3: Solución de Problemas -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-slate-50 to-stone-50 border-b border-slate-100 p-6">
+                <div class="flex items-center">
+                    <i class="fas fa-headset text-2xl mr-3 text-slate-600"></i>
+                    <h2 class="text-2xl font-bold text-gray-800">INSTRUCTIVO PASO A PASO PARA SOLUCIONAR PROBLEMAS EN LA PLATAFORMA "MI CASO"</h2>
+                </div>
+                <p class="mt-2 text-slate-700">Sistema de recepción de evidencias y documentos de Inmigración Ok abogados.</p>
+            </div>
+            
+            <div class="p-8">
+                <div class="mb-6 p-4 bg-slate-50 border border-slate-100 rounded-lg">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">¿Necesitas ayuda?... Conoce nuestros canales de soporte</h3>
+                    <p class="text-slate-700">En Inmigración OK Abogados, queremos que tu experiencia en la plataforma "MiCaso" sea lo más fluida y sencilla posible. Si en algún momento tienes una pregunta o te encuentras con alguna dificultad, no te preocupes. Nuestro equipo está listo para ayudarte, y obtener soporte es muy fácil.</p>
+                </div>
+
+                <div class="space-y-8">
+                    <div class="border-l-4 border-emerald-200 pl-6">
+                        <h4 class="font-bold text-xl text-gray-800 mb-4 flex items-center">
+                            <span class="bg-emerald-100 text-emerald-700 rounded-full w-8 h-8 inline-flex items-center justify-center text-sm mr-3">1</span>
+                            Visita nuestro Centro de Ayuda (Para respuestas rápidas)
+                        </h4>
+                        <p class="text-gray-600 mb-4">Nuestro Centro de Ayuda es el lugar perfecto para encontrar respuestas inmediatas a las preguntas o dificultades que puedas tener al utilizar nuestra plataforma "MiCaso".</p>
+                        <div class="space-y-3">
+                            <div class="flex items-start">
+                                <span class="bg-slate-100 text-slate-600 rounded-full px-3 py-1 text-sm font-medium mr-3 mt-1">Paso 1:</span>
+                                <p class="text-gray-600">Desplázate hasta la parte inferior (el pie de página) de cualquier pantalla dentro de la plataforma "MiCaso".</p>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="bg-slate-100 text-slate-600 rounded-full px-3 py-1 text-sm font-medium mr-3 mt-1">Paso 2:</span>
+                                <p class="text-gray-600">Busca y haz clic en cualquiera de las opciones del "Centro de Ayuda" (Soporte Técnico - Reportar un Problema). Serás dirigido a nuestro chat de WhatsApp, donde podrás entablar diálogo con nuestro equipo.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-l-4 border-sky-200 pl-6">
+                        <h4 class="font-bold text-xl text-gray-800 mb-4 flex items-center">
+                            <span class="bg-sky-100 text-sky-700 rounded-full w-8 h-8 inline-flex items-center justify-center text-sm mr-3">2</span>
+                            Escríbenos un correo (Para dudas detalladas)
+                        </h4>
+                        <p class="text-gray-600 mb-4">Si tu consulta es más específica o necesitas detallar una situación particular, enviarnos un correo electrónico es una excelente opción.</p>
+                        <div class="p-4 bg-sky-50 border border-sky-100 rounded-lg mb-4">
+                            <p class="text-sky-800 text-center">
+                                <strong>Nuestra dirección de soporte es:</strong> 
+                                <a href="mailto:info@inmigracionok.esq" class="text-sky-600 hover:underline font-mono">info@inmigracionok.esq</a>
+                            </p>
+                        </div>
+                        <div class="p-3 bg-yellow-50 border border-yellow-100 rounded-lg">
+                            <p class="text-yellow-700"><strong>Recomendación útil:</strong> Para poder ayudarte más rápido, por favor incluye en tu correo tu nombre completo y una descripción clara de tu consulta o del problema que estás experimentando, relacionando que se trata de la plataforma "MiCaso".</p>
+                        </div>
+                    </div>
+
+                    <div class="border-l-4 border-orange-200 pl-6">
+                        <h4 class="font-bold text-xl text-gray-800 mb-4 flex items-center">
+                            <span class="bg-orange-100 text-orange-700 rounded-full w-8 h-8 inline-flex items-center justify-center text-sm mr-3">3</span>
+                            Llámanos por Teléfono (Para asistencia directa)
+                        </h4>
+                        <p class="text-gray-600 mb-4">Si prefieres hablar directamente con un miembro de nuestro equipo de soporte para resolver tus dudas sobre la plataforma, estaremos encantados de atenderte.</p>
+                        <div class="p-4 bg-orange-50 border border-orange-100 rounded-lg">
+                            <p class="text-orange-800 text-center">
+                                <strong>Nuestra línea telefónica de asistencia es:</strong> 
+                                <a href="https://api.whatsapp.com/send?phone=19087583931&text=Hola%2C%20estoy%20en%20el%20sistema%20de%20carga%20de%20documentos%20de%20Inmigraci%C3%B3n%20OK%20Abogados%20y%20necesito%20ayuda" class="text-orange-600 hover:underline font-mono text-lg">+1 (908) 838-0182</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 p-6 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-100 rounded-xl">
+                    <h4 class="font-bold text-xl text-rose-700 mb-4 flex items-center">
+                        <i class="fas fa-exclamation-triangle text-rose-600 mr-2"></i>
+                        ¡Importante! Nuestros únicos canales oficiales
+                    </h4>
+                    <p class="text-rose-700">Para proteger la seguridad de tu caso y la confidencialidad de tu información, te recordamos que los tres canales mencionados en esta guía (Centro de Ayuda, correo electrónico y línea telefónica) son los únicos y exclusivos medios oficiales para solicitar ayuda sobre la plataforma "MiCaso". Por favor, nunca compartas tus datos de acceso o información sensible a través de otros medios.</p>
+                </div>
+
+                <!-- Video Tutorial 4: Soporte y Ayuda -->
+                <div class="bg-gray-50 rounded-xl p-6 text-center mt-8">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-play-circle text-slate-500 mr-2"></i>
+                        Video Tutorial: Soporte y Ayuda
+                    </h4>
+                    
+                    <!-- OPCIÓN 1: Video de YouTube (descomenta cuando tengas el video) -->
+                    
+                    <div class="w-full aspect-video rounded-lg overflow-hidden shadow-sm">
+                        <iframe 
+                            class="w-full h-full"
+                            src="https://www.youtube.com/embed/jfrg7iHo3FA" 
+                            title="Video Tutorial - Soporte y Ayuda"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
