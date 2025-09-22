@@ -10,13 +10,8 @@ import logging
 # Configurar logging
 logger = logging.getLogger(__name__)
 
-# Inicializar el gestor de tokens de Dropbox al importar la aplicación
-try:
-    from app.dropbox_token_manager import get_token_manager
-    # Inicializar el token manager al arrancar la aplicación
-    token_manager = get_token_manager()
-except Exception as e:
-    print(f"Advertencia: No se pudo inicializar el gestor de tokens de Dropbox: {e}")
+# Nota: No inicializamos el gestor de tokens aquí para evitar que falle
+# si las variables de entorno aún no se han cargado. Se hará dentro de create_app.
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -82,6 +77,13 @@ def create_app(config_name=None):
     # Configurar eventos de SQLAlchemy
     from app.events import setup_events
     setup_events()
+
+    # Inicializar el gestor de tokens de Dropbox una vez cargada la config
+    try:
+        from app.dropbox_token_manager import get_token_manager
+        _ = get_token_manager()
+    except Exception as e:
+        print(f"Advertencia: No se pudo inicializar el gestor de tokens de Dropbox: {e}")
     
     # Filtros personalizados de Jinja2
     @app.template_filter('datetime')

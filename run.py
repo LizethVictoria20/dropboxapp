@@ -1,9 +1,10 @@
 import argparse
-from app import create_app
 from dotenv import load_dotenv
 
-# Cargar variables de entorno desde .env
+# Cargar variables de entorno desde .env ANTES de importar la app
 load_dotenv()
+
+from app import create_app
 
 app = create_app()
 

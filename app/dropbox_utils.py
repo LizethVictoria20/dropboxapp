@@ -9,6 +9,59 @@ from app.dropbox_token_manager import get_valid_dropbox_token, get_token_manager
 
 logger = logging.getLogger(__name__)
 
+def _normalize_dropbox_path(path: str) -> str:
+    """Normaliza rutas a formato Dropbox '/a/b' sin dobles barras."""
+    if path is None:
+        return '/'
+    path = str(path).replace('\\', '/')
+    path = path.strip()
+    if not path:
+        return '/'
+    if not path.startswith('/'):
+        path = '/' + path
+    while '//' in path:
+        path = path.replace('//', '/')
+    if len(path) > 1 and path.endswith('/'):
+        path = path[:-1]
+    return path
+
+def get_dropbox_base_folder() -> str:
+    """Obtiene la carpeta base global desde config/env si está definida."""
+    base = current_app.config.get('DROPBOX_BASE_FOLDER')
+    if base:
+        return _normalize_dropbox_path(base)
+    return ''
+
+def with_base_folder(path: str) -> str:
+    """Antepone la carpeta base global a una ruta dada, si está configurada."""
+    base = get_dropbox_base_folder()
+    if not base:
+        return _normalize_dropbox_path(path)
+    # Si path ya incluye base al inicio, no duplicar
+    normalized = _normalize_dropbox_path(path)
+    if normalized.startswith(base + '/') or normalized == base:
+        return normalized
+    if normalized == '/':
+        return base
+    return _normalize_dropbox_path(f"{base}{normalized}")
+
+def without_base_folder(path: str) -> str:
+    """Elimina el prefijo de la carpeta base si existe para trabajar con rutas lógicas."""
+    base = get_dropbox_base_folder()
+    normalized = _normalize_dropbox_path(path)
+    if not base:
+        return normalized
+    if normalized == base:
+        return '/'
+    if normalized.startswith(base + '/'):
+        logical = normalized[len(base):]
+        if not logical:
+            return '/'
+        if not logical.startswith('/'):
+            logical = '/' + logical
+        return _normalize_dropbox_path(logical)
+    return normalized
+
 def get_dbx():
     """
     Obtiene un cliente de Dropbox con token válido
@@ -183,7 +236,7 @@ def create_dropbox_folder(path):
     """Crea una carpeta en Dropbox"""
     dbx = get_dbx()
     try:
-        dbx.files_create_folder_v2(path)
+        dbx.files_create_folder_v2(with_base_folder(path))
     except dropbox.exceptions.ApiError as e:
         if "conflict" not in str(e):
             raise e
@@ -191,7 +244,7 @@ def create_dropbox_folder(path):
 def move_dropbox_item(from_path, to_path):
     """Mueve un elemento en Dropbox"""
     dbx = get_dbx()
-    dbx.files_move_v2(from_path, to_path)
+    dbx.files_move_v2(with_base_folder(from_path), with_base_folder(to_path))
 
 def rename_dropbox_item(from_path, new_name):
     """Renombra un elemento en Dropbox"""
@@ -293,7 +346,7 @@ def descargar_desde_dropbox(path):
     path = os.path.normpath(path).replace("\\", "/")
     try:
         dbx = get_dbx()
-        metadata, response = dbx.files_download(path)
+        metadata, response = dbx.files_download(with_base_folder(path))
         return response.content
     except dropbox.exceptions.ApiError as e:
         logger.error(f"Error descargando archivo {path}: {e}")

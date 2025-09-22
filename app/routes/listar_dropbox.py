@@ -7,7 +7,7 @@ from app.models import Archivo, Beneficiario, Folder, User, Notification, Coment
 from app import db
 import unicodedata
 from datetime import datetime
-from app.dropbox_utils import get_dbx, get_valid_dropbox_token
+from app.dropbox_utils import get_dbx, get_valid_dropbox_token, with_base_folder, without_base_folder
 import time
 
 bp = Blueprint("listar_dropbox", __name__)
@@ -67,7 +67,7 @@ def actualizar_estado_archivo():
         # Crear registro mínimo si no existe
         usuario_email = dropbox_path.strip('/').split('/')[0]
         user = User.query.filter_by(email=usuario_email).first()
-        archivo = Archivo(
+        archivo = Archivo(  # type: ignore[call-arg]
             nombre=dropbox_path.split('/')[-1],
             categoria='',
             subcategoria='',
@@ -110,7 +110,7 @@ def obtener_carpetas_dropbox_estructura(path="", dbx=None):
     if dbx is None:
         from app.dropbox_utils import get_dbx
         dbx = get_dbx()
-    res = dbx.files_list_folder(path, recursive=True)
+    res = dbx.files_list_folder(with_base_folder(path), recursive=True)
     all_paths = [entry.path_display for entry in res.entries if isinstance(entry, dropbox.files.FolderMetadata)]
 
     # Construir el árbol
@@ -134,7 +134,7 @@ def obtener_estructura_dropbox(path="", dbx=None):
     
     try:
         # Obtener contenido del directorio actual (no recursivo)
-        res = dbx.files_list_folder(path, recursive=False)
+        res = dbx.files_list_folder(with_base_folder(path), recursive=False)
     except dropbox.exceptions.ApiError as e:
         print(f"Error accediendo a Dropbox path '{path}': {e}")
         # Retornar estructura vacía si el path no existe
@@ -177,7 +177,7 @@ def obtener_estructura_dropbox_optimizada(path="", dbx=None, max_depth=3, curren
         if not path or path == "":
             path = ""
         
-        res = dbx.files_list_folder(path, recursive=False)
+        res = dbx.files_list_folder(with_base_folder(path), recursive=False)
 
     except dropbox.exceptions.ApiError as e:
         print(f"Error accediendo a Dropbox path '{path}': {e}")
@@ -228,9 +228,9 @@ def obtener_estructura_dropbox_recursiva_limitada(path="", dbx=None, max_depth=3
             print(f"Warning: Error obteniendo cliente Dropbox: {e}")
             return {"_subcarpetas": {}, "_archivos": []}
 
-    base = (path or "").rstrip("/")
+    base = without_base_folder((path or "")).rstrip("/")
     try:
-        result = dbx.files_list_folder(base if base != "/" else "", recursive=True)
+        result = dbx.files_list_folder(with_base_folder(base if base != "/" else ""), recursive=True)
     except dropbox.exceptions.ApiError as e:
         print(f"Error accediendo a Dropbox path '{path}': {e}")
         return {"_subcarpetas": {}, "_archivos": []}
@@ -255,7 +255,7 @@ def obtener_estructura_dropbox_recursiva_limitada(path="", dbx=None, max_depth=3
             if not getattr(entry, "path_display", None):
                 continue
 
-            full_path = entry.path_display
+            full_path = without_base_folder(entry.path_display)
             if base and not full_path.startswith(base + "/") and full_path != base:
                 continue
 
@@ -470,13 +470,13 @@ def carpetas_dropbox():
         api_key = get_valid_dropbox_token()
         if not api_key:
             return render_template("carpetas_dropbox.html", 
-                                 estructuras_usuarios={},
-                                 usuarios={},
-                                 usuario_actual=current_user,
-                                 estructuras_usuarios_json="{}",
-                                 usuarios_emails_json="{}",
-                                 folders_por_ruta={},
-                                 config_error=True)
+                                    estructuras_usuarios={},
+                                    usuarios={},
+                                    usuario_actual=current_user,
+                                    estructuras_usuarios_json="{}",
+                                    usuarios_emails_json="{}",
+                                    folders_por_ruta={},
+                                    config_error=True)
         
         dbx = dropbox.Dropbox(api_key)
 
@@ -514,7 +514,7 @@ def carpetas_dropbox():
                     user.dropbox_folder_path = f"/{user.titular.email}/{user.nombre}"
                 
                 try:
-                    dbx.files_create_folder_v2(user.dropbox_folder_path)
+                    dbx.files_create_folder_v2(with_base_folder(user.dropbox_folder_path))
                 except dropbox.exceptions.ApiError as e:
                     if "conflict" not in str(e):
                         raise e
@@ -894,10 +894,10 @@ def crear_carpeta():
     
     try:
         dbx = get_dbx()
-        dbx.files_create_folder_v2(ruta)
+        dbx.files_create_folder_v2(with_base_folder(ruta))
         
         # Guardar carpeta en la base de datos
-        nueva_carpeta = Folder(
+        nueva_carpeta = Folder(  # type: ignore[call-arg]
             name=nombre,
             user_id=usuario_id,
             dropbox_path=ruta,
@@ -1103,7 +1103,7 @@ def subir_archivo():
                     if not usuario.titular.dropbox_folder_path:
                         usuario.titular.dropbox_folder_path = f"/{usuario.titular.email}"
                         try:
-                            dbx.files_create_folder_v2(usuario.titular.dropbox_folder_path)
+                            dbx.files_create_folder_v2(with_base_folder(usuario.titular.dropbox_folder_path))
                             print("Carpeta raíz del titular creada:", usuario.titular.dropbox_folder_path)
                         except dropbox.exceptions.ApiError as e:
                             if "conflict" not in str(e):
@@ -1126,7 +1126,7 @@ def subir_archivo():
                 if isinstance(usuario, Beneficiario) and hasattr(usuario, "titular") and usuario.titular:
                     carpeta_beneficiarios = f"{usuario.titular.dropbox_folder_path}/Beneficiarios"
                     try:
-                        dbx.files_create_folder_v2(carpeta_beneficiarios)
+                        dbx.files_create_folder_v2(with_base_folder(carpeta_beneficiarios))
                         print("Carpeta 'Beneficiarios' creada:", carpeta_beneficiarios)
                     except dropbox.exceptions.ApiError as e:
                         if "conflict" not in str(e):
@@ -1135,7 +1135,7 @@ def subir_archivo():
                         print("La carpeta 'Beneficiarios' ya existía")
                 
                 # Crear la carpeta del usuario/beneficiario
-                dbx.files_create_folder_v2(carpeta_usuario)
+                dbx.files_create_folder_v2(with_base_folder(carpeta_usuario))
                 print("Carpeta raíz creada en Dropbox:", carpeta_usuario)
             except dropbox.exceptions.ApiError as e:
                 if "conflict" not in str(e):
@@ -1151,11 +1151,11 @@ def subir_archivo():
         # Crear carpeta de categoría únicamente
         ruta_categoria = f"{carpeta_usuario}/{categoria}"
         try:
-            dbx.files_create_folder_v2(ruta_categoria)
+            dbx.files_create_folder_v2(with_base_folder(ruta_categoria))
             print("Carpeta categoría creada:", ruta_categoria)
             
             # Guardar carpeta categoría en la base de datos
-            carpeta_cat = Folder(
+            carpeta_cat = Folder(  # type: ignore[call-arg]
                 name=categoria,
                 user_id=getattr(usuario, "id", None),
                 dropbox_path=ruta_categoria,
@@ -1211,7 +1211,7 @@ def subir_archivo():
         # Subir archivo con nombre final (sin sobrescribir)
         dropbox_dest = f"{ruta_categoria}/{nombre_final}"
         try:
-            dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("add"))
+            dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
         except dropbox.exceptions.ApiError as e:
             if "conflict" in str(e):
                 # Si hay conflicto, agregar un sufijo adicional
@@ -1221,17 +1221,19 @@ def subir_archivo():
                 ext_final = "." + nombre_final.rsplit(".", 1)[1] if "." in nombre_final else ""
                 nombre_final = f"{nombre_sin_ext}_{sufijo_random}{ext_final}"
                 dropbox_dest = f"{ruta_categoria}/{nombre_final}"
-                dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("add"))
+                dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
             else:
                 raise e
         print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
 
         # Guardar en la base de datos
-        nuevo_archivo = Archivo(
+        # Guardar ruta lógica sin carpeta base
+        dropbox_dest_logico = without_base_folder(dropbox_dest)
+        nuevo_archivo = Archivo(  # type: ignore[call-arg]
             nombre=nombre_final,
             categoria=categoria,
             subcategoria="",
-            dropbox_path=dropbox_dest,
+            dropbox_path=dropbox_dest_logico,
             usuario_id=getattr(usuario, "id", None),
             estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
         )
@@ -1305,7 +1307,7 @@ def mover_archivo(archivo_nombre, carpeta_actual):
     # Crear carpetas destino si no existen
     carpeta_usuario = usuario.dropbox_folder_path or f"/{usuario.email}"
     try:
-        dbx.files_create_folder_v2(carpeta_usuario)
+        dbx.files_create_folder_v2(with_base_folder(carpeta_usuario))
     except dropbox.exceptions.ApiError as e:
         if "conflict" not in str(e):
             raise e
@@ -1319,13 +1321,13 @@ def mover_archivo(archivo_nombre, carpeta_actual):
         pass
     ruta_categoria = f"{carpeta_usuario}/{categoria}"
     try:
-        dbx.files_create_folder_v2(ruta_categoria)
+        dbx.files_create_folder_v2(with_base_folder(ruta_categoria))
     except dropbox.exceptions.ApiError as e:
         if "conflict" not in str(e):
             raise e
     # Mover archivo en Dropbox a categoría (sin subcategoría)
     nuevo_destino = f"{ruta_categoria}/{archivo.nombre}"
-    dbx.files_move_v2(archivo.dropbox_path, nuevo_destino, allow_shared_folder=True, autorename=True)
+    dbx.files_move_v2(with_base_folder(archivo.dropbox_path), with_base_folder(nuevo_destino), allow_shared_folder=True, autorename=True)
 
     # Actualiza en BD
     archivo.dropbox_path = nuevo_destino
@@ -1636,8 +1638,8 @@ def mover_archivo_modal():
             print(f"  Hacia: {new_dropbox_path}")
             
             result = dbx.files_move_v2(
-                from_path=archivo_path,
-                to_path=new_dropbox_path,
+                from_path=with_base_folder(archivo_path),
+                to_path=with_base_folder(new_dropbox_path),
                 allow_shared_folder=True,
                 autorename=True
             )
@@ -1663,15 +1665,18 @@ def mover_archivo_modal():
                 # Crear nuevo registro
                 path_parts = result_path.split('/')
                 if len(path_parts) >= 4:
-                    usuario_email = path_parts[1]
-                    categoria = path_parts[2] if len(path_parts) > 2 else ""
-                    subcategoria = path_parts[3] if len(path_parts) > 3 else ""
+                    # path en Dropbox real; convertir a lógico removiendo base
+                    result_path_logico = without_base_folder(result_path)
+                    path_parts = result_path_logico.strip('/').split('/')
+                    usuario_email = path_parts[0]
+                    categoria = path_parts[1] if len(path_parts) > 1 else ""
+                    subcategoria = path_parts[2] if len(path_parts) > 2 else ""
                     
                     usuario = User.query.filter_by(email=usuario_email).first()
                     if usuario:
-                        nuevo_archivo = Archivo(
+                        nuevo_archivo = Archivo(  # type: ignore[call-arg]
                             nombre=archivo_nombre,
-                            dropbox_path=result_path,
+                            dropbox_path=result_path_logico,
                             categoria=categoria,
                             subcategoria=subcategoria,
                             usuario_id=usuario.id,
@@ -1846,7 +1851,7 @@ def renombrar_archivo():
     dbx = get_dbx()
     try:
         print(f"DEBUG | Renombrando en Dropbox: {old_path} -> {new_path}")
-        dbx.files_move_v2(old_path, new_path, allow_shared_folder=True, autorename=True)
+        dbx.files_move_v2(with_base_folder(old_path), with_base_folder(new_path), allow_shared_folder=True, autorename=True)
     except Exception as e:
         print(f"DEBUG | Error renombrando en Dropbox: {e}")
         
@@ -1924,11 +1929,11 @@ def sincronizar_dropbox_a_bd():
                     if len(partes) > 3:
                         subcategoria = partes[3]
 
-                    nuevo_archivo = Archivo(
+                    nuevo_archivo = Archivo(  # type: ignore[call-arg]
                         nombre=entry.name,
                         categoria=categoria,
                         subcategoria=subcategoria,
-                        dropbox_path=dropbox_path,
+                        dropbox_path=without_base_folder(dropbox_path),
                         usuario_id=usuario.id,
                         estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
                     )
@@ -2046,11 +2051,11 @@ def sincronizar_usuario(email):
                     if len(partes) > 3:
                         subcategoria = partes[3]
                     
-                    nuevo_archivo = Archivo(
+                    nuevo_archivo = Archivo(  # type: ignore[call-arg]
                         nombre=entry.name,
                         categoria=categoria,
                         subcategoria=subcategoria,
-                        dropbox_path=dropbox_path,
+                        dropbox_path=without_base_folder(dropbox_path),
                         usuario_id=usuario.id,
                         estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
                     )
@@ -2192,7 +2197,7 @@ def buscar_archivo_especifico():
                 categoria = "Documentos financieros"
                 subcategoria = "Recibo de pago"
                 
-                nuevo_archivo = Archivo(
+                nuevo_archivo = Archivo(  # type: ignore[call-arg]
                     nombre=archivo_encontrado.name,
                     categoria=categoria,
                     subcategoria=subcategoria,
@@ -2304,7 +2309,7 @@ def buscar_archivo_dropbox(nombre_archivo):
                 if len(partes) > 2:
                     subcategoria = partes[2]
                 
-                nuevo_archivo = Archivo(
+                nuevo_archivo = Archivo(  # type: ignore[call-arg]
                     nombre=archivo_principal.name,
                     categoria=categoria,
                     subcategoria=subcategoria,
@@ -2378,7 +2383,7 @@ def sincronizar_dropbox_completo():
                 if len(partes) > 2:
                     subcategoria = partes[2]
                 
-                nuevo_archivo = Archivo(
+                nuevo_archivo = Archivo(  # type: ignore[call-arg]
                     nombre=entry.name,
                     categoria=categoria,
                     subcategoria=subcategoria,
@@ -2429,7 +2434,7 @@ def sincronizar_carpetas_dropbox():
                         # Extraer nombre de la carpeta del path
                         nombre = entry.name
                         
-                        nueva_carpeta = Folder(
+                        nueva_carpeta = Folder(  # type: ignore[call-arg]
                             name=nombre,
                             user_id=usuario.id,
                             dropbox_path=dropbox_path,
@@ -2545,7 +2550,7 @@ def subir_archivo_rapido():
                     if not usuario.titular.dropbox_folder_path:
                         usuario.titular.dropbox_folder_path = f"/{usuario.titular.email}"
                         try:
-                            dbx.files_create_folder_v2(usuario.titular.dropbox_folder_path)
+                            dbx.files_create_folder_v2(with_base_folder(usuario.titular.dropbox_folder_path))
                             print("Carpeta raíz del titular creada:", usuario.titular.dropbox_folder_path)
                         except dropbox.exceptions.ApiError as e:
                             if "conflict" not in str(e):
@@ -2570,14 +2575,14 @@ def subir_archivo_rapido():
                 if isinstance(usuario, Beneficiario) and hasattr(usuario, "titular") and usuario.titular:
                     carpeta_beneficiarios = f"{usuario.titular.dropbox_folder_path}/Beneficiarios"
                     try:
-                        dbx.files_create_folder_v2(carpeta_beneficiarios)
+                        dbx.files_create_folder_v2(with_base_folder(carpeta_beneficiarios))
                         print("Carpeta 'Beneficiarios' creada:", carpeta_beneficiarios)
                     except dropbox.exceptions.ApiError as e:
                         if "conflict" not in str(e):
                             raise e
                 
                 # Crear la carpeta del usuario/beneficiario
-                dbx.files_create_folder_v2(ruta_base)
+                dbx.files_create_folder_v2(with_base_folder(ruta_base))
                 print("Carpeta raíz creada:", ruta_base)
             except dropbox.exceptions.ApiError as e:
                 if "conflict" not in str(e):
@@ -2618,12 +2623,12 @@ def subir_archivo_rapido():
         except dropbox.exceptions.ApiError as e:
             if "not_found" in str(e):
                 print(f"Creando carpeta destino: {carpeta_destino_completa}")
-                dbx.files_create_folder_v2(carpeta_destino_completa)
+                dbx.files_create_folder_v2(with_base_folder(carpeta_destino_completa))
                 
                 # Guardar carpeta en la base de datos
                 from app.models import Folder
                 carpeta_nombre = carpeta_destino_completa.split('/')[-1]
-                nueva_carpeta = Folder(
+                nueva_carpeta = Folder(  # type: ignore[call-arg]
                     name=carpeta_nombre,
                     user_id=getattr(usuario, "id", None),
                     dropbox_path=carpeta_destino_completa,
@@ -2646,7 +2651,7 @@ def subir_archivo_rapido():
         dropbox_dest = f"{carpeta_destino_completa}/{nombre_normalizado}"
         
         try:
-            dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("add"))
+            dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
         except dropbox.exceptions.ApiError as e:
             if "conflict" in str(e):
                 # Si hay conflicto, agregar un sufijo adicional
@@ -2654,14 +2659,14 @@ def subir_archivo_rapido():
                 sufijo_random = str(random.randint(1000, 9999))
                 nombre_normalizado = f"{normaliza(nombre_base)}_{sufijo_random}{ext}"
                 dropbox_dest = f"{carpeta_destino_completa}/{nombre_normalizado}"
-                dbx.files_upload(archivo_content, dropbox_dest, mode=dropbox.files.WriteMode("add"))
+                dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
             else:
                 raise e
         print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
 
         # Guardar en la base de datos con categoría y subcategoría genéricas
         print(f"🔧 Guardando en BD con ruta: {dropbox_dest}")
-        nuevo_archivo = Archivo(
+        nuevo_archivo = Archivo(  # type: ignore[call-arg]
             nombre=nombre_normalizado,  # Usar el nombre normalizado sin timestamp
             categoria="Subida Rápida",  # Categoría genérica
             subcategoria="Directo",     # Subcategoría genérica
@@ -2734,7 +2739,7 @@ def ver_usuario_carpetas(usuario_id):
         if not usuario.dropbox_folder_path:
             usuario.dropbox_folder_path = f"/{usuario.email}"
             try:
-                dbx.files_create_folder_v2(usuario.dropbox_folder_path)
+                dbx.files_create_folder_v2(with_base_folder(usuario.dropbox_folder_path))
             except dropbox.exceptions.ApiError as e:
                 if "conflict" not in str(e):
                     raise e
@@ -3111,7 +3116,7 @@ def renombrar_carpeta():
                 print(f"DEBUG | Renombrando carpeta hija: {old_path_hija} -> {new_path_hija}")
                 
                 # Renombrar en Dropbox
-                dbx.files_move_v2(old_path_hija, new_path_hija, allow_shared_folder=True, autorename=True)
+                dbx.files_move_v2(with_base_folder(old_path_hija), with_base_folder(new_path_hija), allow_shared_folder=True, autorename=True)
                 
                 # Actualizar en la base de datos
                 carpeta_hija.dropbox_path = new_path_hija
@@ -3147,7 +3152,7 @@ def renombrar_carpeta():
     dbx = get_dbx()
     try:
         print(f"DEBUG | Renombrando carpeta en Dropbox: {old_path} -> {new_path}")
-        dbx.files_move_v2(old_path, new_path, allow_shared_folder=True, autorename=True)
+        dbx.files_move_v2(with_base_folder(old_path), with_base_folder(new_path), allow_shared_folder=True, autorename=True)
     except Exception as e:
         print(f"DEBUG | Error renombrando carpeta en Dropbox: {e}")
         if redirect_url and "/usuario/" in redirect_url:
