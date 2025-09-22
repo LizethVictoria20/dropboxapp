@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Tutorial Carga de Documentos - Mi Caso{% endblock %}
+
+{% block content %}
+<div class="space-y-8 max-w-6xl">
+    <!-- Navegación de regreso -->
+    <div class="flex items-center text-gray-600 mb-4">
+        <a href="{{ url_for('tutoriales.index') }}" class="flex items-center hover:text-blue-600 transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Volver a Tutoriales
+        </a>
+    </div>
+
+    <!-- Encabezado -->
+    <div class="text-center bg-gradient-to-br from-sky-50 to-indigo-50 border border-sky-200 rounded-2xl p-8">
+        <div class="flex items-center justify-center mb-4">
+            <i class="fas fa-cloud-upload-alt text-4xl text-sky-600"></i>
+        </div>
+        <h1 class="text-3xl font-bold mb-2 text-gray-800">Tutorial Carga de Documentos</h1>
+        <p class="text-base text-sky-700">
+            Guía paso a paso para cargar tus documentos y evidencias
+        </p>
+    </div>
+
+    <!-- Contenido del Tutorial -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-sky-50 to-indigo-50 border-b border-sky-100 p-6">
+            <div class="flex items-center">
+                <i class="fas fa-cloud-upload-alt text-2xl mr-3 text-sky-600"></i>
+                <h2 class="text-2xl font-bold text-gray-800">INSTRUCTIVO PASO A PASO PARA CARGAR TUS DOCUMENTOS Y EVIDENCIAS</h2>
+            </div>
+            <p class="mt-2 text-sky-700">EN LA PLATAFORMA "MI CASO"</p>
+            <p class="text-base text-sky-600">Sistema de recepción de evidencias y documentos de Inmigración Ok abogados.</p>
+        </div>
+        
+        <div class="p-8">
+            <div class="mb-6 p-4 bg-sky-50 border border-sky-100 rounded-lg">
+                <p class="text-sky-700 text-base">Esta guía te mostrará, paso a paso, cómo subir tus archivos a la plataforma "MiCaso". Cargar tus documentos correctamente es uno de los pasos más importantes de tu proceso, y estamos aquí para asegurarnos de que sea una tarea fácil y segura para ti.</p>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-file-check text-sky-500 mr-2"></i>
+                    1: Antes de Empezar: Prepara tus archivos
+                </h3>
+                <p class="text-gray-600 text-base mb-4">Para que la carga de tus documentos funcione a la primera, solo necesitas revisar dos cosas rápidas. Piensa en esto como tu lista de verificación personal:</p>
+                <ul class="space-y-3">
+                    <li class="flex items-start">
+                        <span class="bg-emerald-100 text-emerald-700 rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-1">✓</span>
+                        <div>
+                            <strong class="text-gray-700">Formato Correcto:</strong>
+                            <span class="text-gray-600 text-base"> Asegúrate de que tu archivo sea uno de los siguientes tipos: PDF, DOC, DOCX, XLS, XLSX, CSV, JPG, JPEG, PNG, MP4, MOV, MP3, ZIP, TXT, o GIF.</span>
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="bg-emerald-100 text-emerald-700 rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-1">✓</span>
+                        <div>
+                            <strong class="text-gray-700">Tamaño Adecuado:</strong>
+                            <span class="text-gray-600 text-base"> Verifica que el archivo que vas a subir no pese más de 1 GB. Si es más grande, considera comprimirlo en un archivo ZIP.</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-upload text-sky-500 mr-2"></i>
+                    2: Paso a Paso para cargar tu documento
+                </h3>
+                <p class="text-gray-600 text-base mb-4">Sigue estas instrucciones sencillas para enviar tus archivos a nuestro equipo de forma segura.</p>
+                
+                <div class="space-y-6">
+                    <div class="border-l-4 border-sky-200 pl-6">
+                        <h4 class="font-bold text-lg text-gray-800 mb-2">Inicia sesión en tu cuenta MiCaso</h4>
+                        <p class="text-gray-600 text-base mb-2">Antes que nada, asegúrate de haber ingresado a la plataforma. Ve a la página principal de MiCaso e inicia sesión con el correo electrónico y la contraseña que registraste al crear tu cuenta.</p>
+                        <div class="p-3 bg-orange-50 border border-orange-100 rounded-lg mt-2">
+                            <p class="text-orange-700 text-base"><strong>¿Aún no tienes una cuenta?</strong> No te preocupes. Para poder subir documentos, primero debes registrarte. Sigue nuestro Instructivo para registrarte en "MiCaso" y luego regresa de nuevo a este Instructivo.</p>
+                        </div>
+                    </div>
+
+                    <div class="border-l-4 border-sky-200 pl-6">
+                        <h4 class="font-bold text-lg text-gray-800 mb-2">Selecciona el archivo desde tu dispositivo</h4>
+                        <p class="text-gray-600 text-base mb-2">Una vez dentro, busca la pestaña <strong>"Subir"</strong> (ubicada en la parte superior izquierda de la pantalla), para subir archivos y haz clic en el botón <strong>"Examinar archivos"</strong>.</p>
+                        <p class="text-gray-600 text-base">Se abrirá una ventana para que busques el documento en tu computadora o teléfono. Encuéntralo y haz doble clic sobre él.</p>
+                    </div>
+
+                    <div class="border-l-4 border-sky-200 pl-6">
+                        <h4 class="font-bold text-lg text-gray-800 mb-2">Indica a quién pertenece el documento</h4>
+                        <p class="text-gray-600 text-base mb-2">Ve al menú desplegable llamado <strong>"¿A quién pertenece este documento?"</strong>.</p>
+                        <p class="text-gray-600 text-base">Haz clic en él y elige el nombre de la persona a la que corresponde el archivo (puedes ser tú o uno de tus beneficiarios registrados). Esto nos ayuda a organizar el caso de manera impecable.</p>
+                    </div>
+
+                    <div class="border-l-4 border-sky-200 pl-6">
+                        <h4 class="font-bold text-lg text-gray-800 mb-2">Elige el tipo de evidencia</h4>
+                        <p class="text-gray-600 text-base mb-2">Ahora, haz clic en el menú desplegable <strong>"Elija el tipo de evidencia que desea cargar"</strong>.</p>
+                        <p class="text-gray-600 text-base">Selecciona la opción que mejor describa tu archivo (por ejemplo: "Fotografías", "Chats", "Certificado de defunción", etc.). Esto acelera el proceso de revisión.</p>
+                    </div>
+
+                    <div class="border-l-4 border-emerald-200 pl-6">
+                        <h4 class="font-bold text-lg text-emerald-700 mb-2">¡Sube tu archivo!</h4>
+                        <p class="text-gray-600 text-base mb-2">Una vez que hayas completado los pasos anteriores, haz clic en el botón <strong>"Importar Archivo"</strong>.</p>
+                        <p class="text-gray-600 text-base">Espera un momento mientras la barra de progreso se completa. <strong>¡No cierres la página hasta que confirmes que la carga ha finalizado!</strong></p>
+                        <div class="p-3 bg-yellow-50 border border-yellow-100 rounded-lg mt-2">
+                            <p class="text-yellow-700 text-base"><strong>Nota Importante:</strong> Deberás repetir estos pasos (del "b" al "e") para cada uno de los documentos que necesites enviarnos.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-tasks text-sky-500 mr-2"></i>
+                    3: Después de Subir: Entendiendo el estado de tu documento
+                </h3>
+                <p class="text-gray-600 text-base mb-4">Una vez cargado, tu documento pasará por diferentes etapas. Podrás ver su estado en la plataforma, si revisas en la pestaña <strong>"Mis Archivos"</strong> y esto es lo que significa cada uno:</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-amber-50 border border-amber-100 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <span class="bg-amber-200 text-amber-800 rounded-full px-3 py-1 text-sm font-medium mr-2">Pendiente de revisión</span>
+                        </div>
+                        <p class="text-amber-700 text-base">¡Lo recibimos! Tu documento está en la fila y muy pronto será revisado por nuestro equipo. No necesitas hacer nada más por ahora.</p>
+                    </div>
+                    
+                    <div class="p-4 bg-sky-50 border border-sky-100 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <span class="bg-sky-200 text-sky-800 rounded-full px-3 py-1 text-sm font-medium mr-2">En revisión</span>
+                        </div>
+                        <p class="text-sky-700 text-base">Uno de nuestros especialistas ya está trabajando con tu documento, validando que toda la información sea correcta y útil para tu caso.</p>
+                    </div>
+                    
+                    <div class="p-4 bg-emerald-50 border border-emerald-100 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <span class="bg-emerald-200 text-emerald-800 rounded-full px-3 py-1 text-sm font-medium mr-2">Aprobado</span>
+                        </div>
+                        <p class="text-emerald-700 text-base">¡Excelente! Tu documento ha sido verificado, aceptado y añadido oficialmente a tu expediente. Es una pieza más completada en el rompecabezas de tu caso.</p>
+                    </div>
+                    
+                    <div class="p-4 bg-rose-50 border border-rose-100 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <span class="bg-rose-200 text-rose-800 rounded-full px-3 py-1 text-sm font-medium mr-2">Rechazado</span>
+                        </div>
+                        <p class="text-rose-700 text-base">Hubo un inconveniente con el archivo. Puede ser por calidad, información incorrecta o porque no era el documento solicitado. Por favor, revisa los comentarios que nuestro equipo dejó en la plataforma para saber exactamente qué ocurrió y cómo puedes solucionarlo.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-sky-50 border border-sky-100 rounded-lg p-6 text-center">
+                <h4 class="text-lg font-bold text-gray-800 mb-2">Estamos contigo</h4>
+                <p class="text-gray-600 text-base mb-2">¡Y eso es todo! Has completado exitosamente el proceso de carga de documentos. Recuerda que subir tus evidencias de forma clara y ordenada es clave para el éxito de tu caso.</p>
+                <p class="text-gray-600 text-base">Si tienes algún problema o duda durante el proceso, no dudes en contactarnos. Estamos aquí para ayudarte.</p>
+            </div>
+
+            <!-- Video Tutorial: Carga de Documentos -->
+            <div class="bg-gray-50 rounded-xl p-6 text-center mt-8">
+                <h4 class="text-lg font-bold text-gray-800 mb-4">
+                    <i class="fas fa-play-circle text-sky-500 mr-2"></i>
+                    Video Tutorial: Carga de Documentos
+                </h4>
+                
+                <div class="w-full aspect-video rounded-lg overflow-hidden shadow-sm">
+                    <iframe 
+                        class="w-full h-full"
+                        src="https://www.youtube.com/embed/scsAWu-FWzw" 
+                        title="Video Tutorial - Carga de Documentos"
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegación a otros tutoriales -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+        <a href="{{ url_for('tutoriales.registro') }}" 
+           class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 hover:bg-emerald-100 transition-colors group">
+            <div class="flex items-center">
+                <i class="fas fa-user-plus text-2xl text-emerald-600 mr-3"></i>
+                <div>
+                    <h3 class="font-bold text-emerald-800 group-hover:text-emerald-900">Volver: Tutorial de Registro</h3>
+                    <p class="text-emerald-600 text-sm">Cómo crear tu cuenta</p>
+                </div>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('tutoriales.solucionar_problemas') }}" 
+           class="bg-slate-50 border border-slate-200 rounded-xl p-4 hover:bg-slate-100 transition-colors group">
+            <div class="flex items-center">
+                <i class="fas fa-headset text-2xl text-slate-600 mr-3"></i>
+                <div>
+                    <h3 class="font-bold text-slate-800 group-hover:text-slate-900">Siguiente: Obtener Ayuda</h3>
+                    <p class="text-slate-600 text-sm">Canales de soporte disponibles</p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -184,7 +184,8 @@
   </head>
   <body class="bg-surface">
     <div id="page-container">
-      <!-- Header -->
+      <!-- Header - Solo mostrar cuando el usuario esté autenticado -->
+      {% if current_user.is_authenticated %}
       <header class="bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex h-16 items-center justify-between">
@@ -533,6 +534,103 @@
           </div>
         </div>
       </header>
+      {% else %}
+      <!-- Header para usuarios no autenticados -->
+      <header class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex h-16 items-center justify-between">
+            <!-- Logo y Navegación -->
+            <div class="flex items-center space-x-8">
+              <!-- Logo -->
+              <div class="flex items-center space-x-3">
+                <div class="h-[10rem] rounded-lg p-1">
+                  <img
+                    src="{{ url_for('static', filename='image/LogoText.png') }}"
+                    alt="Inmigración OK Abogados"
+                    class="h-full object-contain"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex items-center space-x-6">
+              <div class="relative group">
+                <a 
+                  href="{{ url_for('auth.login') }}" 
+                  class="flex items-center space-x-3 hover:bg-surface rounded-xl px-3 py-2 transition-colors">
+                  <div class="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    <i class="fas fa-sign-in-alt"></i>
+                  </div>
+                  <div class="flex flex-col text-right">
+                    <span class="text-sm font-medium text-gray-900">
+                      Iniciar Sesión
+                    </span>
+                    <span class="text-xs text-gray-500">
+                      Acceder al sistema
+                    </span>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Menú Móvil -->
+              <button
+                id="mobileMenuButtonGuest"
+                class="md:hidden text-primary hover:text-primary-dark transition-colors"
+              >
+                <i class="fas fa-bars text-xl"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Menú móvil para usuarios no autenticados -->
+        <div
+          id="mobileMenuGuest"
+          class="md:hidden fixed inset-0 z-50 bg-black/20 backdrop-blur-sm hidden"
+        >
+          <div class="fixed right-0 top-0 h-full w-80 bg-white shadow-xl">
+            <div class="flex items-center justify-between p-6 border-b border-gray-100">
+              <h3 class="text-lg font-semibold text-gray-900">Menú</h3>
+              <button
+                id="closeMobileMenuGuest"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <i class="fas fa-times text-xl"></i>
+              </button>
+            </div>
+            
+            <div class="px-4 py-6 space-y-3 overflow-y-auto">
+              <a
+                href="{{ url_for('tutoriales.index') }}"
+                class="{% if request.endpoint.startswith('tutoriales') %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+              >
+                <i class="fas fa-graduation-cap mr-3 w-5 text-center"></i>
+                Tutoriales
+              </a>
+              
+              <div class="border-t border-gray-100 my-4"></div>
+              
+              <a
+                href="{{ url_for('web_register.register') }}"
+                class="text-gray-600 hover:bg-gray-50 block px-3 py-3 rounded-lg font-medium transition-colors"
+              >
+                <i class="fas fa-user-plus mr-3 w-5 text-center"></i>
+                Registrarse
+              </a>
+              
+              <a
+                href="{{ url_for('auth.login') }}"
+                class="text-primary bg-primary/10 block px-3 py-3 rounded-lg font-medium transition-colors"
+              >
+                <i class="fas fa-sign-in-alt mr-3 w-5 text-center"></i>
+                Iniciar Sesión
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+      {% endif %}
 
       <!-- Contenido principal - NUEVO -->
       <main class="flex-grow py-8">
@@ -610,6 +708,43 @@
         }
         if (mobileMenuOverlay) {
           mobileMenuOverlay.addEventListener("click", closeMobileMenuHandler);
+        }
+
+        // Menú móvil para usuarios no autenticados
+        const mobileMenuButtonGuest = document.getElementById("mobileMenuButtonGuest");
+        const mobileMenuGuest = document.getElementById("mobileMenuGuest");
+        const closeMobileMenuGuest = document.getElementById("closeMobileMenuGuest");
+
+        // Función para abrir el menú de invitados
+        function openMobileMenuGuest() {
+          if (mobileMenuGuest) {
+            mobileMenuGuest.classList.remove("hidden");
+            document.body.style.overflow = "hidden";
+          }
+        }
+
+        // Función para cerrar el menú de invitados
+        function closeMobileMenuGuest() {
+          if (mobileMenuGuest) {
+            mobileMenuGuest.classList.add("hidden");
+            document.body.style.overflow = "";
+          }
+        }
+
+        // Event listeners para menú de invitados
+        if (mobileMenuButtonGuest) {
+          mobileMenuButtonGuest.addEventListener("click", openMobileMenuGuest);
+        }
+        if (closeMobileMenuGuest) {
+          closeMobileMenuGuest.addEventListener("click", closeMobileMenuGuest);
+        }
+        if (mobileMenuGuest) {
+          // Cerrar al hacer click en el overlay
+          mobileMenuGuest.addEventListener("click", function(e) {
+            if (e.target === mobileMenuGuest) {
+              closeMobileMenuGuest();
+            }
+          });
         }
       });
     </script>
