@@ -29,6 +29,10 @@ class Config:
     DROPBOX_ACCESS_TOKEN = os.environ.get('DROPBOX_ACCESS_TOKEN')
     DROPBOX_REFRESH_TOKEN = os.environ.get('DROPBOX_REFRESH_TOKEN')
     DROPBOX_API_KEY = os.environ.get('DROPBOX_API_KEY')
+    # Carpeta base global para contener TODAS las operaciones en Dropbox
+    DROPBOX_BASE_FOLDER = os.environ.get('DROPBOX_BASE_FOLDER')
+    # (Opcional) Enlace compartido si se quiere resolver namespace desde un link
+    DROPBOX_BASE_SHARED_LINK = os.environ.get('DROPBOX_BASE_SHARED_LINK')
     
     # Configuración de logging
     LOG_LEVEL = 'INFO'
