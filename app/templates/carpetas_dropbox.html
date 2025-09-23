@@ -2804,111 +2804,57 @@ block content %}
   function descargarArchivo(fileId, filePath, filename) {
     console.log("Descargando archivo:", filePath, "Nombre:", filename);
 
-    // Mostrar indicador de carga
     const loadingOverlay = createLoadingOverlay("Descargando archivo...");
     document.body.appendChild(loadingOverlay);
 
-    // Verificar si es un ID numérico (archivo local) o una ruta (archivo Dropbox)
-    const isLocalFile = !isNaN(filePath);
-
-    if (isLocalFile) {
-      // Para archivos locales, usar la ruta /admin/preview_file/{id}
-      fetch(`/admin/preview_file/${filePath}`)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status}`);
-          }
-          return response.blob();
-        })
-        .then((blob) => {
-          // Crear enlace de descarga
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-
-          // Quitar indicador de carga
-          document.body.removeChild(loadingOverlay);
-
-          // Mostrar mensaje de éxito
-          Swal.fire({
-            icon: "success",
-            title: "¡Descarga completada!",
-            text: `El archivo "${filename}" se ha descargado correctamente.`,
-            confirmButtonColor: "#0076a8",
-            timer: 3000,
-            timerProgressBar: true,
-          });
-        })
-        .catch((error) => {
-          console.error("Error al descargar archivo:", error);
-          document.body.removeChild(loadingOverlay);
-
-          Swal.fire({
-            icon: "error",
-            title: "Error al descargar",
-            text: `No se pudo descargar el archivo: ${error.message}`,
-            confirmButtonColor: "#0076a8",
-          });
-        });
+    // Si es numérico asumimos ID de archivo local
+    const isLocalId = !isNaN(filePath);
+    let url = "";
+    if (isLocalId) {
+      url = `/admin/descargar_archivo?archivo_id=${encodeURIComponent(filePath)}`;
     } else {
-      // Para archivos de Dropbox, usar el endpoint POST
-      fetch("/admin/preview_file", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          path: filePath,
-          extension: filename.split(".").pop() || "",
-        }),
+      url = `/admin/descargar_archivo?path=${encodeURIComponent(filePath)}&nombre=${encodeURIComponent(filename)}`;
+    }
+
+    fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+        return response.blob();
       })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status}`);
-          }
-          return response.blob();
-        })
-        .then((blob) => {
-          // Crear enlace de descarga
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-
-          // Quitar indicador de carga
-          document.body.removeChild(loadingOverlay);
-
-          // Mostrar mensaje de éxito
+      .then((blob) => {
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objectUrl;
+        a.download = filename || "archivo";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(objectUrl);
+        document.body.removeChild(loadingOverlay);
+        if (window.Swal) {
           Swal.fire({
             icon: "success",
             title: "¡Descarga completada!",
             text: `El archivo "${filename}" se ha descargado correctamente.`,
             confirmButtonColor: "#0076a8",
-            timer: 3000,
-            timerProgressBar: true,
+            timer: 2500,
           });
-        })
-        .catch((error) => {
-          console.error("Error al descargar archivo:", error);
-          document.body.removeChild(loadingOverlay);
-
+        }
+      })
+      .catch((error) => {
+        console.error("Error al descargar archivo:", error);
+        document.body.removeChild(loadingOverlay);
+        if (window.Swal) {
           Swal.fire({
             icon: "error",
             title: "Error al descargar",
             text: `No se pudo descargar el archivo: ${error.message}`,
             confirmButtonColor: "#0076a8",
           });
-        });
-    }
+        } else {
+          alert(`No se pudo descargar el archivo: ${error.message}`);
+        }
+      });
   }
 
   // Inicialización final para asegurar que todo esté disponible
@@ -3162,4 +3108,9 @@ block content %}
   document.addEventListener('DOMContentLoaded', initStatusBadgesDropboxes);
 </script>
 
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}

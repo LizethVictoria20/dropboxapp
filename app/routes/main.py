@@ -1140,6 +1140,138 @@ def api_usuario_eliminar(usuario_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500 
 
+@bp.route('/config/dropbox/status')
+@login_required
+@role_required('admin')
+def dropbox_config_status():
+    """Página de estado y configuración de Dropbox"""
+    from app.dropbox_token_manager import get_token_manager
+    import os
+    
+    try:
+        # Obtener información del gestor de tokens
+        manager = get_token_manager()
+        status = manager.get_token_status()
+        
+        # Obtener validación completa de tokens
+        from app.dropbox_token_manager import validate_dropbox_tokens
+        validation_status = validate_dropbox_tokens()
+        
+        # Estado de conexión con Dropbox basado en validación
+        if validation_status["access_token_valid"] and validation_status["refresh_token_valid"]:
+            dropbox_status = "✅ Conectado correctamente - Todos los tokens son válidos"
+        elif validation_status["access_token_valid"]:
+            dropbox_status = "⚠️ Conectado - Access token válido, pero refresh token tiene problemas"
+        elif validation_status["errors"]:
+            dropbox_status = f"❌ Error de conexión: {'; '.join(validation_status['errors'])}"
+        else:
+            dropbox_status = "⚠️ Estado desconocido - Verificando tokens..."
+        
+        # Variables de entorno con valores parciales (solo mostrar si están configuradas)
+        config_status = {}
+        
+        # DROPBOX_API_KEY (token de acceso)
+        api_key = os.environ.get('DROPBOX_API_KEY') or os.environ.get('DROPBOX_ACCESS_TOKEN')
+        config_status['DROPBOX_API_KEY'] = {
+            'configurado': bool(api_key),
+            'valor': f"{api_key[:10]}..." if api_key else "No configurado"
+        }
+        
+        # DROPBOX_APP_KEY
+        app_key = os.environ.get('DROPBOX_APP_KEY')
+        config_status['DROPBOX_APP_KEY'] = {
+            'configurado': bool(app_key),
+            'valor': f"{app_key[:10]}..." if app_key else "No configurado"
+        }
+        
+        # DROPBOX_APP_SECRET
+        app_secret = os.environ.get('DROPBOX_APP_SECRET')
+        config_status['DROPBOX_APP_SECRET'] = {
+            'configurado': bool(app_secret),
+            'valor': f"{app_secret[:10]}..." if app_secret else "No configurado"
+        }
+        
+        # DROPBOX_ACCESS_TOKEN
+        access_token = os.environ.get('DROPBOX_ACCESS_TOKEN')
+        config_status['DROPBOX_ACCESS_TOKEN'] = {
+            'configurado': bool(access_token),
+            'valor': f"{access_token[:10]}..." if access_token else "No configurado"
+        }
+        
+        # DROPBOX_REFRESH_TOKEN
+        refresh_token = os.environ.get('DROPBOX_REFRESH_TOKEN')
+        config_status['DROPBOX_REFRESH_TOKEN'] = {
+            'configurado': bool(refresh_token),
+            'valor': f"{refresh_token[:10]}..." if refresh_token else "No configurado"
+        }
+        
+        # Verificar si todas están configuradas
+        todas_configuradas = all(var['configurado'] for var in config_status.values())
+        
+        # Sistema de renovación automática
+        auto_refresh_enabled = status.get('refresh_token_configured', False)
+        
+        # Información de renovación
+        last_refresh = None
+        next_refresh = None
+        
+        if hasattr(manager, 'last_refresh') and manager.last_refresh:
+            from datetime import timedelta
+            last_refresh = manager.last_refresh.strftime('%Y-%m-%d %H:%M:%S')
+            next_refresh = (manager.last_refresh + timedelta(minutes=45)).strftime('%Y-%m-%d %H:%M:%S')
+        
+        return render_template('config_status.html', 
+                             config_status=config_status,
+                             todas_configuradas=todas_configuradas,
+                             dropbox_status=dropbox_status,
+                             auto_refresh_enabled=auto_refresh_enabled,
+                             last_refresh=last_refresh,
+                             next_refresh=next_refresh,
+                             validation_status=validation_status)
+    except Exception as e:
+        logger.error(f"Error en config status: {e}")
+        flash(f'Error al obtener estado: {str(e)}', 'error')
+        return redirect(url_for('main.dashboard'))
+
+@bp.route('/config/dropbox/refresh', methods=['POST'])
+@login_required
+@role_required('admin') 
+def refresh_dropbox_token():
+    """Renovar token de Dropbox manualmente"""
+    from app.dropbox_token_manager import refresh_dropbox_token as refresh_token
+    
+    try:
+        success = refresh_token()
+        if success:
+            flash('Token de Dropbox renovado exitosamente', 'success')
+        else:
+            flash('No se pudo renovar el token. Revisa los logs para más detalles.', 'error')
+    except Exception as e:
+        logger.error(f"Error renovando token: {e}")
+        flash(f'Error al renovar token: {str(e)}', 'error')
+    
+    return redirect(url_for('main.dropbox_config_status'))
+
+@bp.route('/config/dropbox/validate', methods=['GET'])
+@login_required
+@role_required('admin') 
+def validate_dropbox_config():
+    """API endpoint para validar configuración de Dropbox"""
+    from app.dropbox_token_manager import validate_dropbox_tokens
+    
+    try:
+        validation_status = validate_dropbox_tokens()
+        return jsonify({
+            "success": True,
+            "validation": validation_status
+        })
+    except Exception as e:
+        logger.error(f"Error validando configuración: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 @bp.route('/webhook/dropbox', methods=['GET', 'POST'])
 def dropbox_webhook():
     """
@@ -1222,80 +1354,6 @@ def test_webhook():
     </html>
     """ 
 
-@bp.route('/config/dropbox/status')
-def dropbox_config_status():
-    """
-    Ruta para verificar el estado de la configuración de Dropbox
-    """
-    from app.dropbox_utils import verify_dropbox_config
-    
-    # Obtener estado de configuración
-    status = verify_dropbox_config()
-    
-    # Convertir a formato para el template
-    config_status = {
-        'DROPBOX_API_KEY': {
-            'configurado': status['config']['api_key']['available'],
-            'valor': status['config']['api_key']['value']
-        },
-        'DROPBOX_APP_KEY': {
-            'configurado': status['config']['app_key']['available'],
-            'valor': status['config']['app_key']['value']
-        },
-        'DROPBOX_APP_SECRET': {
-            'configurado': status['config']['app_secret']['available'],
-            'valor': status['config']['app_secret']['value']
-        },
-        'DROPBOX_ACCESS_TOKEN': {
-            'configurado': status['config']['access_token']['available'],
-            'valor': status['config']['access_token']['value']
-        },
-        'DROPBOX_REFRESH_TOKEN': {
-            'configurado': status['config']['refresh_token']['available'],
-            'valor': status['config']['refresh_token']['value']
-        }
-    }
-    
-    # Estado de conexión
-    if status['connection']['connected']:
-        if 'account_info' in status['connection']:
-            account_info = status['connection']['account_info']
-            dropbox_status = f"Conectado como: {account_info['email']} ({account_info['name']})"
-        else:
-            dropbox_status = "Conectado a Dropbox"
-    elif 'error' in status['connection'] and status['connection']['error']:
-        dropbox_status = f"Error de conexión: {status['connection']['error']}"
-    else:
-        dropbox_status = "No configurado"
-    
-    return render_template('config_status.html', 
-                         config_status=config_status,
-                         dropbox_status=dropbox_status,
-                         todas_configuradas=status['all_configured'],
-                         connection_status=status['connection'],
-                         auto_refresh_enabled=status.get('auto_refresh_enabled', False),
-                         last_refresh=status.get('last_refresh'),
-                         next_refresh=status.get('next_refresh'))
-
-@bp.route('/config/dropbox/refresh', methods=['POST'])
-@login_required
-@role_required('admin')
-def refresh_dropbox_token():
-    """
-    Ruta para renovar manualmente el token de Dropbox
-    """
-    from app.dropbox_token_manager import refresh_dropbox_token
-    
-    try:
-        success = refresh_dropbox_token()
-        if success:
-            flash('Token de Dropbox renovado exitosamente', 'success')
-        else:
-            flash('Error renovando el token de Dropbox', 'error')
-    except Exception as e:
-        flash(f'Error renovando token: {str(e)}', 'error')
-    
-    return redirect(url_for('main.dropbox_config_status')) 
 
 @bp.route('/debug/file-extensions')
 @login_required

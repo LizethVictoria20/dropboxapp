@@ -150,9 +150,31 @@ def get_dropbox_client():
     """Obtiene el cliente de Dropbox"""
     try:
         token = get_valid_dropbox_token()
-        if token:
-            return dropbox.Dropbox(token)
-        return None
+        if not token:
+            logger.error("No se pudo obtener un token válido de Dropbox")
+            return None
+        
+        # Crear cliente y hacer una prueba básica de conectividad
+        client = dropbox.Dropbox(token)
+        try:
+            # Prueba rápida de conectividad
+            client.users_get_current_account()
+            return client
+        except dropbox.exceptions.AuthError as e:
+            logger.error(f"Token de Dropbox inválido o expirado: {e}")
+            return None
+        except dropbox.exceptions.ApiError as e:
+            if "invalid_access_token" in str(e) or "unauthorized" in str(e):
+                logger.error(f"Token de acceso inválido: {e}")
+                return None
+            else:
+                # Para otros errores de API, aún devolvemos el cliente ya que podría ser un error temporal
+                logger.warning(f"Error de API al probar conectividad, pero devolviendo cliente: {e}")
+                return client
+        except Exception as e:
+            logger.warning(f"Error de conectividad, pero devolviendo cliente: {e}")
+            return client
+            
     except Exception as e:
         logger.error(f"Error obteniendo cliente Dropbox: {e}")
         return None
@@ -236,26 +258,87 @@ def list_folder_contents(*args, **kwargs):
 def get_file_download_link(*args, **kwargs):
     """Obtiene enlace de descarga"""
     try:
-        # Función placeholder
-        return None
+        path = kwargs.get('path') or (args[0] if args else None)
+        if not path:
+            return None
+
+        dbx = get_dropbox_client()
+        if dbx is None:
+            logger.error("Cliente Dropbox no disponible para obtener enlace de descarga")
+            return None
+
+        dropbox_path = with_base_folder(path)
+        try:
+            # Enlace temporal de descarga directa (caduca en ~4h)
+            tmp = dbx.files_get_temporary_link(dropbox_path)
+            return getattr(tmp, 'link', None)
+        except Exception as e:
+            logger.error(f"Error obteniendo enlace temporal para {dropbox_path}: {e}")
+            return None
     except Exception as e:
         logger.error(f"Error obteniendo enlace: {e}")
         return None
 
 def descargar_desde_dropbox(*args, **kwargs):
-    """Descarga archivo desde Dropbox"""
+    """Descarga archivo desde Dropbox.
+
+    Retorna bytes del contenido o None en caso de error.
+    Acepta 'path' como argumento nombrado o primer posicional.
+    """
     try:
-        # Función placeholder
-        return None
+        path = kwargs.get('path') or (args[0] if args else None)
+        if not path:
+            logger.error("descargar_desde_dropbox: path no proporcionado")
+            return None
+
+        dbx = get_dropbox_client()
+        if dbx is None:
+            logger.error("Cliente Dropbox no disponible para descargar archivo")
+            return None
+
+        dropbox_path = with_base_folder(path)
+        logger.debug(f"Descargando desde Dropbox: {dropbox_path}")
+        try:
+            metadata, res = dbx.files_download(path=dropbox_path)
+            # 'res' es un HTTPResponse-like, .content devuelve bytes
+            contenido = res.content
+            return contenido
+        except dropbox.exceptions.ApiError as e:
+            logger.error(f"APIError al descargar {dropbox_path}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error inesperado al descargar {dropbox_path}: {e}")
+            return None
     except Exception as e:
         logger.error(f"Error descargando archivo: {e}")
         return None
 
 def generar_enlace_dropbox_temporal(*args, **kwargs):
-    """Genera enlace temporal de Dropbox"""
+    """Genera enlace temporal de Dropbox para visualización/descarga directa.
+
+    Retorna una URL con expiración (normalmente ~4 horas).
+    """
     try:
-        # Función placeholder
-        return None
+        path = kwargs.get('path') or (args[0] if args else None)
+        if not path:
+            logger.error("generar_enlace_dropbox_temporal: path no proporcionado")
+            return None
+
+        dbx = get_dropbox_client()
+        if dbx is None:
+            logger.error("Cliente Dropbox no disponible para generar enlace temporal")
+            return None
+
+        dropbox_path = with_base_folder(path)
+        try:
+            tmp = dbx.files_get_temporary_link(dropbox_path)
+            return getattr(tmp, 'link', None)
+        except dropbox.exceptions.ApiError as e:
+            logger.error(f"APIError generando enlace temporal para {dropbox_path}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error inesperado generando enlace temporal para {dropbox_path}: {e}")
+            return None
     except Exception as e:
         logger.error(f"Error generando enlace temporal: {e}")
         return None

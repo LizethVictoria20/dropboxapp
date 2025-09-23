@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 from flask import Flask, jsonify, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -20,6 +21,12 @@ login_manager = LoginManager()
 
 def create_app(config_name=None):
     app = Flask(__name__)
+    
+    # Cargar variables de entorno desde .env si existe
+    try:
+        load_dotenv()
+    except Exception:
+        pass
     
     if config_name is None:
         config_name = os.environ.get('FLASK_ENV', 'default')

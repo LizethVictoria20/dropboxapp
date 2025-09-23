@@ -1085,7 +1085,15 @@ def subir_archivo():
     archivo.seek(0)  # Resetear el puntero del archivo para futuras lecturas
 
     try:
+        # Obtener cliente Dropbox con manejo específico de errores de autenticación
         dbx = get_dbx()
+        if dbx is None:
+            print("ERROR: No se pudo obtener cliente de Dropbox - token inválido")
+            flash("Error de autenticación con Dropbox. Los tokens han expirado. Contacta al administrador para reconfigurar la conexión.", "error")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"success": False, "error": "Tokens de Dropbox expirados. Contacta al administrador."}), 401
+            else:
+                return redirect(url_for("listar_dropbox.subir_archivo"))
         
         # Carpeta raíz de usuario/beneficiario
         if hasattr(usuario, "dropbox_folder_path") and usuario.dropbox_folder_path:
@@ -1261,6 +1269,34 @@ def subir_archivo():
             return redirect(redirect_url)
 
 
+    except dropbox.exceptions.AuthError as e:
+        db.session.rollback()
+        print(f"ERROR de autenticación Dropbox: {e}")
+        error_msg = "Tokens de Dropbox expirados o inválidos. Contacta al administrador para reconfigurar la conexión con Dropbox."
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"success": False, "error": error_msg}), 401
+        else:
+            flash(error_msg, "error")
+            return redirect(url_for("listar_dropbox.subir_archivo"))
+    
+    except dropbox.exceptions.ApiError as e:
+        db.session.rollback()
+        print(f"ERROR API de Dropbox: {e}")
+        if "invalid_access_token" in str(e) or "unauthorized" in str(e):
+            error_msg = "Tokens de Dropbox expirados. Contacta al administrador para reconfigurar la conexión."
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"success": False, "error": error_msg}), 401
+            else:
+                flash(error_msg, "error")
+                return redirect(url_for("listar_dropbox.subir_archivo"))
+        else:
+            error_msg = f"Error de Dropbox: {str(e)}"
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"success": False, "error": error_msg}), 500
+            else:
+                flash(error_msg, "error")
+                return redirect(url_for("listar_dropbox.subir_archivo"))
+    
     except Exception as e:
         db.session.rollback()
         print(f"ERROR general en subida de archivo: {e}")
