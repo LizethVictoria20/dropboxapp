@@ -23,4 +23,5 @@ __pycache__/
 *.tar.gz
 *.rar
 *.tar.bz2
-*.tar.xz
+*.tar.xz.env
+.dropbox_tokens.json
