@@ -25,3 +25,8 @@ __pycache__/
 *.tar.bz2
 *.tar.xz.env
 .dropbox_tokens.json
+
+# Sensibles
+.env
+.dropbox_tokens.json
+tokens.json
