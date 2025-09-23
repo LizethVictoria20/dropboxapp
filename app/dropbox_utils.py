@@ -8,6 +8,7 @@ from datetime import datetime
 import os
 from app.dropbox_token_manager import get_valid_dropbox_token, get_token_manager
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -41,15 +42,106 @@ def _normalize_dropbox_path(path: str) -> str:
     
     return path
 
+def sanitize_dropbox_segment(name: str) -> str:
+    """Sanea un nombre de segmento para usarlo como carpeta/archivo en Dropbox.
+    - Reemplaza '/' y '\\' por '-'
+    - Colapsa espacios, quita espacios/puntos finales
+    - Reemplaza espacios por '_'
+    - Limita a 255 caracteres
+    """
+    try:
+        if not name:
+            return 'SIN_NOMBRE'
+        text = str(name)
+        # Reemplazar separadores inválidos
+        text = text.replace('/', '-').replace('\\', '-')
+        # Colapsar espacios en blanco múltiples
+        text = re.sub(r"\s+", " ", text)
+        # Quitar espacios al inicio/fin
+        text = text.strip()
+        # Quitar puntos/espacios finales (Windows restrictions y buenas prácticas)
+        text = text.rstrip('. ')
+        # Evitar vacío tras saneo
+        if not text:
+            text = 'SIN_NOMBRE'
+        # Sustituir espacios por guion bajo para mayor compatibilidad
+        text = text.replace(' ', '_')
+        # Limitar longitud
+        if len(text) > 255:
+            text = text[:255]
+        return text
+    except Exception:
+        return 'SIN_NOMBRE'
+
 def get_dropbox_base_folder():
     """Obtiene la carpeta base configurada en Dropbox"""
-    return '/'
+    global _cached_base_folder
+    if _cached_base_folder is not None:
+        return _cached_base_folder
+
+    try:
+        # 1) Revisar variable de entorno/config directa con el path deseado
+        base_folder = (
+            getattr(current_app, 'config', {}) and current_app.config.get('DROPBOX_BASE_FOLDER')
+        ) or os.environ.get('DROPBOX_BASE_FOLDER')
+        if base_folder:
+            _cached_base_folder = _normalize_dropbox_path(base_folder)
+            return _cached_base_folder
+
+        # 2) Intentar resolver desde un enlace compartido si está configurado
+        shared_link = (
+            getattr(current_app, 'config', {}) and current_app.config.get('DROPBOX_BASE_SHARED_LINK')
+        ) or os.environ.get('DROPBOX_BASE_SHARED_LINK')
+        shared_link_password = (
+            getattr(current_app, 'config', {}) and current_app.config.get('DROPBOX_BASE_SHARED_LINK_PASSWORD')
+        ) or os.environ.get('DROPBOX_BASE_SHARED_LINK_PASSWORD')
+
+        if shared_link:
+            dbx = get_dropbox_client()
+            if dbx is None:
+                logger.warning("Dropbox client no disponible para resolver carpeta base; usando '/'")
+                _cached_base_folder = '/'
+                return _cached_base_folder
+            try:
+                meta = dbx.sharing_get_shared_link_metadata(url=shared_link, link_password=shared_link_password)
+                # Para enlaces a recursos dentro de TU Dropbox, path_display/path_lower viene definido
+                path_display = getattr(meta, 'path_display', None)
+                path_lower = getattr(meta, 'path_lower', None)
+                final_path = path_display or path_lower
+                if final_path:
+                    _cached_base_folder = _normalize_dropbox_path(final_path)
+                    return _cached_base_folder
+                # Si no hay path (p.ej. carpeta ajena sin montar), no podemos fijar path-root aquí
+                logger.warning("No se pudo resolver path desde el enlace compartido; usando raíz '/'")
+            except Exception as e:
+                logger.error(f"Error resolviendo carpeta base desde enlace compartido: {e}")
+                # Continuar con fallback a '/'
+
+        # 3) Fallback: raíz
+        _cached_base_folder = '/'
+        return _cached_base_folder
+    except Exception as e:
+        logger.error(f"Error obteniendo carpeta base: {e}")
+        return '/'
 
 def create_dropbox_folder(folder_path):
     """Crea una carpeta en Dropbox"""
     try:
-        # Función básica que siempre devuelve True para mantener la funcionalidad
-        return True
+        dbx = get_dropbox_client()
+        if dbx is None:
+            logger.error("Cliente de Dropbox no disponible para crear carpeta")
+            return False
+        path = with_base_folder(folder_path)
+        try:
+            dbx.files_create_folder_v2(path)
+            return True
+        except dropbox.exceptions.ApiError as e:
+            # Si ya existe, consideramos éxito idempotente
+            if 'conflict' in str(e).lower():
+                logger.info(f"Carpeta ya existía en Dropbox: {path}")
+                return True
+            logger.error(f"Error de API creando carpeta {path}: {e}")
+            return False
     except Exception as e:
         logger.error(f"Error creando carpeta {folder_path}: {e}")
         return False

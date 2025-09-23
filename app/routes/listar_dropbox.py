@@ -7,7 +7,7 @@ from app.models import Archivo, Beneficiario, Folder, User, Notification, Coment
 from app import db
 import unicodedata
 from datetime import datetime
-from app.dropbox_utils import get_dbx, get_valid_dropbox_token, with_base_folder, without_base_folder
+from app.dropbox_utils import get_dbx, get_valid_dropbox_token, with_base_folder, without_base_folder, sanitize_dropbox_segment, _normalize_dropbox_path
 import time
 
 bp = Blueprint("listar_dropbox", __name__)
@@ -108,10 +108,10 @@ def api_mis_archivos():
 
 def obtener_carpetas_dropbox_estructura(path="", dbx=None):
     if dbx is None:
-        from app.dropbox_utils import get_dbx
+        from app.dropbox_utils import get_dbx, with_base_folder, without_base_folder, sanitize_dropbox_segment
         dbx = get_dbx()
-    res = dbx.files_list_folder(with_base_folder(path), recursive=True)
-    all_paths = [entry.path_display for entry in res.entries if isinstance(entry, dropbox.files.FolderMetadata)]
+        res = dbx.files_list_folder(with_base_folder(path), recursive=True)
+        all_paths = [entry.path_display for entry in res.entries if isinstance(entry, dropbox.files.FolderMetadata)]
 
     # Construir el árbol
     tree = {}
@@ -1149,14 +1149,15 @@ def subir_archivo():
             print("Ruta raíz guardada en DB:", carpeta_usuario)
 
         # Crear carpeta de categoría únicamente
-        ruta_categoria = f"{carpeta_usuario}/{categoria}"
+        categoria_saneada = sanitize_dropbox_segment(categoria)
+        ruta_categoria = f"{carpeta_usuario}/{categoria_saneada}"
         try:
             dbx.files_create_folder_v2(with_base_folder(ruta_categoria))
             print("Carpeta categoría creada:", ruta_categoria)
             
             # Guardar carpeta categoría en la base de datos
             carpeta_cat = Folder(  # type: ignore[call-arg]
-                name=categoria,
+                name=categoria_saneada,
                 user_id=getattr(usuario, "id", None),
                 dropbox_path=ruta_categoria,
                 es_publica=True
@@ -1175,7 +1176,7 @@ def subir_archivo():
 
         # Generar nombre final del archivo incluyendo nombre original y timestamp
         import time
-        nombre_evidencia = categoria.upper().replace(" ", "_")
+        nombre_evidencia = categoria_saneada.upper().replace(" ", "_")
         nombre_original = archivo.filename
         nombre_base = nombre_original
         ext = ""
@@ -1184,7 +1185,7 @@ def subir_archivo():
             ext = "." + nombre_original.rsplit(".", 1)[1].lower()
         
         # Normalizar el nombre base del archivo
-        nombre_base_normalizado = normaliza(nombre_base)
+        nombre_base_normalizado = sanitize_dropbox_segment(nombre_base)
         
         # Generar timestamp único
         timestamp = str(int(time.time()))
@@ -1192,19 +1193,19 @@ def subir_archivo():
         # Determinar tipo de usuario y generar nombre único
         if isinstance(usuario, User) and not getattr(usuario, "es_beneficiario", False):
             # TITULAR
-            nombre_titular = normaliza(usuario.nombre or usuario.email.split('@')[0])
+            nombre_titular = sanitize_dropbox_segment(usuario.nombre or usuario.email.split('@')[0])
             nombre_final = f"TITULAR_{nombre_titular}_{nombre_base_normalizado}{ext}"
         elif isinstance(usuario, Beneficiario):
             # BENEFICIARIO
-            nombre_ben = normaliza(usuario.nombre)
+            nombre_ben = sanitize_dropbox_segment(usuario.nombre)
             if hasattr(usuario, "titular") and usuario.titular:
-                nombre_titular = normaliza(usuario.titular.nombre)
+                nombre_titular = sanitize_dropbox_segment(usuario.titular.nombre)
             else:
                 nombre_titular = "SIN_TITULAR"
             nombre_final = f"{nombre_ben}_TITULAR_{nombre_titular}_{nombre_base_normalizado}{ext}"
         else:
             # Usuario genérico
-            nombre_final = f"{normaliza(usuario.nombre or usuario.email.split('@')[0])}_{nombre_base_normalizado}{ext}"
+            nombre_final = f"{sanitize_dropbox_segment(usuario.nombre or usuario.email.split('@')[0])}_{nombre_base_normalizado}{ext}"
 
         print("DEBUG | Nombre final para guardar/subir:", nombre_final)
 
@@ -1341,6 +1342,158 @@ def mover_archivo(archivo_nombre, carpeta_actual):
     
     flash("Archivo movido correctamente.", "success")
     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+
+@bp.route('/exportar_archivos_carpeta', methods=['GET', 'POST'])
+@login_required
+def exportar_archivos_carpeta():
+    """Exporta todos los archivos de una carpeta origen a una carpeta destino"""
+    from app.models import Archivo
+    
+    # Verificar que el usuario esté autenticado y tenga permisos de admin
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
+        return redirect(url_for("auth.login"))
+    
+    # Permitir exportaciones masivas a usuarios administrativos y clientes (para reorganizar sus archivos)
+    if current_user.rol not in ["admin", "superadmin", "cliente"]:
+        flash(f"No tienes permisos para realizar exportaciones masivas de archivos. Rol actual: {current_user.rol}", "error")
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
+    if request.method == 'GET':
+        # Mostrar formulario para seleccionar carpetas origen y destino
+        return render_template("exportar_archivos.html")
+    
+    # POST: procesar exportación
+    carpeta_origen = request.form.get("carpeta_origen", "").strip()
+    carpeta_destino = request.form.get("carpeta_destino", "").strip()
+    
+    if not carpeta_origen or not carpeta_destino:
+        flash("Debes especificar tanto la carpeta origen como la carpeta destino.", "error")
+        return redirect(url_for("listar_dropbox.exportar_archivos_carpeta"))
+    
+    # Normalizar rutas
+    carpeta_origen = _normalize_dropbox_path(carpeta_origen)
+    carpeta_destino = _normalize_dropbox_path(carpeta_destino)
+    
+    print(f"🔧 Exportando archivos de '{carpeta_origen}' a '{carpeta_destino}'")
+    
+    try:
+        dbx = get_dbx()
+        if not dbx:
+            flash("Error: No se pudo conectar con Dropbox.", "error")
+            return redirect(url_for("listar_dropbox.exportar_archivos_carpeta"))
+        
+        # Buscar todos los archivos en la carpeta origen en la base de datos
+        archivos_a_exportar = []
+        
+        # Buscar archivos que coincidan con la carpeta origen
+        if carpeta_origen.endswith('/'):
+            carpeta_origen = carpeta_origen[:-1]
+        
+        archivos_db = Archivo.query.filter(
+            Archivo.dropbox_path.like(f"{carpeta_origen}/%")
+        ).all()
+        
+        print(f"🔧 Archivos encontrados en BD para carpeta '{carpeta_origen}': {len(archivos_db)}")
+        
+        if not archivos_db:
+            # Buscar carpetas similares para sugerir al usuario
+            todas_rutas = db.session.query(Archivo.dropbox_path).distinct().all()
+            rutas_sugeridas = []
+            
+            for (ruta,) in todas_rutas:
+                if "IOK" in ruta and "Cases" in ruta:
+                    partes = ruta.strip('/').split('/')
+                    if len(partes) >= 3:
+                        ruta_base = '/' + '/'.join(partes[:3])
+                        if ruta_base not in rutas_sugeridas:
+                            rutas_sugeridas.append(ruta_base)
+            
+            mensaje = f"No se encontraron archivos en la carpeta '{carpeta_origen}'."
+            if rutas_sugeridas:
+                mensaje += f" Rutas disponibles: {', '.join(rutas_sugeridas[:3])}"
+            
+            flash(mensaje, "warning")
+            return redirect(url_for("listar_dropbox.exportar_archivos_carpeta"))
+        
+        # Crear carpeta destino si no existe
+        try:
+            dbx.files_create_folder_v2(with_base_folder(carpeta_destino))
+            print(f"🔧 Carpeta destino creada: {carpeta_destino}")
+        except dropbox.exceptions.ApiError as e:
+            if "conflict" not in str(e).lower():
+                print(f"🔧 Error creando carpeta destino: {e}")
+                raise e
+            print(f"🔧 La carpeta destino ya existía: {carpeta_destino}")
+        
+        archivos_movidos = 0
+        errores = []
+        
+        for archivo in archivos_db:
+            try:
+                # Construir nueva ruta manteniendo la estructura de subcarpetas
+                ruta_relativa = archivo.dropbox_path[len(carpeta_origen):].lstrip('/')
+                nueva_ruta = f"{carpeta_destino}/{ruta_relativa}"
+                nueva_ruta = _normalize_dropbox_path(nueva_ruta)
+                
+                print(f"🔧 Moviendo: {archivo.dropbox_path} -> {nueva_ruta}")
+                
+                # Crear subcarpetas intermedias si es necesario
+                subcarpeta_destino = '/'.join(nueva_ruta.split('/')[:-1])
+                if subcarpeta_destino != carpeta_destino:
+                    try:
+                        dbx.files_create_folder_v2(with_base_folder(subcarpeta_destino))
+                        print(f"🔧 Subcarpeta creada: {subcarpeta_destino}")
+                    except dropbox.exceptions.ApiError as e:
+                        if "conflict" not in str(e).lower():
+                            print(f"🔧 Error creando subcarpeta: {e}")
+                
+                # Mover archivo en Dropbox
+                result = dbx.files_move_v2(
+                    with_base_folder(archivo.dropbox_path), 
+                    with_base_folder(nueva_ruta), 
+                    allow_shared_folder=True, 
+                    autorename=True
+                )
+                
+                # Obtener la ruta final en caso de que se haya renombrado
+                ruta_final = without_base_folder(result.metadata.path_display or result.metadata.path_lower)
+                
+                # Actualizar registro en la base de datos
+                archivo.dropbox_path = ruta_final
+                db.session.commit()
+                
+                archivos_movidos += 1
+                print(f"🔧 Archivo movido exitosamente: {archivo.nombre}")
+                
+            except Exception as e:
+                error_msg = f"Error moviendo {archivo.nombre}: {str(e)}"
+                errores.append(error_msg)
+                print(f"🔧 {error_msg}")
+                continue
+        
+        # Registrar actividad
+        current_user.registrar_actividad('bulk_export', 
+            f'Exportados {archivos_movidos} archivos de "{carpeta_origen}" a "{carpeta_destino}"')
+        
+        # Mostrar resultados
+        if archivos_movidos > 0:
+            flash(f"Exportación completada: {archivos_movidos} archivos movidos exitosamente.", "success")
+        
+        if errores:
+            flash(f"Se encontraron {len(errores)} errores durante la exportación.", "warning")
+            for error in errores[:5]:  # Mostrar solo los primeros 5 errores
+                flash(error, "error")
+            if len(errores) > 5:
+                flash(f"... y {len(errores) - 5} errores más.", "error")
+        
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"🔧 Error general en exportación: {e}")
+        flash(f"Error durante la exportación: {str(e)}", "error")
+        return redirect(url_for("listar_dropbox.exportar_archivos_carpeta"))
 
 @bp.route('/mover_archivo_modal', methods=['POST'])
 @login_required

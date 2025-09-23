@@ -1,4 +1,4 @@
-from app.dropbox_utils import get_dbx
+from app.dropbox_utils import get_dbx, with_base_folder
 # routes/usuarios.py
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
@@ -306,7 +306,7 @@ def importar_archivo_usuario(usuario_id):
         
         # Subir a Dropbox
         dropbox_path = f"{carpeta.dropbox_path}/{archivo.filename}"
-        dbx.files_upload(archivo_content, dropbox_path, mode=dropbox.files.WriteMode("overwrite"))
+        dbx.files_upload(archivo_content, with_base_folder(dropbox_path), mode=dropbox.files.WriteMode("overwrite"))
         
         # Guardar en base de datos
         nuevo_archivo = Archivo(
@@ -443,19 +443,20 @@ def eliminar_usuario(usuario_id):
         if usuario.dropbox_folder_path:
             try:
                 # Listar todo el contenido de la carpeta del usuario
-                res = dbx.files_list_folder(usuario.dropbox_folder_path, recursive=True)
+                res = dbx.files_list_folder(with_base_folder(usuario.dropbox_folder_path), recursive=True)
                 
                 # Eliminar archivos primero
                 for entry in res.entries:
                     if hasattr(entry, 'path_display'):
                         try:
+                            # path_display ya incluye la ruta completa devuelta por Dropbox
                             dbx.files_delete_v2(entry.path_display)
                         except dropbox.exceptions.ApiError as e:
                             if "not_found" not in str(e):
                                 print(f"Error eliminando {entry.path_display}: {e}")
                 
                 # Eliminar la carpeta raíz del usuario
-                dbx.files_delete_v2(usuario.dropbox_folder_path)
+                dbx.files_delete_v2(with_base_folder(usuario.dropbox_folder_path))
                 
             except dropbox.exceptions.ApiError as e:
                 if "not_found" not in str(e):
