@@ -16,12 +16,19 @@ depends_on = None
 
 
 def upgrade():
-    # Add estado column to archivo table
-    op.add_column('archivo', sa.Column('estado', sa.String(length=20), nullable=True))
-    
-    # Update existing records to have 'en_revision' as default state
-    op.execute("UPDATE archivo SET estado = 'en_revision' WHERE estado IS NULL")
+    # Add estado column to archivo table, but only if it does not exist (idempotente)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = [c['name'] for c in inspector.get_columns('archivo')]
+    if 'estado' not in columns:
+        op.add_column('archivo', sa.Column('estado', sa.String(length=20), nullable=True))
+        op.execute("UPDATE archivo SET estado = 'en_revision' WHERE estado IS NULL")
 
 
 def downgrade():
-    op.drop_column('archivo', 'estado')
+    # Drop column only if present
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = [c['name'] for c in inspector.get_columns('archivo')]
+    if 'estado' in columns:
+        op.drop_column('archivo', 'estado')

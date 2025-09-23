@@ -1243,7 +1243,9 @@
         return;
       }
 
-      const items = data.archivos.map(a => {
+      const isCliente = {{ 'true' if (hasattr(current_user, 'rol') and current_user.rol == 'cliente') else 'false' }};
+      const visibles = isCliente ? data.archivos.filter(a => a.es_publica !== false) : data.archivos;
+      const items = visibles.map(a => {
         return `<li class="py-2 flex items-center justify-between border-b border-gray-50">
           <div class="flex items-center">
             <i class="far fa-file text-blue-500 mr-2"></i>
@@ -1254,7 +1256,11 @@
         </li>`;
       }).join('');
 
-      cont.innerHTML = `<ul class="divide-y divide-gray-100">${items}</ul>`;
+      if (!visibles.length) {
+        cont.innerHTML = '<p class="text-sm text-text-secondary">Aún no tienes archivos públicos.</p>';
+      } else {
+        cont.innerHTML = `<ul class="divide-y divide-gray-100">${items}</ul>`;
+      }
     } catch (e) {
       cont.innerHTML = '<p class="text-sm text-red-600">No se pudieron cargar los estados en este momento.</p>';
     }

@@ -41,7 +41,8 @@ def obtener_estado_archivo():
         return jsonify({'success': False, 'error': 'Parámetro path requerido'}), 400
     archivo = Archivo.query.filter_by(dropbox_path=dropbox_path).first()
     estado = archivo.estado if archivo and archivo.estado else None
-    return jsonify({'success': True, 'estado': estado})
+    es_publica = archivo.es_publica if archivo and hasattr(archivo, 'es_publica') else True
+    return jsonify({'success': True, 'estado': estado, 'es_publica': es_publica})
 
 @bp.route('/api/archivo/estado', methods=['POST'])
 @login_required
@@ -91,7 +92,16 @@ def actualizar_estado_archivo():
 def api_mis_archivos():
     """Devuelve archivos del usuario actual con su estado"""
     try:
-        archivos = Archivo.query.filter_by(usuario_id=current_user.id).order_by(Archivo.fecha_subida.desc()).limit(50).all()
+        query = Archivo.query.filter_by(usuario_id=current_user.id)
+        # Si es cliente, ocultar archivos privados
+        try:
+            if hasattr(current_user, 'rol') and current_user.rol == 'cliente':
+                query = query.filter(Archivo.es_publica.is_(True))
+        except Exception:
+            # Si no hay atributo rol, no aplicar filtro adicional
+            pass
+
+        archivos = query.order_by(Archivo.fecha_subida.desc()).limit(50).all()
         datos = []
         for a in archivos:
             datos.append({
@@ -100,7 +110,8 @@ def api_mis_archivos():
                 'categoria': a.categoria,
                 'subcategoria': a.subcategoria,
                 'estado': a.estado,
-                'dropbox_path': a.dropbox_path
+                'dropbox_path': a.dropbox_path,
+                'es_publica': getattr(a, 'es_publica', True)
             })
         return jsonify({'success': True, 'archivos': datos})
     except Exception as e:
@@ -344,9 +355,13 @@ def filtra_archivos_ocultos(estructura, usuario_id, prefix=""):
         print(f"DEBUG | SEGURIDAD: Prefix {prefix_normalized} no está dentro de {user_base_path} para archivos, retornando vacío")
         return nueva_estructura
     
-    # Obtener archivos visibles del usuario en la BD
+    # Obtener archivos del usuario en la BD y mapear por ruta
     archivos_visibles = Archivo.query.filter_by(usuario_id=usuario_id).all()
     rutas_visibles = {archivo.dropbox_path for archivo in archivos_visibles}
+    path_a_archivo = {archivo.dropbox_path: archivo for archivo in archivos_visibles}
+    
+    # Importar usuario actual para aplicar reglas por rol
+    from flask_login import current_user
     
     # Filtrar archivos: mostrar archivos que están en la BD O todos los archivos dentro de la ruta del usuario
     for archivo_nombre in estructura.get("_archivos", []):
@@ -357,8 +372,26 @@ def filtra_archivos_ocultos(estructura, usuario_id, prefix=""):
             print(f"DEBUG | SEGURIDAD: Archivo {archivo_path} no está dentro de {user_base_path}, saltando")
             continue
             
-        # Mostrar el archivo si está en la BD O está dentro de la ruta del usuario
-        if archivo_path in rutas_visibles or archivo_path.startswith(user_base_path):
+        # Decidir visibilidad según rol y bandera es_publica
+        mostrar_archivo = False
+        archivo_bd = path_a_archivo.get(archivo_path)
+
+        # Roles admin/superadmin/lector: siempre pueden ver
+        if hasattr(current_user, "rol") and current_user.rol in ["admin", "superadmin", "lector"]:
+            mostrar_archivo = True
+        else:
+            # Rol cliente (u otros): si es el dueño, ocultar si es privado
+            if hasattr(current_user, "rol") and current_user.rol == "cliente" and current_user.id == usuario_id:
+                if archivo_bd is not None and getattr(archivo_bd, "es_publica", True) is False:
+                    mostrar_archivo = False
+                else:
+                    # Si no está en BD o es pública, se muestra
+                    mostrar_archivo = True
+            else:
+                # Por defecto, mantener la lógica anterior de pertenencia a la ruta/BD
+                mostrar_archivo = (archivo_path in rutas_visibles or archivo_path.startswith(user_base_path))
+
+        if mostrar_archivo:
             nueva_estructura["_archivos"].append(archivo_nombre)
             print(f"DEBUG | Archivo visible mostrado para usuario {usuario_id}: {archivo_nombre}")
         else:
@@ -739,6 +772,97 @@ def obtener_info_carpeta(ruta):
             'nombre': ruta.split('/')[-1] if '/' in ruta else ruta,
             'usuario_id': None
         })
+
+@bp.route("/api/toggle_visibilidad", methods=["POST"])
+@login_required
+def toggle_visibilidad():
+    """Cambia la visibilidad (pública/privada) de una carpeta o archivo.
+    Espera JSON: { tipo: 'carpeta'|'archivo', ruta: '/email/...', es_publica: true|false, usuario_id: <int> }
+    """
+    from app.models import Folder, Archivo, User
+    if not current_user.is_authenticated or not hasattr(current_user, "rol"):
+        return jsonify({"success": False, "error": "Sesión expirada"}), 401
+
+    data = request.get_json(silent=True) or {}
+    tipo = (data.get("tipo") or "").strip()
+    ruta = (data.get("ruta") or "").strip()
+    es_publica = data.get("es_publica")
+
+    if tipo not in ("carpeta", "archivo"):
+        return jsonify({"success": False, "error": "Tipo inválido"}), 400
+    if not ruta:
+        return jsonify({"success": False, "error": "Ruta requerida"}), 400
+    if es_publica is None:
+        return jsonify({"success": False, "error": "es_publica requerido"}), 400
+
+    # Permisos: admin/superadmin o lector con permiso de modificar
+    if not (
+        current_user.rol in ["admin", "superadmin"] or
+        (current_user.rol == "lector" and hasattr(current_user, 'puede_modificar_archivos') and current_user.puede_modificar_archivos())
+    ):
+        return jsonify({"success": False, "error": "No autorizado"}), 403
+
+    # Normalizar ruta
+    ruta_norm = str(ruta).replace('//', '/').rstrip('/')
+    if not ruta_norm.startswith('/'):
+        ruta_norm = '/' + ruta_norm
+
+    try:
+        if tipo == "carpeta":
+            carpeta = Folder.query.filter_by(dropbox_path=ruta_norm).first()
+            if not carpeta:
+                # Crear registro de carpeta si no existe en BD
+                partes = ruta_norm.strip('/').split('/')
+                if not partes:
+                    return jsonify({"success": False, "error": "Ruta inválida"}), 400
+                usuario_email = partes[0]
+                usuario = User.query.filter_by(email=usuario_email).first()
+                if not usuario:
+                    return jsonify({"success": False, "error": "Usuario no encontrado para la ruta"}), 404
+                nombre_carpeta = partes[-1]
+                carpeta = Folder(  # type: ignore[call-arg]
+                    name=nombre_carpeta,
+                    user_id=usuario.id,
+                    dropbox_path=ruta_norm,
+                    es_publica=bool(es_publica)
+                )
+                db.session.add(carpeta)
+            else:
+                carpeta.es_publica = bool(es_publica)
+            # Propagar visibilidad a archivos dentro de la carpeta
+            try:
+                prefijo = ruta_norm.rstrip('/') + '/%'
+                Archivo.query.filter(Archivo.dropbox_path.like(prefijo)).update({Archivo.es_publica: bool(es_publica)}, synchronize_session=False)
+            except Exception as _:
+                pass
+            db.session.commit()
+            return jsonify({"success": True, "tipo": "carpeta", "ruta": carpeta.dropbox_path, "es_publica": carpeta.es_publica})
+        else:
+            archivo = Archivo.query.filter_by(dropbox_path=ruta_norm).first()
+            if not archivo:
+                # Crear registro mínimo de archivo si no existe en BD
+                partes = ruta_norm.strip('/').split('/')
+                if not partes:
+                    return jsonify({"success": False, "error": "Ruta inválida"}), 400
+                usuario_email = partes[0]
+                usuario = User.query.filter_by(email=usuario_email).first()
+                nombre_archivo = partes[-1]
+                archivo = Archivo(  # type: ignore[call-arg]
+                    nombre=nombre_archivo,
+                    categoria='',
+                    subcategoria='',
+                    dropbox_path=ruta_norm,
+                    usuario_id=usuario.id if usuario else None,
+                    es_publica=bool(es_publica)
+                )
+                db.session.add(archivo)
+            else:
+                archivo.es_publica = bool(es_publica)
+            db.session.commit()
+            return jsonify({"success": True, "tipo": "archivo", "ruta": archivo.dropbox_path, "es_publica": archivo.es_publica})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @bp.route("/api/carpeta_contenido/<path:ruta>")
 @login_required

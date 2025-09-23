@@ -124,6 +124,9 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   <script id="estructuras-usuarios-data" type="application/json">
     {{ estructuras_usuarios_json|safe }}
   </script>
+  <script>
+    window.CURRENT_USER_ROLE = '{{ usuario_actual.rol }}';
+  </script>
 
   <!-- Contenedor de carpetas -->
   <div class="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -1819,10 +1822,41 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
           badge.dataset.filePath = path;
           if (estado === 'validado' || estado === 'rechazado' || estado === 'en_revision') {
             badge.classList.remove('hidden');
-            badge.textContent = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'Pendiente para revisión');
+            // Primero ajustar color/etiqueta por estado
             badge.className = `ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${estado === 'validado' ? 'bg-green-100 text-green-700' : estado === 'rechazado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`;
+            // Consultar visibilidad para agregar indicador "Privada" si aplica
+            fetch(`/api/archivo/estado?path=${encodeURIComponent(path)}`)
+              .then(rr => rr.json())
+              .then(dd => {
+                const esPublica = !(dd && dd.hasOwnProperty('es_publica')) ? true : !!dd.es_publica;
+                const estadoTexto = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'Pendiente para revisión');
+                if (!esPublica) {
+                  // Fuerza color rojo si es privada
+                  badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700';
+                  badge.textContent = `${estadoTexto} · Privada`;
+                } else {
+                  badge.textContent = estadoTexto;
+                }
+              }).catch(() => {
+                const estadoTexto = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'Pendiente para revisión');
+                badge.textContent = estadoTexto;
+              });
           } else {
-            badge.classList.add('hidden');
+            // Sin estado; mostrar sólo privacidad si es privada
+            fetch(`/api/archivo/estado?path=${encodeURIComponent(path)}`)
+              .then(rr => rr.json())
+              .then(dd => {
+                const esPublica = !(dd && dd.hasOwnProperty('es_publica')) ? true : !!dd.es_publica;
+                if (esPublica === false) {
+                  badge.classList.remove('hidden');
+                  badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700';
+                  badge.textContent = 'Privada';
+                } else {
+                  badge.classList.add('hidden');
+                }
+              }).catch(() => {
+                badge.classList.add('hidden');
+              });
           }
         }
         closeStatusModal();
@@ -1843,12 +1877,36 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         .then(r => r.json())
         .then(d => {
           const estado = (d && d.estado) ? d.estado : null;
+          const esPublica = !(d && d.hasOwnProperty('es_publica')) ? true : !!d.es_publica;
+          // Si el usuario actual es cliente y el archivo es privado, ocultar el item del árbol
+          if (window.CURRENT_USER_ROLE === 'cliente' && esPublica === false) {
+            const item = badge.closest('div.flex.items-center.justify-between');
+            if (item && item.parentElement) {
+              // El wrapper del archivo es el contenedor con padding (p-3)
+              const wrapper = item.parentElement;
+              if (wrapper && wrapper.classList && wrapper.classList.contains('p-3')) {
+                wrapper.style.display = 'none';
+                return; // No continuar pintando badge para elementos ocultos
+              }
+              // Fallback: ocultar el contenedor encontrado
+              item.style.display = 'none';
+              return;
+            }
+          }
           if (estado === 'validado' || estado === 'rechazado' || estado === 'en_revision') {
             badge.classList.remove('hidden');
-            badge.textContent = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'Pendiente para revisión');
+            const estadoTexto = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'Pendiente para revisión');
+            badge.textContent = esPublica ? estadoTexto : `${estadoTexto} · Privada`;
             badge.className = `ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${estado === 'validado' ? 'bg-green-100 text-green-700' : estado === 'rechazado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`;
           } else {
-            badge.classList.add('hidden');
+            // Sin estado; si es privada, mostrarlo
+            if (esPublica === false) {
+              badge.classList.remove('hidden');
+              badge.textContent = 'Privada';
+              badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700';
+            } else {
+              badge.classList.add('hidden');
+            }
           }
         })
         .catch(() => {

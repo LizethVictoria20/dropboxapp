@@ -57,6 +57,28 @@
         },
       };
     </script>
+    <!-- Modal Confirmar Visibilidad -->
+    <div id="visibilityConfirmModal" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-5 py-4 border-b flex items-center justify-between">
+          <h3 id="visibilityModalTitle" class="text-lg font-semibold text-gray-900">Cambiar visibilidad</h3>
+          <button onclick="closeVisibilityModal()" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="px-5 py-4">
+          <p class="text-sm text-gray-600">Selecciona la visibilidad para:</p>
+          <p id="visibilityPath" class="mt-2 text-sm font-mono text-gray-900 break-all"></p>
+          <input type="hidden" id="visibilityTipo" />
+          <input type="hidden" id="visibilityRuta" />
+        </div>
+        <div class="px-5 py-4 border-t flex items-center justify-end gap-3">
+          <button onclick="closeVisibilityModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Cancelar</button>
+          <button id="visibilityPrivateBtn" onclick="submitVisibilityChange(false)" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Privada</button>
+          <button id="visibilityPublicBtn" onclick="submitVisibilityChange(true)" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Pública</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Funciones globales para modales y carpetas -->
     <script>
@@ -122,6 +144,87 @@
           console.error("❌ Modal createFolderModal no encontrado");
         }
       };
+
+      // Alternar visibilidad de archivo o carpeta
+      window.toggleVisibility = async function(tipo, rutaCompleta) {
+        // Compatibilidad hacia atrás: abrir el modal con la ruta recibida
+        window.openVisibilityModal(tipo, rutaCompleta);
+      }
+
+      // Modal de confirmación de visibilidad
+      window.openVisibilityModal = function(tipo, rutaCompleta) {
+        const modal = document.getElementById('visibilityConfirmModal');
+        const title = document.getElementById('visibilityModalTitle');
+        const pathSpan = document.getElementById('visibilityPath');
+        const tipoInput = document.getElementById('visibilityTipo');
+        const rutaInput = document.getElementById('visibilityRuta');
+        const publicBtn = document.getElementById('visibilityPublicBtn');
+        const privateBtn = document.getElementById('visibilityPrivateBtn');
+
+        if (!modal || !title || !pathSpan || !tipoInput || !rutaInput || !publicBtn || !privateBtn) {
+          console.error('Modal de visibilidad no encontrado o incompleto');
+          return;
+        }
+
+        // Normalizar ruta para mostrar
+        const normalizada = (rutaCompleta || '').replace(/\/+/, '/').replace(/\/$/, '');
+        title.textContent = tipo === 'carpeta' ? 'Cambiar visibilidad de la carpeta' : 'Cambiar visibilidad del archivo';
+        pathSpan.textContent = normalizada;
+        tipoInput.value = tipo;
+        rutaInput.value = normalizada;
+
+        // Mostrar modal
+        modal.classList.remove('hidden');
+      }
+
+      window.closeVisibilityModal = function() {
+        const modal = document.getElementById('visibilityConfirmModal');
+        if (modal) modal.classList.add('hidden');
+      }
+
+      window.submitVisibilityChange = async function(esPublica) {
+        const tipo = document.getElementById('visibilityTipo')?.value;
+        const ruta = document.getElementById('visibilityRuta')?.value;
+        if (!tipo || !ruta) return;
+        try {
+          const res = await fetch('/api/toggle_visibilidad', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ tipo, ruta, es_publica: !!esPublica })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            alert('Error cambiando visibilidad: ' + (data.error || res.statusText));
+            return;
+          }
+
+          // Actualizar badge si es carpeta
+          if (tipo === 'carpeta') {
+            const rutaId = ruta.startsWith('/') ? ruta.slice(1) : ruta;
+            const badge = document.getElementById('badge-' + rutaId);
+            if (badge) {
+              if (data.es_publica) {
+                badge.className = 'ml-2 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800';
+                badge.textContent = 'Pública';
+              } else {
+                badge.className = 'ml-2 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800';
+                badge.textContent = 'Privada';
+              }
+            }
+          }
+
+          window.closeVisibilityModal();
+          // Recargar la página para reflejar todos los cambios
+          window.location.reload();
+        } catch (e) {
+          console.error('submitVisibilityChange error', e);
+          alert('Error inesperado al cambiar visibilidad');
+        }
+      }
 
       window.handleFolderClick = function (folderId, event) {
         // Detener la propagación del evento para evitar conflictos

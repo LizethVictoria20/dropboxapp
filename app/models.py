@@ -242,6 +242,7 @@ class Archivo(db.Model):
     extension = db.Column(db.String(20), nullable=True)  # extensión (ej: pdf, jpg)
     descripcion = db.Column(db.String(255), nullable=True)  # descripción opcional del archivo
     estado = db.Column(db.String(20), nullable=True, default='en_revision')
+    es_publica = db.Column(db.Boolean, default=True)
 
     # Relación con usuario (opcional, solo si manejas usuarios)
     usuario_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
