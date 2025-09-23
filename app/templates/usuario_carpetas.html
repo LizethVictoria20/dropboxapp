@@ -2071,9 +2071,9 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 
   // Validación del formulario de mover archivo
   document.getElementById("moveForm").onsubmit = function (e) {
-    // Verificar que el evento viene del botón de submit
-    if (!e.submitter || !e.submitter.textContent.includes('Mover archivo')) {
-      console.log("❌ Formulario bloqueado - no viene del botón de mover archivo");
+    // Permitir envío también vía Enter o programático (sin e.submitter)
+    if (e.submitter && !e.submitter.textContent.includes('Mover archivo')) {
+      console.log("❌ Formulario bloqueado - submitter no es botón de mover archivo");
       e.preventDefault();
       return false;
     }

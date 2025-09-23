@@ -233,7 +233,31 @@ def obtener_estructura_dropbox_recursiva_limitada(path="", dbx=None, max_depth=3
         result = dbx.files_list_folder(with_base_folder(base if base != "/" else ""), recursive=True)
     except dropbox.exceptions.ApiError as e:
         print(f"Error accediendo a Dropbox path '{path}': {e}")
-        return {"_subcarpetas": {}, "_archivos": []}
+        # Si el path no existe, intentar crear la carpeta base del usuario y reintentar
+        try:
+            if isinstance(e.error, dropbox.files.ListFolderError) and getattr(e.error, 'is_path', lambda: False)():
+                if hasattr(e.error.get_path(), 'is_not_found') and e.error.get_path().is_not_found():
+                    usuario_email = base.strip('/').split('/')[0] if base else None
+                    if usuario_email:
+                        try:
+                            from app.dropbox_utils import create_dropbox_folder
+                            created = create_dropbox_folder(f"/{usuario_email}")
+                            if created:
+                                # Reintentar listado una vez
+                                result = dbx.files_list_folder(with_base_folder(base if base != "/" else ""), recursive=True)
+                            else:
+                                return {"_subcarpetas": {}, "_archivos": []}
+                        except Exception as ce:
+                            print(f"No se pudo crear carpeta base del usuario {usuario_email}: {ce}")
+                            return {"_subcarpetas": {}, "_archivos": []}
+                    else:
+                        return {"_subcarpetas": {}, "_archivos": []}
+                else:
+                    return {"_subcarpetas": {}, "_archivos": []}
+            else:
+                return {"_subcarpetas": {}, "_archivos": []}
+        except Exception:
+            return {"_subcarpetas": {}, "_archivos": []}
 
     # Función auxiliar para crear nodos anidados
     def ensure_path(root, parts):
@@ -1644,6 +1668,9 @@ def mover_archivo_modal():
         
         # Buscar archivo en Dropbox directamente (fuente de verdad)
         dbx = get_dbx()
+        if dbx is None:
+            flash("No hay conexión válida con Dropbox. Verifica las credenciales/tokens.", "error")
+            return redirect(redirect_url or url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_form or current_user.id))
         
         # Debug: Listar carpetas disponibles para verificar
         try:
@@ -1657,33 +1684,124 @@ def mover_archivo_modal():
         except Exception as e:
             print(f"DEBUG | Error listando carpetas: {e}")
         
-        # Buscar el archivo en Dropbox
+        # Intentar construir la ruta del archivo directamente a partir del formulario
         try:
-            search_result = dbx.files_search_v2(query=archivo_nombre)
-            archivo_encontrado = None
-            
-            print(f"DEBUG | Buscando archivo '{archivo_nombre}' en Dropbox...")
-            print(f"DEBUG | Coincidencias encontradas: {len(search_result.matches)}")
-            
-            for match in search_result.matches:
-                # Obtener el path correcto del metadata
-                if hasattr(match.metadata, 'path_display'):
-                    path = match.metadata.path_display
-                elif hasattr(match.metadata, 'path_lower'):
-                    path = match.metadata.path_lower
-                else:
-                    path = str(match.metadata)
+            # Usar la carpeta_actual ya reconstruida con email si aplica
+            carpeta_base_para_archivo = carpeta_actual_completa or carpeta_actual or ''
+            carpeta_base_para_archivo = _normalize_dropbox_path(carpeta_base_para_archivo)
+            archivo_path_logico_intentado = _normalize_dropbox_path(f"{carpeta_base_para_archivo.rstrip('/')}/{archivo_nombre}")
+
+            print(f"DEBUG | Intentando localizar archivo por ruta directa lógica: '{archivo_path_logico_intentado}'")
+            try:
+                archivo_path_api_directo = with_base_folder(archivo_path_logico_intentado)
+                _ = dbx.files_get_metadata(archivo_path_api_directo)
+                # Si no lanza excepción, la ruta existe
+                archivo_encontrado = None
+                archivo_path = archivo_path_api_directo
+                print(f"DEBUG | Ruta directa válida (con base): {archivo_path}")
+                # Log adicional para depurar from_path final que usaremos
+                print(f"DEBUG | ORIGEN_RESUELTO_API: {archivo_path}")
+                # === MOVER USANDO RUTA DIRECTA RESUELTA ===
+                # Verificar que la carpeta destino existe
+                print(f"DEBUG | Verificando existencia de carpeta destino: '{nueva_carpeta}'")
+                try:
+                    metadata_destino = dbx.files_get_metadata(with_base_folder(nueva_carpeta))
+                    if not isinstance(metadata_destino, dropbox.files.FolderMetadata):
+                        flash(f"El destino '{nueva_carpeta}' no es una carpeta válida", "error")
+                        return redirect(redirect_url or url_for("listar_dropbox.carpetas_dropbox"))
+                except Exception as e:
+                    print(f"ERROR | Error verificando carpeta destino '{nueva_carpeta}': {e}")
+                    flash(f"Error verificando carpeta destino '{nueva_carpeta}': {str(e)}", "error")
+                    return redirect(redirect_url or url_for("listar_dropbox.carpetas_dropbox"))
+
+                # Construir paths lógicos y finales para API
+                archivo_path_logico = without_base_folder(archivo_path)
+                new_dropbox_path_logico = _normalize_dropbox_path(f"{nueva_carpeta.rstrip('/')}/{archivo_nombre}")
+                from_path_api = _normalize_dropbox_path(with_base_folder(archivo_path_logico))
+                to_path_api = _normalize_dropbox_path(with_base_folder(new_dropbox_path_logico))
+
+                print(f"DEBUG | Moviendo archivo en Dropbox (rama directa)...")
+                print(f"  Desde (lógico): {archivo_path_logico}")
+                print(f"  Hacia (lógico): {new_dropbox_path_logico}")
+                print(f"  Desde (API): {from_path_api}")
+                print(f"  Hacia (API): {to_path_api}")
+
+                try:
+                    # Confirmar existencia
+                    dbx.files_get_metadata(from_path_api)
+                except Exception as e_from:
+                    print(f"ERROR | FROM no existe justo antes del move (rama directa): {from_path_api} -> {e_from}")
                 
-                print(f"DEBUG | Revisando: {path}")
-                # Verificar si está en la carpeta actual
-                if carpeta_actual and carpeta_actual in path:
-                    archivo_encontrado = match.metadata
-                    print(f"DEBUG | Archivo encontrado en carpeta actual: {path}")
-                    break
-            
-            if not archivo_encontrado:
-                # Si no se encuentra en la carpeta específica, usar la primera coincidencia
-                if search_result.matches:
+                result = dbx.files_move_v2(
+                    from_path=from_path_api,
+                    to_path=to_path_api,
+                    allow_shared_folder=True,
+                    autorename=True
+                )
+
+                # Path destino final
+                if hasattr(result.metadata, 'path_display'):
+                    result_path = result.metadata.path_display
+                elif hasattr(result.metadata, 'path_lower'):
+                    result_path = result.metadata.path_lower
+                else:
+                    result_path = str(result.metadata)
+
+                print(f"DEBUG | Archivo movido exitosamente (rama directa): {result_path}")
+
+                # Actualizar/crear registro BD
+                archivo_bd = Archivo.query.filter_by(dropbox_path=archivo_path).first()
+                if archivo_bd:
+                    archivo_bd.dropbox_path = result_path
+                else:
+                    result_path_logico = without_base_folder(result_path)
+                    parts = result_path_logico.strip('/').split('/')
+                    usuario_email_res = parts[0] if len(parts) > 0 else ''
+                    categoria = parts[1] if len(parts) > 1 else ''
+                    subcategoria = parts[2] if len(parts) > 2 else ''
+                    usuario_res = User.query.filter_by(email=usuario_email_res).first()
+                    if usuario_res:
+                        nuevo_archivo = Archivo(  # type: ignore[call-arg]
+                            nombre=archivo_nombre,
+                            dropbox_path=result_path_logico,
+                            categoria=categoria,
+                            subcategoria=subcategoria,
+                            usuario_id=usuario_res.id,
+                            estado="en_revision"
+                        )
+                        db.session.add(nuevo_archivo)
+                db.session.commit()
+
+                current_user.registrar_actividad('file_moved', f'Archivo "{archivo_nombre}" movido a {result_path}')
+                flash(f"Archivo '{archivo_nombre}' movido exitosamente a '{nueva_carpeta}'", "success")
+
+                return redirect(redirect_url or url_for("listar_dropbox.carpetas_dropbox"))
+            except Exception as e_dir:
+                print(f"DEBUG | Ruta directa no encontrada, se intentará búsqueda por nombre: {e_dir}")
+                # Fallback: Buscar el archivo en Dropbox
+                search_result = dbx.files_search_v2(query=archivo_nombre)
+                archivo_encontrado = None
+
+                print(f"DEBUG | Buscando archivo '{archivo_nombre}' en Dropbox...")
+                print(f"DEBUG | Coincidencias encontradas: {len(search_result.matches)}")
+
+                for match in search_result.matches:
+                    # Obtener el path correcto del metadata
+                    if hasattr(match.metadata, 'path_display'):
+                        path = match.metadata.path_display
+                    elif hasattr(match.metadata, 'path_lower'):
+                        path = match.metadata.path_lower
+                    else:
+                        path = str(match.metadata)
+
+                    print(f"DEBUG | Revisando: {path}")
+                    # Verificar si está en la carpeta actual
+                    if carpeta_actual and carpeta_actual in path:
+                        archivo_encontrado = match.metadata
+                        print(f"DEBUG | Archivo encontrado en carpeta actual: {path}")
+                        break
+
+                if not archivo_encontrado and search_result.matches:
                     archivo_encontrado = search_result.matches[0].metadata
                     if hasattr(archivo_encontrado, 'path_display'):
                         path = archivo_encontrado.path_display
@@ -1692,36 +1810,22 @@ def mover_archivo_modal():
                     else:
                         path = str(archivo_encontrado)
                     print(f"DEBUG | Usando primera coincidencia: {path}")
-            
-            if not archivo_encontrado:
-                flash(f"Archivo '{archivo_nombre}' no encontrado en Dropbox", "error")
-                if redirect_url and "/usuario/" in redirect_url:
-                    return redirect(redirect_url)
-                else:
-                    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
-            
-            # Debug: Mostrar información del archivo encontrado
-            print(f"DEBUG | Archivo encontrado:")
-            print(f"  Tipo: {type(archivo_encontrado)}")
-            print(f"  Atributos disponibles: {[attr for attr in dir(archivo_encontrado) if not attr.startswith('_')]}")
-            if hasattr(archivo_encontrado, 'metadata'):
-                print(f"  Metadata tipo: {type(archivo_encontrado.metadata)}")
-                print(f"  Metadata atributos: {[attr for attr in dir(archivo_encontrado.metadata) if not attr.startswith('_')]}")
-                if hasattr(archivo_encontrado.metadata, 'path_display'):
-                    print(f"  Metadata path_display: {archivo_encontrado.metadata.path_display}")
-                if hasattr(archivo_encontrado.metadata, 'path_lower'):
-                    print(f"  Metadata path_lower: {archivo_encontrado.metadata.path_lower}")
-            else:
-                print(f"  No tiene atributo 'metadata'")
-                if hasattr(archivo_encontrado, 'path_display'):
-                    print(f"  path_display directo: {archivo_encontrado.path_display}")
-                if hasattr(archivo_encontrado, 'path_lower'):
-                    print(f"  path_lower directo: {archivo_encontrado.path_lower}")
+
+                if not archivo_encontrado:
+                    flash(f"Archivo '{archivo_nombre}' no encontrado en Dropbox", "error")
+                    if redirect_url and "/usuario/" in redirect_url:
+                        return redirect(redirect_url)
+                    else:
+                        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        except Exception as e_loc:
+            print(f"ERROR | Error intentando localizar archivo: {e_loc}")
+            # Continuar con fallback normal
             
             # Verificar que la carpeta destino existe
             print(f"DEBUG | Verificando existencia de carpeta destino: '{nueva_carpeta}'")
             try:
-                metadata_destino = dbx.files_get_metadata(nueva_carpeta)
+                # Usar ruta completa con carpeta base configurada
+                metadata_destino = dbx.files_get_metadata(with_base_folder(nueva_carpeta))
                 if not isinstance(metadata_destino, dropbox.files.FolderMetadata):
                     flash(f"El destino '{nueva_carpeta}' no es una carpeta válida", "error")
                     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
@@ -1750,8 +1854,9 @@ def mover_archivo_modal():
                 
                 return redirect(url_for("listar_dropbox.carpetas_dropbox"))
             
-            # Obtener el path correcto del archivo encontrado
-            archivo_path = None
+            # Obtener el path correcto del archivo encontrado (si no se resolvió por ruta directa)
+            if 'archivo_path' not in locals() or not archivo_path:
+                archivo_path = None
             
             print(f"DEBUG | Intentando extraer path del archivo...")
             
@@ -1818,17 +1923,43 @@ def mover_archivo_modal():
             archivo_path = str(archivo_path)
             print(f"DEBUG | Path final del archivo: '{archivo_path}'")
             
-            # Construir path destino
-            new_dropbox_path = f"{nueva_carpeta.rstrip('/')}/{archivo_nombre}"
-            
-            # Mover el archivo usando Dropbox API
+            # Construir paths lógicos (sin carpeta base) y luego aplicar carpeta base
+            archivo_path_logico = without_base_folder(archivo_path)
+            new_dropbox_path_logico = _normalize_dropbox_path(f"{nueva_carpeta.rstrip('/')}/{archivo_nombre}")
+
+            # Preparar paths finales para API
+            from_path_api = _normalize_dropbox_path(with_base_folder(archivo_path_logico))
+            to_path_api = _normalize_dropbox_path(with_base_folder(new_dropbox_path_logico))
+
             print(f"DEBUG | Moviendo archivo en Dropbox...")
-            print(f"  Desde: {archivo_path}")
-            print(f"  Hacia: {new_dropbox_path}")
-            
+            print(f"  Desde (lógico): {archivo_path_logico}")
+            print(f"  Hacia (lógico): {new_dropbox_path_logico}")
+            print(f"  Desde (API): {from_path_api}")
+            print(f"  Hacia (API): {to_path_api}")
+            # Confirmación de existencia justo antes del move
+            try:
+                dbx.files_get_metadata(from_path_api)
+                print(f"DEBUG | Confirmado que existe FROM en Dropbox: {from_path_api}")
+            except Exception as e_check:
+                print(f"ERROR | FROM no existe justo antes del move: {from_path_api} -> {e_check}")
+
+            # Validar existencia de origen; si no existe, probar con el path completo original
+            try:
+                dbx.files_get_metadata(from_path_api)
+            except Exception as e_from_meta:
+                print(f"WARN | from_path_api no existe: {e_from_meta}")
+                # Si 'archivo_path' parece ser un path absoluto con base, probar con ese
+                if isinstance(archivo_path, str) and archivo_path.startswith('/'):
+                    try:
+                        dbx.files_get_metadata(archivo_path)
+                        print("DEBUG | Usando path original con base para 'from_path'")
+                        from_path_api = _normalize_dropbox_path(archivo_path)
+                    except Exception as e_from_orig:
+                        print(f"ERROR | Tampoco existe path original con base: {e_from_orig}")
+
             result = dbx.files_move_v2(
-                from_path=with_base_folder(archivo_path),
-                to_path=with_base_folder(new_dropbox_path),
+                from_path=from_path_api,
+                to_path=to_path_api,
                 allow_shared_folder=True,
                 autorename=True
             )

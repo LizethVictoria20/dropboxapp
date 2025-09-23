@@ -147,34 +147,26 @@ def create_dropbox_folder(folder_path):
         return False
 
 def get_dropbox_client():
-    """Obtiene el cliente de Dropbox"""
+    """Obtiene el cliente de Dropbox con validaciones estrictas.
+    - Nunca devuelve un cliente inválido.
+    - Si no hay token válido, retorna None y loguea la causa.
+    """
     try:
         token = get_valid_dropbox_token()
         if not token:
-            logger.error("No se pudo obtener un token válido de Dropbox")
+            logger.error("No hay token de Dropbox válido disponible (refresh revocado o access token ausente)")
             return None
-        
-        # Crear cliente y hacer una prueba básica de conectividad
+
         client = dropbox.Dropbox(token)
         try:
-            # Prueba rápida de conectividad
             client.users_get_current_account()
             return client
         except dropbox.exceptions.AuthError as e:
             logger.error(f"Token de Dropbox inválido o expirado: {e}")
             return None
-        except dropbox.exceptions.ApiError as e:
-            if "invalid_access_token" in str(e) or "unauthorized" in str(e):
-                logger.error(f"Token de acceso inválido: {e}")
-                return None
-            else:
-                # Para otros errores de API, aún devolvemos el cliente ya que podría ser un error temporal
-                logger.warning(f"Error de API al probar conectividad, pero devolviendo cliente: {e}")
-                return client
         except Exception as e:
-            logger.warning(f"Error de conectividad, pero devolviendo cliente: {e}")
-            return client
-            
+            logger.error(f"No se pudo verificar la cuenta de Dropbox: {e}")
+            return None
     except Exception as e:
         logger.error(f"Error obteniendo cliente Dropbox: {e}")
         return None
