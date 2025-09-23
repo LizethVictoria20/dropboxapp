@@ -2800,6 +2800,30 @@ block content %}
     modal.classList.add("hidden");
   }
 
+  // Crea un overlay de carga reutilizable
+  function createLoadingOverlay(message) {
+    const overlay = document.createElement("div");
+    overlay.className = "fixed inset-0 z-[1000] flex items-center justify-center bg-black/50";
+    overlay.setAttribute("role", "alertdialog");
+    overlay.setAttribute("aria-live", "assertive");
+
+    const container = document.createElement("div");
+    container.className = "flex items-center gap-3 rounded-lg bg-white px-4 py-3 shadow-lg";
+
+    const spinner = document.createElement("div");
+    spinner.className = "w-6 h-6 border-4 border-primary/20 border-t-primary rounded-full animate-spin";
+
+    const text = document.createElement("p");
+    text.className = "text-sm text-gray-700";
+    text.textContent = message || "Cargando...";
+
+    container.appendChild(spinner);
+    container.appendChild(text);
+    overlay.appendChild(container);
+
+    return overlay;
+  }
+
   // Función para descargar archivos
   function descargarArchivo(fileId, filePath, filename) {
     console.log("Descargando archivo:", filePath, "Nombre:", filename);
