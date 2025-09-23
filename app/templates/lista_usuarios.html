@@ -116,10 +116,7 @@ block content %}
             </span>
             <div>
               <div class="font-semibold text-gray-900">
-                {{ u.nombre or u.email.split('@')[0] }}
-              </div>
-              <div class="text-xs text-gray-500">
-                @{{ u.email.split('@')[0] }}
+                      {{ (u.nombre or '') ~ (' ' if u.apellido else '') ~ (u.apellido or '') or u.nombre_completo or u.email }}
               </div>
             </div>
           </td>

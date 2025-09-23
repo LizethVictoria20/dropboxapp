@@ -236,7 +236,7 @@ Inmigración OK{% endblock %} {% block styles %}
                   </div>
                   <div class="ml-4">
                     <div class="text-sm font-medium text-gray-900">
-                      {{ usuario.nombre_completo }}
+                      {{ (usuario.nombre or '') ~ (' ' if usuario.apellido else '') ~ (usuario.apellido or '') or usuario.nombre_completo or usuario.email }}
                     </div>
                     <div class="text-sm text-gray-500">
                       ID: {{ usuario.id }}
