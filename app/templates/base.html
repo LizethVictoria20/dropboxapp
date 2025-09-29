@@ -452,7 +452,7 @@
                     <!-- Opción de Cerrar Sesión -->
                     <div class="py-1">
                       <a
-                        href="{{ url_for('auth.logout') }}"
+                        href="{{ url_for('auth.logout') }}" data-no-spa="true"
                         class="flex items-center space-x-2 px-4 py-2 text-sm text-primary hover:bg-surface transition-colors"
                       >
                         <i class="fas fa-sign-out-alt text-primary w-5"></i>
@@ -616,7 +616,7 @@
 
                     <div class="border-t border-gray-100 my-4"></div>
                     <a
-                      href="{{ url_for('auth.logout') }}"
+                      href="{{ url_for('auth.logout') }}" data-no-spa="true"
                       class="text-red-500 hover:bg-red-50 block px-3 py-3 rounded-lg font-medium transition-colors"
                     >
                       <i class="fas fa-sign-out-alt mr-3 w-5 text-center"></i>
@@ -730,7 +730,7 @@
 
       <!-- Contenido principal - NUEVO -->
       <main class="flex-grow py-8">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div id="app-content" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {% block content %}
           <!-- El contenido de las páginas específicas irá aquí -->
           {% endblock %}
@@ -843,6 +843,116 @@
           });
         }
       });
+    </script>
+
+    <!-- Navegación SPA ligera (intercepta enlaces internos y actualiza solo el contenido) -->
+    <script>
+      (function () {
+        const CONTENT_SELECTOR = '#app-content';
+
+        function isSameOrigin(href) {
+          try {
+            const url = new URL(href, window.location.origin);
+            return url.origin === window.location.origin;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        function shouldIntercept(anchor) {
+          // No interceptar si tiene atributos especiales o abre en nueva pestaña
+          if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) return false;
+          if (anchor.getAttribute('rel') === 'external' || anchor.dataset.noSpa === 'true') return false;
+          const href = anchor.getAttribute('href');
+          if (!href || href.startsWith('#')) return false;
+          if (!isSameOrigin(anchor.href)) return false;
+          return true;
+        }
+
+        async function navigate(url, options = { replace: false }) {
+          const content = document.querySelector(CONTENT_SELECTOR);
+          if (!content) { window.location.assign(url); return; }
+
+          content.setAttribute('aria-busy', 'true');
+          try {
+            const resp = await fetch(url, { headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
+            if (!resp.ok || !resp.headers.get('content-type')?.includes('text/html')) {
+              window.location.assign(url);
+              return;
+            }
+            const text = await resp.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/html');
+            const newContent = doc.querySelector(CONTENT_SELECTOR);
+            const newTitle = doc.querySelector('title');
+
+            if (!newContent) {
+              window.location.assign(url);
+              return;
+            }
+
+            // Reemplazar contenido
+            content.innerHTML = newContent.innerHTML;
+
+            // Ejecutar scripts embebidos del nuevo contenido
+            content.querySelectorAll('script').forEach((oldScript) => {
+              const s = document.createElement('script');
+              // Copiar atributos relevantes
+              [...oldScript.attributes].forEach(attr => s.setAttribute(attr.name, attr.value));
+              s.textContent = oldScript.textContent || '';
+              oldScript.replaceWith(s);
+            });
+
+            // Actualizar título
+            if (newTitle) document.title = newTitle.textContent;
+
+            // Actualizar historial
+            if (options.replace) {
+              window.history.replaceState({}, '', url);
+            } else {
+              window.history.pushState({}, '', url);
+            }
+
+            // Cerrar menús móviles si están abiertos
+            const mobileMenu = document.getElementById('mobileMenu');
+            const mobileMenuGuest = document.getElementById('mobileMenuGuest');
+            if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+              mobileMenu.classList.add('hidden');
+              document.body.style.overflow = '';
+            }
+            if (mobileMenuGuest && !mobileMenuGuest.classList.contains('hidden')) {
+              mobileMenuGuest.classList.add('hidden');
+              document.body.style.overflow = '';
+            }
+
+            // Desplazar al inicio
+            window.scrollTo({ top: 0, behavior: 'instant' });
+          } catch (e) {
+            window.location.assign(url);
+          } finally {
+            content.removeAttribute('aria-busy');
+          }
+        }
+
+        // Interceptar clics en enlaces
+        document.addEventListener('click', (event) => {
+          // Ignorar con teclas modificadoras (nueva pestaña, etc.)
+          if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          let anchor = event.target;
+          while (anchor && anchor.tagName !== 'A') anchor = anchor.parentElement;
+          if (!anchor) return;
+
+          if (!shouldIntercept(anchor)) return;
+
+          event.preventDefault();
+          navigate(anchor.href);
+        }, true);
+
+        // Manejar navegación del navegador (atrás/adelante)
+        window.addEventListener('popstate', () => {
+          navigate(window.location.href, { replace: true });
+        });
+      })();
     </script>
 
     <!-- Funciones JavaScript globales para menús y modales -->
