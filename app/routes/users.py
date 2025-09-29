@@ -235,13 +235,16 @@ def crear_usuario():
             nombre = request.form.get('nombre')
             apellido = request.form.get('apellido')
             telefono = request.form.get('telefono')
-            ciudad = request.form.get('ciudad')
-            estado = request.form.get('estado')
-            direccion = request.form.get('direccion')
-            codigo_postal = request.form.get('codigo_postal')
-            fecha_nacimiento_str = request.form.get('fecha_nacimiento')
-            nacionality = request.form.get('nacionality')
-            country = request.form.get('country')
+            # Campos de ubicación y fecha ya no requeridos ni recogidos
+            # ciudad = request.form.get('ciudad')
+            # estado = request.form.get('estado')
+            # direccion = request.form.get('direccion')
+            # codigo_postal = request.form.get('codigo_postal')
+            # fecha_nacimiento_str = request.form.get('fecha_nacimiento')
+            # nacionality = request.form.get('nacionality')
+            # country = request.form.get('country')
+            area = request.form.get('area')
+            cargo = request.form.get('cargo')
             rol = request.form.get('rol')
             # Si el campo 'activo' no viene en el formulario, por defecto dejar activo=True
             activo_value = request.form.get('activo')
@@ -267,12 +270,8 @@ def crear_usuario():
                 nombre=nombre,
                 apellido=apellido,
                 telefono=telefono,
-                ciudad=ciudad,
-                estado=estado,
-                direccion=direccion,
-                codigo_postal=codigo_postal,
-                nacionality=nacionality,
-                country=country,
+                area=area,
+                cargo=cargo,
                 rol=rol,
                 activo=activo,
                 fecha_registro=datetime.utcnow()
@@ -281,16 +280,7 @@ def crear_usuario():
             # Establecer contraseña
             user.set_password(password)
             
-            # Procesar fecha de nacimiento
-            if fecha_nacimiento_str:
-                try:
-                    fecha_nacimiento = datetime.strptime(fecha_nacimiento_str, '%Y-%m-%d').date()
-                    user.fecha_nacimiento = fecha_nacimiento
-                except ValueError:
-                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                        return jsonify({"success": False, "error": "Formato de fecha de nacimiento inválido"})
-                    flash('Formato de fecha de nacimiento inválido', 'error')
-                    return redirect(url_for('users.listar_usuarios'))
+            # Fecha de nacimiento ya no se solicita en creación
             
             # Procesar permisos adicionales para lectores
             if rol == 'lector':
@@ -420,6 +410,8 @@ def get_user(user_id):
                 'codigo_postal': user.codigo_postal,
                 'nacionality': user.nacionality,
                 'country': user.country,
+                'area': user.area,
+                'cargo': user.cargo,
                 'fecha_nacimiento': user.fecha_nacimiento.strftime('%Y-%m-%d') if user.fecha_nacimiento else None,
                 'rol': user.rol,
                 'activo': user.activo,
@@ -450,12 +442,16 @@ def update_user():
         user.nombre = request.form.get('nombre')
         user.apellido = request.form.get('apellido')
         user.telefono = request.form.get('telefono')
+        # Campos de ubicación ya no gestionados en este flujo de creación,
+        # pero se mantienen aquí por compatibilidad en edición si existen en el formulario
         user.ciudad = request.form.get('ciudad')
         user.estado = request.form.get('estado')
         user.direccion = request.form.get('direccion')
         user.codigo_postal = request.form.get('codigo_postal')
         user.nacionality = request.form.get('nacionality')
         user.country = request.form.get('country')
+        user.area = request.form.get('area')
+        user.cargo = request.form.get('cargo')
         user.alien_number = request.form.get('alien_number')
         
         # Validar y actualizar rol

@@ -31,6 +31,7 @@ class User(UserMixin, db.Model):
     document_number = db.Column(db.String(50), nullable=True)
     alien_number = db.Column(db.String(50), nullable=True)
     area = db.Column(db.String(100), nullable=True)
+    cargo = db.Column(db.String(100), nullable=True)
     
     # Relaciones
     beneficiarios = db.relationship('User', backref=db.backref('titular', remote_side=[id]), lazy=True)
