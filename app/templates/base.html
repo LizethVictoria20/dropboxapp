@@ -313,13 +313,13 @@
                 <!-- Enlaces exclusivos para SUPERADMIN -->
                 <a
                   href="{{ url_for('main.dashboard_admin') }}"
-                  class="{% if request.endpoint == 'admin.dashboard' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                  class="{% if request.endpoint == 'main.dashboard_admin' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
                 >
                   Dashboard
                 </a>
                 <a
-                  href="#"
-                  class="{% if request.endpoint == 'main.listar_carpetas' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                  href="{{ url_for('usuarios.lista_usuarios') }}"
+                  class="{% if request.endpoint == 'usuarios.lista_usuarios' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
                 >
                   Clientes
                 </a>
@@ -330,7 +330,7 @@
                   Usuarios
                 </a>
                 <a
-                  href="#"
+                  href="{{ url_for('main.profile') }}"
                   class="{% if request.endpoint == 'main.profile' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
                 >
                   Mi Perfil
@@ -358,13 +358,13 @@
                 {% elif user_role == 'admin' %}
                 <a
                   href="{{ url_for('main.dashboard_admin') }}"
-                  class="{% if request.endpoint == 'admin.dashboard' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                  class="{% if request.endpoint == 'main.dashboard_admin' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
                 >
                   Dashboard
                 </a>
                 <a
                   href="{{ url_for('usuarios.lista_usuarios') }}"
-                  class="{% if request.endpoint == 'main.listar_carpetas' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                  class="{% if request.endpoint == 'usuarios.lista_usuarios' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
                 >
                   Clientes
                 </a>
@@ -383,7 +383,7 @@
                 {% elif user_role == 'lector' %}
                 <a
                   href="{{ url_for('main.dashboard_admin') }}"
-                  class="{% if request.endpoint == 'admin.dashboard' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
+                  class="{% if request.endpoint == 'main.dashboard_admin' %} text-primary font-medium border-b-2 border-primary {% else %} text-gray-600 hover:text-primary font-medium border-b-2 border-transparent hover:border-primary/30 {% endif %} h-16 flex items-center transition-colors duration-150"
                 >
                   Dashboard
                 </a>
@@ -520,28 +520,21 @@
                     <!-- Enlaces exclusivos para SUPERADMIN -->
                     <a
                       href="{{ url_for('main.dashboard_admin') }}"
-                      class="{% if request.endpoint == 'admin.dashboard' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                      class="{% if request.endpoint == 'main.dashboard_admin' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
                     >
                       <i class="fas fa-chart-line mr-3 w-5 text-center"></i>
                       Dashboard
                     </a>
                     <a
-                      href="#"
-                      class="{% if request.endpoint == 'main.listar_carpetas' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                      href="{{ url_for('usuarios.lista_usuarios') }}"
+                      class="{% if request.endpoint == 'usuarios.lista_usuarios' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
                     >
                       <i class="fas fa-users mr-3 w-5 text-center"></i>
                       Clientes
                     </a>
                     <a
-                      href="{{ url_for('main.listar_usuarios_admin') }}"
-                      class="{% if request.endpoint == 'main.listar_usuarios_admin' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
-                    >
-                      <i class="fas fa-user-shield mr-3 w-5 text-center"></i>
-                      Usuarios
-                    </a>
-                    <a
-                      href="#"
-                      class="{% if request.endpoint == 'superadmin.gestionar_permisos' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                      href="{{ url_for('main.system_settings') }}"
+                      class="{% if request.endpoint == 'main.system_settings' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
                     >
                       <i class="fas fa-shield-alt mr-3 w-5 text-center"></i>
                       Permisos
@@ -564,8 +557,8 @@
                     </a>
                     {% elif user_role == 'admin' %}
                     <a
-                      href="#"
-                      class="{% if request.endpoint == 'main.listar_carpetas' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                      href="{{ url_for('usuarios.lista_usuarios') }}"
+                      class="{% if request.endpoint == 'usuarios.lista_usuarios' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
                     >
                       <i class="fas fa-users mr-3 w-5 text-center"></i>
                       Clientes
@@ -579,7 +572,7 @@
                     </a>
                     <a
                       href="{{ url_for('main.dashboard_admin') }}"
-                      class="{% if request.endpoint == 'admin.dashboard' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                      class="{% if request.endpoint == 'main.dashboard_admin' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
                     >
                       <i class="fas fa-chart-line mr-3 w-5 text-center"></i>
                       Dashboard
@@ -587,7 +580,7 @@
                     {% elif user_role == 'lector' %}
                     <a
                       href="{{ url_for('main.dashboard_admin') }}"
-                      class="{% if request.endpoint == 'admin.dashboard' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
+                      class="{% if request.endpoint == 'main.dashboard_admin' %} text-primary bg-primary/10 {% else %} text-gray-600 hover:bg-gray-50 {% endif %} block px-3 py-3 rounded-lg font-medium transition-colors"
                     >
                       <i class="fas fa-chart-line mr-3 w-5 text-center"></i>
                       Dashboard

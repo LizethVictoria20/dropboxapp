@@ -1243,7 +1243,7 @@
         return;
       }
 
-      const isCliente = {{ 'true' if (hasattr(current_user, 'rol') and current_user.rol == 'cliente') else 'false' }};
+      const isCliente = {{ 'true' if (current_user is defined and current_user.rol is defined and current_user.rol == 'cliente') else 'false' }};
       const visibles = isCliente ? data.archivos.filter(a => a.es_publica !== false) : data.archivos;
       const items = visibles.map(a => {
         return `<li class="py-2 flex items-center justify-between border-b border-gray-50">
