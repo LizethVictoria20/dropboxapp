@@ -850,6 +850,65 @@
       (function () {
         const CONTENT_SELECTOR = '#app-content';
 
+        function normalizePath(path) {
+          try {
+            return path.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
+          } catch (e) { return path; }
+        }
+
+        function updateActiveNav() {
+          const currentPath = normalizePath(window.location.pathname);
+          const allAnchors = Array.from(document.querySelectorAll('nav a[href], #mobileMenu a[href], #mobileMenuGuest a[href]'))
+            .filter(a => a.getAttribute('href') && !a.getAttribute('href').startsWith('#'));
+
+          // Limpiar clases activas y asegurar baseline de borde en desktop
+          allAnchors.forEach(a => {
+            a.classList.remove('text-primary', 'border-primary', 'bg-primary/10');
+            const isDesktopNav = !!a.closest('nav');
+            if (isDesktopNav) {
+              // Mantener siempre el grosor del borde inferior; solo alternar color
+              a.classList.add('border-b-2');
+              a.classList.remove('border-primary');
+              if (!a.classList.contains('border-transparent')) {
+                a.classList.add('border-transparent');
+              }
+            }
+          });
+
+          // 1) Intentar match EXACTO primero
+          let best = allAnchors.find(a => {
+            try {
+              return normalizePath(new URL(a.href, location.origin).pathname) === currentPath;
+            } catch (e) { return false; }
+          }) || null;
+
+          // 2) Si no hay exacto, elegir el enlace cuyo href sea PREFIJO del currentPath (sección contenedora)
+          if (!best) {
+            let bestLen = -1;
+            allAnchors.forEach(a => {
+              try {
+                const hrefPath = normalizePath(new URL(a.href, location.origin).pathname);
+                if (!hrefPath || hrefPath === '/') return;
+                if (currentPath.startsWith(hrefPath + '/') || currentPath === hrefPath) {
+                  const len = hrefPath.length;
+                  if (len > bestLen) { best = a; bestLen = len; }
+                }
+              } catch (e) { /* ignore */ }
+            });
+          }
+
+          // Aplicar clases activas según contexto
+          if (best) {
+            const inMobile = !!best.closest('#mobileMenu, #mobileMenuGuest');
+            if (inMobile) {
+              best.classList.add('text-primary', 'bg-primary/10');
+            } else {
+              best.classList.add('text-primary', 'border-b-2', 'border-primary');
+              best.classList.remove('border-transparent');
+            }
+          }
+        }
+
         function isSameOrigin(href) {
           try {
             const url = new URL(href, window.location.origin);
@@ -927,6 +986,8 @@
 
             // Desplazar al inicio
             window.scrollTo({ top: 0, behavior: 'instant' });
+            // Actualizar estado activo de navegación
+            updateActiveNav();
           } catch (e) {
             window.location.assign(url);
           } finally {
@@ -952,6 +1013,13 @@
         window.addEventListener('popstate', () => {
           navigate(window.location.href, { replace: true });
         });
+
+        // Inicializar estado activo al cargar
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', updateActiveNav);
+        } else {
+          updateActiveNav();
+        }
       })();
     </script>
 
