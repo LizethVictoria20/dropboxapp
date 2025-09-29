@@ -962,6 +962,22 @@
               oldScript.replaceWith(s);
             });
 
+            // Notificar a la página que hubo navegación SPA
+            try {
+              const navEvent = new CustomEvent('spa:navigation', { detail: { url } });
+              window.dispatchEvent(navEvent);
+            } catch (e) { /* noop */ }
+
+            // Inicializaciones específicas por ruta (ej. dashboard admin)
+            try {
+              const pathNow = new URL(url, window.location.origin).pathname;
+              if (/^\/dashboard\/admin(\/?|$)/.test(pathNow)) {
+                if (typeof window.initializeDashboard === 'function') {
+                  window.initializeDashboard();
+                }
+              }
+            } catch (e) { /* noop */ }
+
             // Actualizar título
             if (newTitle) document.title = newTitle.textContent;
 
