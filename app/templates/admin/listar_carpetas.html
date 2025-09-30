@@ -170,12 +170,12 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
                 x-transition:leave="transition ease-in duration-75"
                 x-transition:leave-start="transform opacity-100 scale-100"
                 x-transition:leave-end="transform opacity-0 scale-95"
-                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+                class="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-50 border border-gray-200"
               >
                 <!-- Ver Carpetas -->
                 <a
                   href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=usuario.id) }}"
-                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 whitespace-nowrap"
                 >
                   <i class="fas fa-folder-open mr-3 text-blue-500"></i>
                   Ver Carpetas
@@ -184,11 +184,22 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
                 <!-- Ver Historial -->
                 <button
                   onclick="abrirModalHistorial({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
-                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 whitespace-nowrap"
                 >
                   <i class="fas fa-history mr-3 text-green-500"></i>
                   Ver Historial
                 </button>
+
+                {% if current_user.rol == 'lector' and current_user.lector_extra_permissions and 'editar_cliente' in current_user.lector_extra_permissions %}
+                <!-- Editar Usuario (solo lector con permiso editar_cliente) -->
+                <button
+                  onclick="abrirModalEditar({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 whitespace-nowrap"
+                >
+                  <i class="fas fa-user-edit mr-3 text-yellow-500"></i>
+                  Editar Cliente
+                </button>
+                {% endif %}
 
                 {% if current_user.puede_administrar() or
                 current_user.puede_agregar_beneficiarios() %}
@@ -198,7 +209,7 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
                 <!-- Agregar Beneficiario -->
                 <button
                   onclick="abrirModalBeneficiario({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
-                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 whitespace-nowrap"
                 >
                   <i class="fas fa-user-plus mr-3 text-purple-500"></i>
                   Agregar Beneficiario
@@ -207,7 +218,7 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
                 <!-- Editar Usuario -->
                 <button
                   onclick="abrirModalEditar({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
-                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 whitespace-nowrap"
                 >
                   <i class="fas fa-edit mr-3 text-yellow-500"></i>
                   Editar Usuario
@@ -216,7 +227,7 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
                 <!-- Eliminar Usuario -->
                 <button
                   onclick="confirmarEliminarUsuario({{ usuario.id }}, '{{ usuario.nombre or usuario.email }}')"
-                  class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 whitespace-nowrap"
                 >
                   <i class="fas fa-trash mr-3"></i>
                   Eliminar Usuario
@@ -343,6 +354,145 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
       {% endif %} {% endif %}
     </div>
     {% endif %}
+  </div>
+</div>
+
+<!-- Modal de Editar Usuario (reutilizado como en /usuarios) -->
+<div
+  id="editUserModal"
+  tabindex="-1"
+  aria-hidden="true"
+  class="fixed inset-0 z-50 items-center justify-center hidden overflow-y-auto bg-black bg-opacity-75"
+>
+  <div class="relative w-full max-w-4xl p-4 max-h-full m-auto">
+    <div id="modalContent" class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all">
+      <!-- Encabezado del Modal -->
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-xl font-bold font-montserrat text-text flex items-center" id="modal-title">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          Editar Cliente <span id="editing-user-name" class="ml-2"></span>
+        </h3>
+        <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" onclick="cerrarModalEditar()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Contenido del Modal -->
+      <div class="max-h-[70vh] overflow-auto">
+        <form id="editUserForm" action="{{ url_for('users.update_user') }}" method="POST">
+          <input type="hidden" id="edit-user-id" name="user_id" />
+          <div class="px-6 py-5 bg-gray-50">
+            <div id="messageBox" class="message-box hidden" role="alert"></div>
+
+            <!-- Tabs mínimas: Info básica, Seguridad, Roles -->
+            <div class="border-b border-gray-200 mb-6 sticky top-0 bg-gray-50 z-10">
+              <nav class="-mb-px flex space-x-8">
+                <button type="button" class="whitespace-nowrap tab-button active border-primary text-primary font-medium border-b-2 py-3 px-1" data-tab="info-basica-tab">Información Básica</button>
+                <button type="button" class="whitespace-nowrap tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent font-medium border-b-2 py-3 px-1" data-tab="contrasena-tab">Cambiar Contraseña</button>
+                <button type="button" class="whitespace-nowrap tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent font-medium border-b-2 py-3 px-1" data-tab="roles-tab">Roles de Usuario</button>
+              </nav>
+            </div>
+
+            <div class="tab-content">
+              <!-- Info básica -->
+              <div id="info-basica-tab" class="tab-pane">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label for="edit-email" class="block text-sm font-medium text-text">Email</label>
+                    <input type="email" name="email" id="edit-email" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="ejemplo@correo.com" required />
+                  </div>
+                  <div class="space-y-2">
+                    <label for="edit-name" class="block text-sm font-medium text-text">Nombre</label>
+                    <input type="text" name="nombre" id="edit-name" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Nombre" />
+                  </div>
+                  <div class="space-y-2">
+                    <label for="edit-lastname" class="block text-sm font-medium text-text">Apellido</label>
+                    <input type="text" name="apellido" id="edit-lastname" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Apellido" />
+                  </div>
+                  <div class="space-y-2">
+                    <label for="edit-telephone" class="block text-sm font-medium text-text">Teléfono</label>
+                    <input type="text" name="telefono" id="edit-telephone" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="Número de teléfono" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cambiar contraseña -->
+              <div id="contrasena-tab" class="tab-pane hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label for="edit-password" class="block text-sm font-medium text-text">Nueva Contraseña</label>
+                    <input type="password" name="password" id="edit-password" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="••••••••" />
+                  </div>
+                  <div class="space-y-2">
+                    <label for="edit-password-confirm" class="block text-sm font-medium text-text">Confirmar Contraseña</label>
+                    <input type="password" name="password_confirm" id="edit-password-confirm" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary shadow-sm" placeholder="••••••••" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Roles -->
+              <div id="roles-tab" class="tab-pane hidden">
+                <div class="space-y-4">
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium text-text">Rol del Usuario</label>
+                    <div class="bg-white border border-gray-200 rounded-lg">
+                      <label class="role-option cursor-pointer block">
+                        <input type="radio" name="rol" value="admin" class="sr-only" onchange="toggleLectorPermissions()" />
+                        <div class="flex items-center justify-between p-4 border-b border-gray-100 hover:bg-gray-50">
+                          <div class="flex items-center"><div class="w-4 h-4 border-2 border-gray-300 rounded-full mr-3"></div><span class="text-sm font-medium text-gray-900">Administrador</span></div>
+                        </div>
+                      </label>
+                      <label class="role-option cursor-pointer block">
+                        <input type="radio" name="rol" value="lector" class="sr-only" onchange="toggleLectorPermissions()" />
+                        <div class="flex items-center justify-between p-4 border-b border-gray-100 hover:bg-gray-50">
+                          <div class="flex items-center"><div class="w-4 h-4 border-2 border-gray-300 rounded-full mr-3"></div><span class="text-sm font-medium text-gray-900">Lector</span></div>
+                        </div>
+                      </label>
+                      <label class="role-option cursor-pointer block">
+                        <input type="radio" name="rol" value="superadmin" class="sr-only" onchange="toggleLectorPermissions()" />
+                        <div class="flex items-center justify-between p-4 border-b border-gray-100 hover:bg-gray-50">
+                          <div class="flex items-center"><div class="w-4 h-4 border-2 border-gray-300 rounded-full mr-3"></div><span class="text-sm font-medium text-gray-900">Superadmin</span></div>
+                        </div>
+                      </label>
+                      <label class="role-option cursor-pointer block">
+                        <input type="radio" name="rol" value="cliente" class="sr-only" onchange="toggleLectorPermissions()" />
+                        <div class="flex items-center justify-between p-4 hover:bg-gray-50">
+                          <div class="flex items-center"><div class="w-4 h-4 border-2 border-gray-300 rounded-full mr-3"></div><span class="text-sm font-medium text-gray-900">Cliente</span></div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Permisos adicionales para Lector -->
+                  <div id="editLectorPermissions" class="hidden bg-gray-50 border-b border-gray-100">
+                    <div class="p-4">
+                      <h4 class="text-sm font-medium text-gray-700 mb-3">Permisos Adicionales</h4>
+                      <div class="space-y-3">
+                        <label class="flex items-center"><input type="checkbox" name="puede_renombrar" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" /><span class="ml-2 text-sm text-gray-700">Renombrar archivos</span></label>
+                        <label class="flex items-center"><input type="checkbox" name="puede_mover" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" /><span class="ml-2 text-sm text-gray-700">Mover archivos</span></label>
+                        <label class="flex items-center"><input type="checkbox" name="puede_eliminar" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" /><span class="ml-2 text-sm text-gray-700">Eliminar archivos</span></label>
+                        <label class="flex items-center"><input type="checkbox" name="puede_agregar_beneficiarios" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" /><span class="ml-2 text-sm text-gray-700">Agregar beneficiarios</span></label>
+                        <label class="flex items-center"><input type="checkbox" name="puede_editar_cliente" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" /><span class="ml-2 text-sm text-gray-700">Editar Cliente</span></label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="px-6 py-4 bg-white border-t border-gray-100 flex justify-end gap-3">
+            <button type="button" class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-text bg-white hover:bg-gray-50" onclick="cerrarModalEditar()">Cancelar</button>
+            <button type="submit" class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-light">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -526,10 +676,18 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
     if (modal) modal.classList.add("hidden");
   }
 
-  // Función para abrir modal de editar usuario
+  // Función para abrir modal de editar usuario (reutiliza el modal de edición existente)
   function abrirModalEditar(usuarioId, nombreUsuario) {
-    // Por ahora mostrar un alert, pero se puede implementar un modal real
-    alert(`Editar usuario ${nombreUsuario} (ID: ${usuarioId})`);
+    if (typeof openEditModal === 'function') {
+      openEditModal(usuarioId);
+      return;
+    }
+    // Fallback simple: si no está cargada la función, intentar cargar datos y mostrar modal local
+    if (typeof window._openEditModalLocal === 'function') {
+      window._openEditModalLocal(usuarioId);
+      return;
+    }
+    alert('No se pudo abrir el modal de edición en esta vista. Actualiza la página e intenta de nuevo.');
   }
 
   // Función para confirmar eliminación de usuario
@@ -706,6 +864,147 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
         cerrarModalBeneficiario();
       }
     });
+
+  // ===== Modal Editar Usuario (reutilizado) =====
+  window.cerrarModalEditar = function () {
+    const modal = document.getElementById('editUserModal');
+    if (modal) modal.classList.add('hidden');
+    const form = document.getElementById('editUserForm');
+    if (form) form.reset();
+  };
+
+  window.toggleLectorPermissions = function () {
+    const selectedRole = document.querySelector('input[name="rol"]:checked');
+    const permisosDiv = document.getElementById('editLectorPermissions');
+    if (!permisosDiv) return;
+    if (selectedRole && selectedRole.value === 'lector') {
+      permisosDiv.classList.remove('hidden');
+    } else {
+      permisosDiv.classList.add('hidden');
+    }
+  };
+
+  window.openEditModal = function (userId) {
+    // Cargar datos del usuario para editar (misma API que /usuarios)
+    fetch(`/users/get_user/${userId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          const user = data.user;
+          document.getElementById('edit-user-id').value = user.id;
+          document.getElementById('edit-email').value = user.email || '';
+          document.getElementById('edit-name').value = user.nombre || '';
+          document.getElementById('edit-lastname').value = user.apellido || '';
+          document.getElementById('edit-telephone').value = user.telefono || '';
+
+          // Seleccionar rol
+          const roleRadios = document.querySelectorAll('input[name="rol"]');
+          roleRadios.forEach(r => r.checked = (r.value === (user.rol || 'usuario')));
+
+          // Permisos lector
+          const permisosDiv = document.getElementById('editLectorPermissions');
+          const selectedRole = document.querySelector('input[name="rol"]:checked');
+          if (selectedRole && selectedRole.value === 'lector') {
+            permisosDiv.classList.remove('hidden');
+          } else {
+            permisosDiv.classList.add('hidden');
+          }
+
+          if (user.lector_extra_permissions) {
+            try {
+              const permisos = JSON.parse(user.lector_extra_permissions);
+              document.querySelector('input[name="puede_renombrar"]').checked = permisos.includes('renombrar');
+              document.querySelector('input[name="puede_mover"]').checked = permisos.includes('mover');
+              document.querySelector('input[name="puede_eliminar"]').checked = permisos.includes('eliminar');
+              document.querySelector('input[name="puede_agregar_beneficiarios"]').checked = permisos.includes('agregar_beneficiarios');
+              const editarClienteInput = document.querySelector('input[name="puede_editar_cliente"]');
+              if (editarClienteInput) editarClienteInput.checked = permisos.includes('editar_cliente');
+            } catch (e) { /* noop */ }
+          } else {
+            // Limpiar checks
+            ['puede_renombrar','puede_mover','puede_eliminar','puede_agregar_beneficiarios','puede_editar_cliente']
+              .forEach(n => { const el = document.querySelector(`input[name="${n}"]`); if (el) el.checked = false; });
+          }
+
+          document.getElementById('editing-user-name').textContent = user.nombre || user.email;
+          const modal = document.getElementById('editUserModal');
+          if (modal) modal.classList.remove('hidden');
+
+          // Inicializar tabs del modal de edición
+          initEditUserModalTabs();
+          // Mostrar por defecto Información Básica
+          showEditUserTab('info-basica-tab');
+
+          // Enlazar cambios de rol para alternar permisos de lector
+          roleRadios.forEach(radio => {
+            radio.addEventListener('change', toggleLectorPermissions);
+          });
+          
+          // Enlazar submit para enviar como AJAX y permanecer en /listar_carpetas
+          const form = document.getElementById('editUserForm');
+          if (form) {
+            form.addEventListener('submit', function(e){
+              e.preventDefault();
+              const fd = new FormData(form);
+              fd.append('redirect_url', window.location.pathname);
+              fetch(form.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(d => {
+                  if (d && d.success) {
+                    cerrarModalEditar();
+                    // Si el backend envía redirect, usarlo; de lo contrario recargar la página
+                    if (d.redirect) {
+                      window.location.href = d.redirect;
+                    } else {
+                      window.location.reload();
+                    }
+                  } else {
+                    alert(d && d.error ? d.error : 'No se pudo actualizar el usuario');
+                  }
+                })
+                .catch(() => alert('Error al actualizar el usuario'));
+            }, { once: true });
+          }
+        } else {
+          alert('Error al cargar los datos del usuario');
+        }
+      })
+      .catch(() => alert('Error al cargar los datos del usuario'));
+  };
+
+  // Tabs del modal de edición (reutiliza misma lógica que en /usuarios)
+  function initEditUserModalTabs() {
+    const modal = document.getElementById('editUserModal');
+    if (!modal) return;
+    const buttons = modal.querySelectorAll('.tab-button');
+    const panes = modal.querySelectorAll('.tab-pane');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', function () {
+        const tabId = this.getAttribute('data-tab');
+        showEditUserTab(tabId);
+      });
+    });
+
+    // Helper para mostrar una pestaña
+    window.showEditUserTab = function(tabId) {
+      // Ocultar todas
+      panes.forEach(p => p.classList.add('hidden'));
+      // Desactivar todas
+      buttons.forEach(b => {
+        b.classList.remove('active', 'border-primary', 'text-primary');
+        b.classList.add('border-transparent', 'text-gray-500');
+      });
+      // Activar seleccionada
+      const activePane = modal.querySelector('#' + tabId);
+      if (activePane) activePane.classList.remove('hidden');
+      const activeBtn = Array.from(buttons).find(b => b.getAttribute('data-tab') === tabId);
+      if (activeBtn) {
+        activeBtn.classList.add('active', 'border-primary', 'text-primary');
+        activeBtn.classList.remove('border-transparent', 'text-gray-500');
+      }
+    };
+  }
 
   // Cerrar modal de historial al hacer clic fuera de él
   (function(){

@@ -475,6 +475,8 @@ def update_user():
                 permisos_adicionales.append('eliminar')
             if request.form.get('puede_agregar_beneficiarios'):
                 permisos_adicionales.append('agregar_beneficiarios')
+            if request.form.get('puede_editar_cliente'):
+                permisos_adicionales.append('editar_cliente')
             
             user.lector_extra_permissions = json.dumps(permisos_adicionales) if permisos_adicionales else None
         else:
@@ -555,7 +557,8 @@ def update_user():
             success_message += ' (incluye cambio de contraseña)'
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({"success": True, "message": success_message})
+            redirect_url = request.form.get('redirect_url') or url_for('main.listar_carpetas')
+            return jsonify({"success": True, "message": success_message, "redirect": redirect_url})
         
         flash(success_message, 'success')
         
