@@ -1277,9 +1277,9 @@ def refresh_dropbox_token():
     try:
         success = refresh_token()
         if success:
-            flash('Token de Dropbox renovado exitosamente', 'success')
+            print('Token de Dropbox renovado exitosamente', 'success')
         else:
-            flash('No se pudo renovar el token. Revisa los logs para más detalles.', 'error')
+            print('No se pudo renovar el token. Revisa los logs para más detalles.', 'error')
     except Exception as e:
         logger.error(f"Error renovando token: {e}")
         flash(f'Error al renovar token: {str(e)}', 'error')

@@ -3197,7 +3197,6 @@ def ver_usuario_carpetas(usuario_id):
             _dbx_runtime = _get_dbx()
             if not _dbx_runtime:
                 print("⚠️ get_dbx() devolvió None: token inválido o configuración incompleta. Mostrando estructura vacía.")
-                flash("No se pudo conectar con Dropbox. Revisa la configuración de tokens.", "warning")
                 estructura = {"_subcarpetas": {}, "_archivos": []}
             else:
                 # Usar la función optimizada con recursión limitada para mejor rendimiento
