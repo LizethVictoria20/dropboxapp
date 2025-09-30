@@ -190,6 +190,114 @@ def obtener_historial_usuario_json(usuario_id):
         }
     })
 
+@bp.route('/api/lectores/<int:usuario_id>/historial')
+@login_required
+def api_historial_para_lectores(usuario_id):
+    """API para que usuarios con rol 'lector' puedan ver historial de clientes.
+
+    Reglas:
+    - Solo lectores y administradores/superadmins pueden consultar este endpoint.
+    - Si el solicitante es lector, solo se permite consultar usuarios con rol 'cliente'.
+    """
+    # Verificar rol del solicitante
+    solicitante_es_admin = hasattr(current_user, 'puede_administrar') and current_user.puede_administrar()
+    if not (solicitante_es_admin or (hasattr(current_user, 'rol') and current_user.rol == 'lector')):
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    usuario = User.query.get_or_404(usuario_id)
+
+    # Si es lector, solo puede ver historial de clientes
+    if current_user.rol == 'lector' and usuario.rol != 'cliente':
+        return jsonify({'error': 'Solo puedes ver historial de clientes'}), 403
+
+    # Actividades (limitadas)
+    actividades = UserActivityLog.query.filter_by(user_id=usuario_id) \
+        .order_by(UserActivityLog.fecha.desc()) \
+        .limit(50) \
+        .all()
+
+    # Mapeo de acciones a etiquetas en español
+    accion_labels = {
+        'login': 'Inicio de sesión',
+        'logout': 'Cierre de sesión',
+        'profile_view': 'Vista de perfil',
+        'profile_update': 'Actualización de perfil',
+        'user_registered': 'Usuario registrado',
+        'registration_completed': 'Registro completado',
+        'password_changed': 'Cambio de contraseña',
+        'password_reset': 'Restablecimiento de contraseña',
+        'dashboard_access': 'Acceso al panel',
+        'dashboard_admin_access': 'Acceso al panel de administrador',
+        'admin_dashboard_access': 'Acceso al panel administrativo',
+        'dashboard_cliente_access': 'Acceso al panel de cliente',
+        'dashboard_lector_access': 'Acceso al panel de lector',
+        'file_uploaded': 'Archivo subido',
+        'file_moved': 'Archivo movido',
+        'file_renamed': 'Archivo renombrado',
+        'file_hidden': 'Archivo ocultado',
+        'folder_created': 'Carpeta creada',
+        'folder_deleted': 'Carpeta eliminada',
+        'folder_hidden': 'Carpeta ocultada',
+        'folder_renamed': 'Carpeta renombrada',
+        'advanced_search': 'Búsqueda avanzada',
+        'bulk_export': 'Exportación masiva',
+        'beneficiary_update': 'Actualización de beneficiario',
+        'importar_archivo': 'Importación de archivo',
+        'editar_usuario': 'Edición de usuario'
+    }
+
+    actividades_data = []
+    for actividad in actividades:
+        codigo = actividad.accion or ''
+        actividades_data.append({
+            'id': actividad.id,
+            'accion': accion_labels.get(codigo, codigo or 'Actividad'),
+            'accion_code': codigo,
+            'descripcion': actividad.descripcion,
+            'fecha': actividad.fecha.isoformat() if actividad.fecha else None,
+        })
+
+    # Archivos recientes del cliente (resumen)
+    archivos = Archivo.query.filter_by(usuario_id=usuario_id) \
+        .order_by(Archivo.fecha_subida.desc()) \
+        .limit(20) \
+        .all()
+
+    archivos_data = []
+    for archivo in archivos:
+        archivos_data.append({
+            'id': archivo.id,
+            'nombre': archivo.nombre,
+            'fecha_subida': archivo.fecha_subida.isoformat() if archivo.fecha_subida else None,
+            'extension': getattr(archivo, 'extension', None),
+            'estado': getattr(archivo, 'estado', None)
+        })
+
+    # Resumen de carpetas (no se exponen datos sensibles)
+    carpetas = Folder.query.filter_by(user_id=usuario_id).order_by(Folder.fecha_creacion.desc()).all()
+    carpetas_data = []
+    for carpeta in carpetas:
+        carpetas_data.append({
+            'id': carpeta.id,
+            'name': carpeta.name,
+            'es_publica': carpeta.es_publica,
+            'fecha_creacion': carpeta.fecha_creacion.isoformat() if carpeta.fecha_creacion else None
+        })
+
+    return jsonify({
+        'success': True,
+        'usuario': {
+            'id': usuario.id,
+            'nombre': usuario.nombre,
+            'apellido': usuario.apellido,
+            'email': usuario.email,
+            'rol': usuario.rol
+        },
+        'actividades': actividades_data,
+        'archivos': archivos_data,
+        'carpetas': carpetas_data
+    })
+
 @bp.route('/usuarios/<int:usuario_id>/carpetas-json')
 @login_required
 def obtener_carpetas_usuario_json(usuario_id):

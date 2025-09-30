@@ -346,6 +346,29 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
   </div>
 </div>
 
+<!-- Modal de Historial -->
+<div id="modalHistorial" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4">
+    <!-- Header del modal -->
+    <div class="flex items-center justify-between p-6 border-b border-gray-200">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">Historial de Actividad</h3>
+        <p class="text-sm text-gray-600 mt-1">Para: <span id="nombreUsuarioHistorial" class="font-medium"></span></p>
+      </div>
+      <button onclick="cerrarModalHistorial()" class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Contenido -->
+    <div class="p-6 overflow-y-auto max-h-[70vh]">
+      <div id="contenidoHistorial" class="space-y-4">
+        <!-- El contenido se cargará dinámicamente -->
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal para Agregar Beneficiario -->
 <div
   id="modalBeneficiario"
@@ -456,8 +479,51 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
 <script>
   // Función para abrir modal de historial
   function abrirModalHistorial(usuarioId, nombreUsuario) {
-    // Por ahora mostrar un alert, pero se puede implementar un modal real
-    alert(`Ver historial de ${nombreUsuario} (ID: ${usuarioId})`);
+    const modal = document.getElementById("modalHistorial");
+    const nombreSpan = document.getElementById("nombreUsuarioHistorial");
+    const contenido = document.getElementById("contenidoHistorial");
+
+    if (!modal || !nombreSpan || !contenido) {
+      alert("Error: No se pudo abrir el modal de historial.");
+      return;
+    }
+
+    nombreSpan.textContent = nombreUsuario;
+    contenido.innerHTML = '<p class="text-gray-500 text-center py-8">Cargando historial...</p>';
+    modal.classList.remove("hidden");
+
+    fetch(`/api/lectores/${usuarioId}/historial`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.success) {
+          const actividades = data.actividades || [];
+          if (actividades.length) {
+            contenido.innerHTML = actividades.map(a => `
+              <div class="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                <div class="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium text-gray-900">${a.accion || ''}</p>
+                  <p class="text-sm text-gray-600">${a.descripcion || ''}</p>
+                  <p class="text-xs text-gray-500">${a.fecha ? new Date(a.fecha).toLocaleString() : ''}</p>
+                </div>
+              </div>
+            `).join('');
+          } else {
+            contenido.innerHTML = '<p class="text-gray-500 text-center py-8">No hay actividades registradas para este usuario.</p>';
+          }
+        } else {
+          contenido.innerHTML = '<p class="text-red-500 text-center py-8">No se pudo cargar el historial.</p>';
+        }
+      })
+      .catch(err => {
+        console.error('Error cargando historial:', err);
+        contenido.innerHTML = '<p class="text-red-500 text-center py-8">Error al cargar el historial.</p>';
+      });
+  }
+
+  function cerrarModalHistorial() {
+    const modal = document.getElementById("modalHistorial");
+    if (modal) modal.classList.add("hidden");
   }
 
   // Función para abrir modal de editar usuario
@@ -640,5 +706,15 @@ Clientes del Sistema {% else %} Carpetas de Usuarios {% endif %} {% endblock %}
         cerrarModalBeneficiario();
       }
     });
+
+  // Cerrar modal de historial al hacer clic fuera de él
+  (function(){
+    const modalHist = document.getElementById("modalHistorial");
+    if (modalHist) {
+      modalHist.addEventListener("click", function(e){
+        if (e.target === this) cerrarModalHistorial();
+      });
+    }
+  })();
 </script>
 {% endblock %}

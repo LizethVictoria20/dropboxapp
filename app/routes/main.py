@@ -847,11 +847,45 @@ def api_usuario_historial(usuario_id):
             .order_by(desc(UserActivityLog.fecha))\
             .limit(50).all()
         
+        # Mapeo de códigos de acción a etiquetas en español
+        accion_labels = {
+            'login': 'Inicio de sesión',
+            'logout': 'Cierre de sesión',
+            'profile_view': 'Vista de perfil',
+            'profile_update': 'Actualización de perfil',
+            'user_registered': 'Usuario registrado',
+            'registration_completed': 'Registro completado',
+            'password_changed': 'Cambio de contraseña',
+            'password_reset': 'Restablecimiento de contraseña',
+            'user_status_changed': 'Cambio de estado de usuario',
+            'user_role_changed': 'Cambio de rol de usuario',
+            'dashboard_access': 'Acceso al panel',
+            'dashboard_admin_access': 'Acceso al panel de administrador',
+            'admin_dashboard_access': 'Acceso al panel administrativo',
+            'dashboard_cliente_access': 'Acceso al panel de cliente',
+            'dashboard_lector_access': 'Acceso al panel de lector',
+            'file_uploaded': 'Archivo subido',
+            'file_moved': 'Archivo movido',
+            'file_renamed': 'Archivo renombrado',
+            'file_hidden': 'Archivo ocultado',
+            'folder_created': 'Carpeta creada',
+            'folder_deleted': 'Carpeta eliminada',
+            'folder_hidden': 'Carpeta ocultada',
+            'folder_renamed': 'Carpeta renombrada',
+            'advanced_search': 'Búsqueda avanzada',
+            'bulk_export': 'Exportación masiva',
+            'beneficiary_update': 'Actualización de beneficiario',
+            'importar_archivo': 'Importación de archivo',
+            'editar_usuario': 'Edición de usuario'
+        }
+
         actividades_data = []
         for actividad in actividades:
+            codigo = actividad.accion or ''
             actividades_data.append({
                 'id': actividad.id,
-                'accion': actividad.accion,
+                'accion': accion_labels.get(codigo, codigo or 'Actividad'),
+                'accion_code': codigo,
                 'descripcion': actividad.descripcion,
                 'fecha': actividad.fecha.isoformat() if actividad.fecha else None,
                 'ip_address': actividad.ip_address

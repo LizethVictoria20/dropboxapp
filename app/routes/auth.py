@@ -77,7 +77,6 @@ def login():
                 activity_log = UserActivityLog(
                     user_id=user.id,
                     accion='login',
-                    descripcion=f'Login exitoso desde {request.remote_addr}',
                     ip_address=request.remote_addr
                 )
                 db.session.add(activity_log)

@@ -592,6 +592,53 @@ def get_user_history(user_id):
         history = []
         
         # Procesar actividades
+        # Mapeo de códigos de acción a etiquetas en español
+        accion_labels = {
+            'login': 'Inicio de sesión',
+            'logout': 'Cierre de sesión',
+            'profile_view': 'Vista de perfil',
+            'profile_update': 'Actualización de perfil',
+            'user_registered': 'Usuario registrado',
+            'registration_completed': 'Registro completado',
+            'password_changed': 'Cambio de contraseña',
+            'password_reset': 'Restablecimiento de contraseña',
+            'user_status_changed': 'Cambio de estado de usuario',
+            'user_role_changed': 'Cambio de rol de usuario',
+            'dashboard_access': 'Acceso al panel',
+            'dashboard_admin_access': 'Acceso al panel de administrador',
+            'admin_dashboard_access': 'Acceso al panel administrativo',
+            'dashboard_cliente_access': 'Acceso al panel de cliente',
+            'dashboard_lector_access': 'Acceso al panel de lector',
+            'upload_file': 'Subida de archivo',
+            'delete_file': 'Eliminación de archivo',
+            'rename_file': 'Renombrado de archivo',
+            'move_file': 'Movimiento de archivo',
+            'update_profile': 'Actualización de perfil',
+            'add_beneficiary': 'Agregar beneficiario',
+            'remove_beneficiary': 'Eliminar beneficiario',
+            'change_permissions': 'Cambio de permisos',
+            'create_folder': 'Creación de carpeta',
+            'delete_folder': 'Eliminación de carpeta',
+            'activate_user': 'Activación de usuario',
+            'deactivate_user': 'Desactivación de usuario',
+            'create_user': 'Creación de cuenta',
+            'create_beneficiario': 'Creación de beneficiario',
+            'change_password': 'Cambio de contraseña',
+            'login_failed': 'Intento de inicio de sesión fallido',
+            'file_uploaded': 'Archivo subido',
+            'file_moved': 'Archivo movido',
+            'file_renamed': 'Archivo renombrado',
+            'file_hidden': 'Archivo ocultado',
+            'folder_created': 'Carpeta creada',
+            'folder_deleted': 'Carpeta eliminada',
+            'folder_hidden': 'Carpeta ocultada',
+            'folder_renamed': 'Carpeta renombrada',
+            'advanced_search': 'Búsqueda avanzada',
+            'bulk_export': 'Exportación masiva',
+            'beneficiary_update': 'Actualización de beneficiario',
+            'importar_archivo': 'Importación de archivo',
+            'editar_usuario': 'Edición de usuario'
+        }
         for activity in activities:
             # Mapear acciones
             tipo_mapping = {
@@ -639,7 +686,8 @@ def get_user_history(user_id):
                 'login_failed': 'Intento de inicio de sesión fallido'
             }
             
-            titulo = titulo_mapping.get(activity.accion, 'Actividad del sistema')
+            # Mantener compatibilidad con el título pero usar etiqueta española si existe
+            titulo = accion_labels.get(activity.accion) or titulo_mapping.get(activity.accion, 'Actividad del sistema')
             
             # Formatear fecha
             fecha_str = "N/A"
