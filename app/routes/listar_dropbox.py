@@ -3190,19 +3190,27 @@ def ver_usuario_carpetas(usuario_id):
             db.session.commit()
 
         path = usuario.dropbox_folder_path
-        
+
         try:
-            # Usar la función optimizada con recursión limitada para mejor rendimiento
-            estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
-            
-            # Filtrar archivos ocultos de la estructura
-            print(f"DEBUG | Filtrando archivos ocultos para usuario {usuario.id}")
-            estructura = filtra_archivos_ocultos(estructura, usuario.id, path)
-            
-            # Filtrar carpetas ocultas de la estructura (exactamente como archivos)
-            print(f"DEBUG | Filtrando carpetas ocultas para usuario {usuario.id}")
-            estructura = filtra_carpetas_ocultas(estructura, usuario.id, path)
-            
+            # Verificar que el cliente de Dropbox esté disponible antes de listar
+            from app.dropbox_utils import get_dbx as _get_dbx
+            _dbx_runtime = _get_dbx()
+            if not _dbx_runtime:
+                print("⚠️ get_dbx() devolvió None: token inválido o configuración incompleta. Mostrando estructura vacía.")
+                flash("No se pudo conectar con Dropbox. Revisa la configuración de tokens.", "warning")
+                estructura = {"_subcarpetas": {}, "_archivos": []}
+            else:
+                # Usar la función optimizada con recursión limitada para mejor rendimiento
+                estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
+
+                # Filtrar archivos ocultos de la estructura
+                print(f"DEBUG | Filtrando archivos ocultos para usuario {usuario.id}")
+                estructura = filtra_archivos_ocultos(estructura, usuario.id, path)
+
+                # Filtrar carpetas ocultas de la estructura (exactamente como archivos)
+                print(f"DEBUG | Filtrando carpetas ocultas para usuario {usuario.id}")
+                estructura = filtra_carpetas_ocultas(estructura, usuario.id, path)
+
         except Exception as e:
             print(f"Error obteniendo estructura para usuario {usuario.email}: {e}")
             estructura = {"_subcarpetas": {}, "_archivos": []}

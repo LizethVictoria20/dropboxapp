@@ -221,7 +221,7 @@ Inmigración OK{% endblock %} {% block styles %}
             id="users-table-body"
           >
             {% for usuario in usuarios %}
-            <tr class="hover:bg-gray-50">
+            <tr class="hover:bg-gray-50 cursor-pointer" data-href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=usuario.id) }}">
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
                   <div class="flex-shrink-0 h-10 w-10">
@@ -285,7 +285,7 @@ Inmigración OK{% endblock %} {% block styles %}
                 usuario.fecha_registro else 'N/A' }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div class="relative">
+                <div class="relative" onclick="event.stopPropagation()">
                   <button
                     onclick="toggleUserMenu('user-menu-{{ usuario.id }}', event)"
                     class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary rounded-full p-1"
@@ -302,7 +302,7 @@ Inmigración OK{% endblock %} {% block styles %}
                     <div class="py-1">
                       <!-- Ver historial -->
                       <button
-                        onclick="closeUserMenu('user-menu-{{ usuario.id }}'); openHistoryModal({{ usuario.id }})"
+                        onclick="event.stopPropagation(); closeUserMenu('user-menu-{{ usuario.id }}'); openHistoryModal({{ usuario.id }})"
                         class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                       >
                         <i
@@ -313,7 +313,7 @@ Inmigración OK{% endblock %} {% block styles %}
 
                       <!-- Editar -->
                       <button
-                        onclick="closeUserMenu('user-menu-{{ usuario.id }}'); openEditModal({{ usuario.id }})"
+                        onclick="event.stopPropagation(); closeUserMenu('user-menu-{{ usuario.id }}'); openEditModal({{ usuario.id }})"
                         class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                       >
                         <i
@@ -330,7 +330,7 @@ Inmigración OK{% endblock %} {% block styles %}
 
                       <!-- Eliminar -->
                       <button
-                        onclick="closeUserMenu('user-menu-{{ usuario.id }}'); confirmDeleteUser({{ usuario.id }}, '{{ usuario.nombre_completo or usuario.email }}')"
+                        onclick="event.stopPropagation(); closeUserMenu('user-menu-{{ usuario.id }}'); confirmDeleteUser({{ usuario.id }}, '{{ usuario.nombre_completo or usuario.email }}')"
                         class="group flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
                       >
                         <i
@@ -1637,6 +1637,18 @@ Inmigración OK{% endblock %} {% block styles %}
 </div>
 {% endblock %} {% block scripts %}
 <script>
+  // Delegado para hacer click en fila completa navegable usando data-href
+  (function(){
+    document.addEventListener('click', function(e){
+      const tr = e.target.closest('tr[data-href]');
+      if (!tr) return;
+      // Evitar si se hizo click en controles interactivos
+      const interactive = e.target.closest('a, button, input, select, textarea, [role="button"]');
+      if (interactive) return;
+      const href = tr.getAttribute('data-href');
+      if (href) window.location.assign(href);
+    });
+  })();
   // Funciones para el modal de crear usuario
   window.openCreateUserModal = function () {
     document.getElementById("createUserModal").classList.remove("hidden");

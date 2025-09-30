@@ -106,7 +106,8 @@ block content %}
         {% for u in usuarios %}
         <!-- Fila de tabla en escritorio -->
         <tr
-          class="border-b last:border-0 hover:bg-blue-50 transition hidden md:table-row"
+          class="border-b last:border-0 hover:bg-blue-50 transition hidden md:table-row cursor-pointer"
+          data-href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
         >
           <td class="flex items-center gap-3 py-3 px-6">
             <span
@@ -137,7 +138,7 @@ block content %}
             {% endif %}
           </td>
           <td class="px-2 text-right">
-            <div class="relative" x-data="{ open: false }">
+            <div class="relative" x-data="{ open: false }" onclick="event.stopPropagation()">
               <button
                 @click="open = !open"
                 class="p-2 rounded hover:bg-gray-100 group relative"
@@ -347,6 +348,21 @@ block content %}
   </div>
 </div>
 
+<script>
+  // Delegado para filas clicables en /usuarios
+  (function(){
+    document.addEventListener('click', function(e){
+      const tr = e.target.closest('tr[data-href]');
+      if (!tr) return;
+      const interactive = e.target.closest('a, button, input, select, textarea, [role="button"]');
+      if (interactive) return;
+      const href = tr.getAttribute('data-href');
+      if (href) window.location.assign(href);
+    });
+  })();
+  
+  // Si se repinta el tbody por AJAX, sigue funcionando por delegación
+</script>
 <!-- Modal de confirmación para eliminar usuario -->
 <div
   id="modalEliminar"
