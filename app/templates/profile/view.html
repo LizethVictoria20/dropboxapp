@@ -3,7 +3,7 @@
   <main class="flex-grow py-8">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <div
-        class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8"
+        class="flex flex-col md:flex-row md:items-center md:justify-between mb-8"
       >
         <div>
           <h1 class="text-3xl font-bold font-montserrat text-primary-dark">
@@ -13,24 +13,34 @@
             Gestiona tu información personal y configuración de cuenta
           </p>
         </div>
-        <div class="flex items-center gap-3 mt-4 md:mt-0">
-          <button
-            type="button"
-            class="inline-flex items-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out"
-            onclick="openModal()"
+        <button
+          type="button"
+          class="mt-4 md:mt-0 inline-flex items-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out"
+          onclick="openModal()"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828l-11.142 11.142a4 4 0 01-1.414 1.414L3 21l1.414-4.142a4 4 0 011.414-1.414l9.9-9.9z" />
-            </svg>
-            Editar Perfil
-          </button>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828l-11.142 11.142a4 4 0 01-1.414 1.414L3 21l1.414-4.142a4 4 0 011.414-1.414l9.9-9.9z"
+            />
+          </svg>
+          Editar Perfil
+        </button>
       </div>
 
       <div class="grid grid-cols-1 gap-8">
         <div
           class="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden"
         >
-          <div class="px-6 py-5 border-b border-gray-100 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div class="px-6 py-5 border-b border-gray-100 flex flex-col items-start sm:flex-row sm:items-center sm:justify-between">
             <div class="flex-shrink-0 mr-6">
               <div
                 class="h-20 w-20 rounded-full bg-primary-light/20 border-2 border-primary-light flex items-center justify-center text-primary text-2xl font-bold"
@@ -39,7 +49,7 @@
                 user.apellido[0]|upper if user.apellido else '' }}
               </div>
             </div>
-            <div class="flex-grow flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div class="flex w-full flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-3 mt-4 sm:mt-0">
               <div>
                 <h2
                   class="text-2xl font-bold font-montserrat text-primary-dark"
@@ -112,70 +122,70 @@
                   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-5">
                     <!-- Nombre -->
                     <div class="border-b border-gray-100 pb-3">
-                      <div class="flex">
-                        <div class="w-1/3">
+                      <div class="flex flex-col sm:flex-row">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Nombre
                           </h4>
                         </div>
-                        <div class="w-2/3">
-                          <p class="text-base text-text break-words">{{ user.nombre }}</p>
+                        <div class="w-full sm:w-2/3">
+                          <p class="text-base text-text">{{ user.nombre }}</p>
                         </div>
                       </div>
                     </div>
 
                     <!-- Apellido -->
                     <div class="border-b border-gray-100 pb-3">
-                      <div class="flex">
-                        <div class="w-1/3">
+                      <div class="flex flex-col sm:flex-row">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Apellido
                           </h4>
                         </div>
-                        <div class="w-2/3">
-                          <p class="text-base text-text break-words">{{ user.apellido }}</p>
+                        <div class="w-full sm:w-2/3">
+                          <p class="text-base text-text">{{ user.apellido }}</p>
                         </div>
                       </div>
                     </div>
 
                     <!-- Teléfono -->
                     <div class="border-b border-gray-100 pb-3">
-                      <div class="flex">
-                        <div class="w-1/3">
+                      <div class="flex flex-col sm:flex-row">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Teléfono
                           </h4>
                         </div>
-                        <div class="w-2/3">
-                          <p class="text-base text-text break-words">{{ user.telefono }}</p>
+                        <div class="w-full sm:w-2/3">
+                          <p class="text-base text-text">{{ user.telefono }}</p>
                         </div>
                       </div>
                     </div>
 
                     <!-- Usuario -->
                     <div class="border-b border-gray-100 pb-3">
-                      <div class="flex">
-                        <div class="w-1/3">
+                      <div class="flex flex-col sm:flex-row">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Usuario
                           </h4>
                         </div>
-                        <div class="w-2/3">
-                          <p class="text-base text-text break-words">{{ user.username }}</p>
+                        <div class="w-full sm:w-2/3">
+                          <p class="text-base text-text">{{ user.username }}</p>
                         </div>
                       </div>
                     </div>
 
                     <!-- Email -->
                     <div class="border-b border-gray-100 pb-3">
-                      <div class="flex">
-                        <div class="w-1/3">
+                      <div class="flex flex-col sm:flex-row">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Email
                           </h4>
                         </div>
-                        <div class="w-2/3">
-                          <p class="text-base text-text break-words">{{ user.email }}</p>
+                        <div class="w-full sm:w-2/3">
+                          <p class="text-base text-text">{{ user.email }}</p>
                         </div>
                       </div>
                     </div>
@@ -189,7 +199,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text break-words">
+                          <p class="text-base text-text">
                             {{ user.fecha_registro.strftime('%d/%m/%Y') if
                             user.fecha_registro }}
                           </p>
@@ -206,7 +216,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text break-words">
+                          <p class="text-base text-text">
                             <span
                               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light/20 text-primary mr-2 mb-1"
                             >
@@ -220,14 +230,14 @@
                     <!-- Área (si existe) -->
                     {% if user.area %}
                     <div class="border-b border-gray-100 pb-3">
-                      <div class="flex">
-                        <div class="w-1/3">
+                      <div class="flex flex-col sm:flex-row">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Área
                           </h4>
                         </div>
-                        <div class="w-2/3">
-                          <p class="text-base text-text break-words">
+                        <div class="w-full sm:w-2/3">
+                          <p class="text-base text-text">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent mr-2 mb-1">{{ user.area }}</span>
                           </p>
                         </div>
@@ -236,42 +246,46 @@
                     {% endif %}
                     <!-- Identificación -->
                     <div class="border-b border-gray-100 pb-3">
-                      <div class="flex">
-                        <div class="w-1/3">
+                      <div class="flex flex-col sm:flex-row">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Identificación
                           </h4>
                         </div>
-                        <div class="w-2/3">
-                          <p class="text-base text-text break-words">{{ user.document_number }}</p>
+                        <div class="w-full sm:w-2/3">
+                          <p class="text-base text-text">
+                          <p class="text-base text-text">
+                            {{ user.document_number }}
+                          </p>
+                          </p>
                         </div>
                       </div>
                     </div>
                     <!-- Alien number (solo clientes) -->
                     {% if user.rol == 'cliente' %}
                     <div class="border-b border-gray-100 pb-3">
-                      <div class="flex">
-                        <div class="w-1/3">
+                      <div class="flex flex-col sm:flex-row">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Alien number
                           </h4>
                         </div>
-                        <div class="w-2/3">
-                          <p class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light/20 text-primary mr-2 mb-1 break-words">{{ user.alien_number or 'No registrado' }}</p>
+                        <div class="w-full sm:w-2/3">
+                          <p class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light/20 text-primary mr-2 mb-1">{{ user.alien_number or 'No registrado' }}</p>
                         </div>
                       </div>
                     </div>
                     {% endif %}
                     <!-- Ultimo Acceso -->
                     <div class="border-b border-gray-100 pb-3">
-                      <div class="flex">
-                        <div class="w-1/3">
+                      <div class="flex flex-col sm:flex-row">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Acceso
                           </h4>
                         </div>
-                        <div class="w-2/3">
-                          <p class="text-base text-text break-words">
+                        <div class="w-full sm:w-2/3">
+                          <p class="text-base text-text">
                             <span class="text-sm font-medium text-gray-700">
                               {% if last_login_colombia %} {{
                               last_login_colombia.strftime('%Y-%m-%d %H:%M') }}
@@ -304,7 +318,7 @@
                   {% if beneficiarios %}
                   <ul class="divide-y divide-gray-100">
                     {% for b in beneficiarios %}
-                    <li class="py-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <li class="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <p class="text-base font-semibold text-text">
                           {{ b.nombre }}{% if b.lastname %} {{ b.lastname }}{% endif %}
@@ -371,16 +385,16 @@
                 </div>
 
                 <div class="p-5">
-                  <div class="flex flex-wrap">
-                    <!-- Primera fila: 3 columnas -->
-                    <div class="w-full md:w-1/3 md:pr-4 mb-5">
-                      <div class="flex border-b border-gray-100 pb-3">
-                        <div class="w-1/3">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    <!-- Ciudad -->
+                    <div class="mb-5">
+                      <div class="flex flex-col sm:flex-row border-b border-gray-100 pb-3">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Ciudad
                           </h4>
                         </div>
-                        <div class="w-2/3">
+                        <div class="w-full sm:w-2/3">
                           <p class="text-base text-text">
                             {{ user.ciudad if user.ciudad else 'No registrado' }}
                           </p>
@@ -388,14 +402,15 @@
                       </div>
                     </div>
 
-                    <div class="w-full md:w-1/3 md:pr-4 mb-5">
-                      <div class="flex border-b border-gray-100 pb-3">
-                        <div class="w-1/3">
+                    <!-- Departamento -->
+                    <div class="mb-5">
+                      <div class="flex flex-col sm:flex-row border-b border-gray-100 pb-3">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Departamento
                           </h4>
                         </div>
-                        <div class="w-2/3">
+                        <div class="w-full sm:w-2/3">
                           <p class="text-base text-text">
                             {{ user.estado if user.estado else ' No registrado' }}
                           </p>
@@ -403,14 +418,15 @@
                       </div>
                     </div>
 
-                    <div class="w-full md:w-1/3 mb-5">
-                      <div class="flex border-b border-gray-100 pb-3">
-                        <div class="w-1/3">
+                    <!-- Dirección -->
+                    <div class="mb-5">
+                      <div class="flex flex-col sm:flex-row border-b border-gray-100 pb-3">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Dirección
                           </h4>
                         </div>
-                        <div class="w-2/3">
+                        <div class="w-full sm:w-2/3">
                           <p class="text-base text-text">
                             {{ user.direccion if user.direccion else 'No registrado'
                             }}
@@ -419,15 +435,15 @@
                       </div>
                     </div>
 
-                    <!-- Segunda fila: 3 columnas -->
-                    <div class="w-full md:w-1/3 md:pr-4 mb-5">
-                      <div class="flex border-b border-gray-100 pb-3">
-                        <div class="w-1/3">
+                    <!-- Código Postal -->
+                    <div class="mb-5">
+                      <div class="flex flex-col sm:flex-row border-b border-gray-100 pb-3">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Código Postal
                           </h4>
                         </div>
-                        <div class="w-2/3">
+                        <div class="w-full sm:w-2/3">
                           <p class="text-base text-text">
                             {{ user.codigo_postal if user.codigo_postal else 'No
                             registrado' }}
@@ -436,14 +452,15 @@
                       </div>
                     </div>
 
-                    <div class="w-full md:w-1/3 md:pr-4 mb-5">
-                      <div class="flex border-b border-gray-100 pb-3">
-                        <div class="w-1/3">
+                    <!-- Nacionalidad -->
+                    <div class="mb-5">
+                      <div class="flex flex-col sm:flex-row border-b border-gray-100 pb-3">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Nacionalidad
                           </h4>
                         </div>
-                        <div class="w-2/3">
+                        <div class="w-full sm:w-2/3">
                           <p class="text-base text-text">
                             {{ user.nacionality if user.nacionality else 'No
                             registrado' }}
@@ -452,14 +469,15 @@
                       </div>
                     </div>
 
-                    <div class="w-full md:w-1/3 mb-5">
-                      <div class="flex border-b border-gray-100 pb-3">
-                        <div class="w-1/3">
+                    <!-- Fecha de Nacimiento -->
+                    <div class="mb-5">
+                      <div class="flex flex-col sm:flex-row border-b border-gray-100 pb-3">
+                        <div class="w-full sm:w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
                             Fecha de Nacimiento
                           </h4>
                         </div>
-                        <div class="w-2/3">
+                        <div class="w-full sm:w-2/3">
                           <p class="text-base text-text">
                             {{ user.fecha_nacimiento.strftime('%d %B, %Y') if
                             user.fecha_nacimiento else 'No registrado' }}
@@ -479,36 +497,8 @@
   </main>
 </div>
 
-<!-- Modal Acciones (condicional para lector con permiso editar_cliente) -->
-{% set puede_editar_cliente = (current_user.rol == 'lector') and current_user.lector_extra_permissions and ('editar_cliente' in current_user.lector_extra_permissions) %}
-{% if puede_editar_cliente %}
-<div id="actionsModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" onclick="if (event.target === this) closeActionsModal()">
-  <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-    <div class="flex items-center justify-between p-4 border-b">
-      <h3 class="text-lg font-semibold text-gray-900">Acciones</h3>
-      <button onclick="closeActionsModal()" class="text-gray-400 hover:text-gray-600">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="p-4 space-y-2">
-      <button type="button" class="w-full flex items-center justify-between px-4 py-3 rounded-lg border hover:bg-gray-50" onclick="openModal(); closeActionsModal()">
-        <span class="flex items-center text-sm text-gray-800">
-          <i class="fas fa-user-edit text-primary mr-2"></i>
-          Editar Cliente
-        </span>
-        <i class="fas fa-chevron-right text-gray-400"></i>
-      </button>
-    </div>
-    <div class="p-4 border-t bg-gray-50 text-right">
-      <button type="button" onclick="closeActionsModal()" class="px-4 py-2 text-sm bg-white border rounded-lg hover:bg-gray-100">Cerrar</button>
-    </div>
-  </div>
-  
-</div>
-{% endif %}
-
 <!-- Modal editar beneficiario -->
-<div id="editBeneficiaryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+<div id="editBeneficiaryModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-50">
   <div class="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl relative">
     <h3 class="text-xl font-bold mb-4 text-primary-dark">
       Editar Beneficiario
@@ -577,7 +567,7 @@
   </div>
 </div>
 
-<div id="beneficiaryInfoMessage" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+<div id="beneficiaryInfoMessage" class="hidden fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-40">
   <div class="bg-white rounded-xl p-6 w-full max-w-md text-center shadow-xl">
     <h2 class="text-lg font-semibold text-primary-dark mb-3">
       ¿Deseas agregar un beneficiario?
@@ -597,7 +587,7 @@
 </div>
 
 <!-- Modal de edición de perfil -->
-<div id="modalOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-500 bg-opacity-75 transition-opacity" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="modalOverlay" class="hidden fixed inset-0 z-50 items-center justify-center bg-gray-500 bg-opacity-75 transition-opacity" aria-labelledby="modal-title" role="dialog" aria-modal="true">
   <div class="w-full max-w-3xl px-4">
     <div id="modalContent" class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all modal-enter">
       <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -621,7 +611,7 @@
             <div id="messageBox" class="message-box hidden" role="alert"></div>
             <!-- Tabs de navegación -->
             <div class="border-b border-gray-200 mb-6 sticky top-0 bg-gray-50 z-10">
-              <nav class="-mb-px flex space-x-8">
+              <nav class="-mb-px flex space-x-8 overflow-x-auto">
                 <button type="button" class="tab-button active border-primary text-primary font-medium border-b-2 py-3 px-1" data-tab="personal-tab">
                   Información Personal
                 </button>
@@ -1209,23 +1199,18 @@
   };
 
   window.showBeneficiaryInfoMessage = function() {
-    document.getElementById("beneficiaryInfoMessage").classList.remove("hidden");
+    var overlay = document.getElementById("beneficiaryInfoMessage");
+    if (!overlay) return;
+    overlay.classList.remove("hidden");
+    overlay.classList.add("flex");
   };
 
   window.closeBeneficiaryInfoMessage = function() {
-    document.getElementById("beneficiaryInfoMessage").classList.add("hidden");
+    var overlay = document.getElementById("beneficiaryInfoMessage");
+    if (!overlay) return;
+    overlay.classList.add("hidden");
+    overlay.classList.remove("flex");
   };
-
-    // Acciones (modal reutilizando editor existente)
-    window.openActionsModal = function() {
-      var m = document.getElementById('actionsModal');
-      if (m) m.classList.remove('hidden');
-    };
-
-    window.closeActionsModal = function() {
-      var m = document.getElementById('actionsModal');
-      if (m) m.classList.add('hidden');
-    };
 
   // Event listeners adicionales
   const openActivityLogButton = document.getElementById("openActivityLogModal");

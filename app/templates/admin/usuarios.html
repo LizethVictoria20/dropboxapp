@@ -31,7 +31,7 @@
         name="q"
         value="{{ busqueda }}"
         placeholder="Buscar cliente"
-        class="w-[32rem] h-[3rem] text-sm px-4 py-3 rounded-xl border border-transparent focus:ring-2 focus:ring-blue-200 focus:outline-none placeholder-gray-400"
+        class="w-full sm:w-[24rem] md:w-[32rem] h-[3rem] text-sm px-4 py-3 rounded-xl border border-transparent focus:ring-2 focus:ring-blue-200 focus:outline-none placeholder-gray-400"
       />
     </div>
   </form>
@@ -50,8 +50,9 @@
       >
     </div>
     {% if usuarios.items %}
+    <div class="overflow-x-auto">
     <table class="min-w-full text-sm text-gray-700">
-      <thead>
+      <thead class="hidden md:table-header-group">
         <tr class="border-b text-gray-500">
           <th class="py-3 px-6 text-left">NOMBRE</th>
           <th class="py-3 px-2 text-left">EMAIL</th>
@@ -213,17 +214,18 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
 
     <!-- Paginación -->
     <div
-      class="flex items-center justify-between px-6 py-4 border-t bg-gray-50"
+      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-6 py-4 border-t bg-gray-50"
     >
       <div class="text-sm text-gray-500">
         Mostrando {{ ((usuarios.page - 1) * usuarios.per_page) + 1 }} a {{
         ((usuarios.page - 1) * usuarios.per_page) + usuarios.items|length }} de
         {{ usuarios.total }} usuarios
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 overflow-x-auto">
         <label class="text-sm text-gray-500 mr-2">Mostrar:</label>
         <select class="text-sm border rounded px-2 py-1 text-gray-600">
           <option>10</option>
