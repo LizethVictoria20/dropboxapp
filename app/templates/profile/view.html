@@ -3,7 +3,7 @@
   <main class="flex-grow py-8">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <div
-        class="flex flex-col md:flex-row md:items-center md:justify-between mb-8"
+        class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8"
       >
         <div>
           <h1 class="text-3xl font-bold font-montserrat text-primary-dark">
@@ -30,7 +30,7 @@
         <div
           class="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden"
         >
-          <div class="px-6 py-5 border-b border-gray-100 flex items-center">
+          <div class="px-6 py-5 border-b border-gray-100 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div class="flex-shrink-0 mr-6">
               <div
                 class="h-20 w-20 rounded-full bg-primary-light/20 border-2 border-primary-light flex items-center justify-center text-primary text-2xl font-bold"
@@ -39,7 +39,7 @@
                 user.apellido[0]|upper if user.apellido else '' }}
               </div>
             </div>
-            <div class="flex-grow flex items-center justify-between">
+            <div class="flex-grow flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <h2
                   class="text-2xl font-bold font-montserrat text-primary-dark"
@@ -109,7 +109,7 @@
                 </div>
 
                 <div class="p-5">
-                  <div class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-5">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-5">
                     <!-- Nombre -->
                     <div class="border-b border-gray-100 pb-3">
                       <div class="flex">
@@ -119,7 +119,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text">{{ user.nombre }}</p>
+                          <p class="text-base text-text break-words">{{ user.nombre }}</p>
                         </div>
                       </div>
                     </div>
@@ -133,7 +133,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text">{{ user.apellido }}</p>
+                          <p class="text-base text-text break-words">{{ user.apellido }}</p>
                         </div>
                       </div>
                     </div>
@@ -147,7 +147,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text">{{ user.telefono }}</p>
+                          <p class="text-base text-text break-words">{{ user.telefono }}</p>
                         </div>
                       </div>
                     </div>
@@ -161,7 +161,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text">{{ user.username }}</p>
+                          <p class="text-base text-text break-words">{{ user.username }}</p>
                         </div>
                       </div>
                     </div>
@@ -175,7 +175,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text">{{ user.email }}</p>
+                          <p class="text-base text-text break-words">{{ user.email }}</p>
                         </div>
                       </div>
                     </div>
@@ -189,7 +189,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text">
+                          <p class="text-base text-text break-words">
                             {{ user.fecha_registro.strftime('%d/%m/%Y') if
                             user.fecha_registro }}
                           </p>
@@ -206,7 +206,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text">
+                          <p class="text-base text-text break-words">
                             <span
                               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light/20 text-primary mr-2 mb-1"
                             >
@@ -227,7 +227,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text">
+                          <p class="text-base text-text break-words">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent mr-2 mb-1">{{ user.area }}</span>
                           </p>
                         </div>
@@ -243,11 +243,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text">
-                          <p class="text-base text-text">
-                            {{ user.document_number }}
-                          </p>
-                          </p>
+                          <p class="text-base text-text break-words">{{ user.document_number }}</p>
                         </div>
                       </div>
                     </div>
@@ -261,7 +257,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light/20 text-primary mr-2 mb-1">{{ user.alien_number or 'No registrado' }}</p>
+                          <p class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light/20 text-primary mr-2 mb-1 break-words">{{ user.alien_number or 'No registrado' }}</p>
                         </div>
                       </div>
                     </div>
@@ -275,7 +271,7 @@
                           </h4>
                         </div>
                         <div class="w-2/3">
-                          <p class="text-base text-text">
+                          <p class="text-base text-text break-words">
                             <span class="text-sm font-medium text-gray-700">
                               {% if last_login_colombia %} {{
                               last_login_colombia.strftime('%Y-%m-%d %H:%M') }}
@@ -308,7 +304,7 @@
                   {% if beneficiarios %}
                   <ul class="divide-y divide-gray-100">
                     {% for b in beneficiarios %}
-                    <li class="py-4 flex items-center justify-between">
+                    <li class="py-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p class="text-base font-semibold text-text">
                           {{ b.nombre }}{% if b.lastname %} {{ b.lastname }}{% endif %}
@@ -377,7 +373,7 @@
                 <div class="p-5">
                   <div class="flex flex-wrap">
                     <!-- Primera fila: 3 columnas -->
-                    <div class="w-1/3 pr-4 mb-5">
+                    <div class="w-full md:w-1/3 md:pr-4 mb-5">
                       <div class="flex border-b border-gray-100 pb-3">
                         <div class="w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
@@ -392,7 +388,7 @@
                       </div>
                     </div>
 
-                    <div class="w-1/3 pr-4 mb-5">
+                    <div class="w-full md:w-1/3 md:pr-4 mb-5">
                       <div class="flex border-b border-gray-100 pb-3">
                         <div class="w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
@@ -407,7 +403,7 @@
                       </div>
                     </div>
 
-                    <div class="w-1/3 mb-5">
+                    <div class="w-full md:w-1/3 mb-5">
                       <div class="flex border-b border-gray-100 pb-3">
                         <div class="w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
@@ -424,7 +420,7 @@
                     </div>
 
                     <!-- Segunda fila: 3 columnas -->
-                    <div class="w-1/3 pr-4 mb-5">
+                    <div class="w-full md:w-1/3 md:pr-4 mb-5">
                       <div class="flex border-b border-gray-100 pb-3">
                         <div class="w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
@@ -440,7 +436,7 @@
                       </div>
                     </div>
 
-                    <div class="w-1/3 pr-4 mb-5">
+                    <div class="w-full md:w-1/3 md:pr-4 mb-5">
                       <div class="flex border-b border-gray-100 pb-3">
                         <div class="w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">
@@ -456,7 +452,7 @@
                       </div>
                     </div>
 
-                    <div class="w-1/3 mb-5">
+                    <div class="w-full md:w-1/3 mb-5">
                       <div class="flex border-b border-gray-100 pb-3">
                         <div class="w-1/3">
                           <h4 class="text-sm font-medium text-text-secondary">

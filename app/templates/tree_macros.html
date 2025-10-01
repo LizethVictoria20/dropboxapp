@@ -5,9 +5,9 @@ folders_por_ruta={}, usuario_email="") %}
   {# Archivos de la carpeta actual #} {% if tree._archivos %} {% for archivo in
   tree._archivos %}
   <div
-    class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+    class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
   >
-    <div class="flex items-center space-x-3">
+    <div class="flex items-center min-w-0 gap-3">
       <div
         class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"
       >
@@ -25,7 +25,7 @@ folders_por_ruta={}, usuario_email="") %}
           />
         </svg>
       </div>
-      <span class="text-gray-700 font-medium">{{ archivo }}</span>
+      <span class="text-gray-700 font-medium truncate" style="max-width: 60vw">{{ archivo }}</span>
       <span id="status-badge-{{ (parent.replace('/', '-').replace('\\', '-')) ~ '-' ~ (archivo.replace('/', '-').replace('\\', '-')) }}" data-file-path="/{{ usuario_email }}/{{ (parent + '/' if parent else '') }}{{ archivo }}" class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
     </div>
 
@@ -218,7 +218,7 @@ folders_por_ruta={}, usuario_email="") %}
     <div
       class="p-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-blue-50"
     >
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div
           class="flex items-center cursor-pointer"
           onclick="handleFolderClick('{{ parent ~ '/' ~ carpeta }}', event)"
@@ -241,7 +241,7 @@ folders_por_ruta={}, usuario_email="") %}
               />
             </svg>
           </div>
-          <div class="flex items-center space-x-3">
+          <div class="flex items-center min-w-0 gap-3">
             <div
               class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center"
             >
@@ -259,7 +259,7 @@ folders_por_ruta={}, usuario_email="") %}
                 />
               </svg>
             </div>
-            <span class="font-semibold text-indigo-900">{{ carpeta }}</span>
+            <span class="font-semibold text-indigo-900 truncate" style="max-width: 60vw">{{ carpeta }}</span>
 
             {# Badge de visibilidad #}
             <span
@@ -418,7 +418,7 @@ folders_por_ruta={}, usuario_email="") %}
       </div>
     </div>
 
-    <div id="folder-{{ parent ~ '/' ~ carpeta }}" class="hidden p-4">
+    <div id="folder-{{ parent ~ '/' ~ carpeta }}" class="hidden p-4 overflow-x-auto">
       {{ render_tree(data, parent ~ '/' ~ carpeta, usuario_id, usuario_actual,
       folders_por_ruta, usuario_email) }}
     </div>

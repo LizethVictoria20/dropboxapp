@@ -809,7 +809,7 @@
         // Menú móvil para usuarios no autenticados
         const mobileMenuButtonGuest = document.getElementById("mobileMenuButtonGuest");
         const mobileMenuGuest = document.getElementById("mobileMenuGuest");
-        const closeMobileMenuGuest = document.getElementById("closeMobileMenuGuest");
+        const closeMobileMenuGuestButton = document.getElementById("closeMobileMenuGuest");
 
         // Función para abrir el menú de invitados
         function openMobileMenuGuest() {
@@ -820,7 +820,7 @@
         }
 
         // Función para cerrar el menú de invitados
-        function closeMobileMenuGuest() {
+        function closeMobileMenuGuestHandler() {
           if (mobileMenuGuest) {
             mobileMenuGuest.classList.add("hidden");
             document.body.style.overflow = "";
@@ -831,14 +831,14 @@
         if (mobileMenuButtonGuest) {
           mobileMenuButtonGuest.addEventListener("click", openMobileMenuGuest);
         }
-        if (closeMobileMenuGuest) {
-          closeMobileMenuGuest.addEventListener("click", closeMobileMenuGuest);
+        if (closeMobileMenuGuestButton) {
+          closeMobileMenuGuestButton.addEventListener("click", closeMobileMenuGuestHandler);
         }
         if (mobileMenuGuest) {
           // Cerrar al hacer click en el overlay
           mobileMenuGuest.addEventListener("click", function(e) {
             if (e.target === mobileMenuGuest) {
-              closeMobileMenuGuest();
+              closeMobileMenuGuestHandler();
             }
           });
         }

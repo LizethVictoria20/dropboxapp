@@ -4,7 +4,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 <div class="max-w-7xl mx-auto px-6 py-8">
   <!-- Header con información del usuario o beneficiario -->
   <div class="mb-6">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div class="flex items-center space-x-4">
         <a
           href="{% if usuario_actual and usuario_actual.rol == 'lector' %}{{ url_for('main.listar_carpetas') }}{% else %}{{ url_for('usuarios.lista_usuarios') }}{% endif %}"
@@ -61,7 +61,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         </div>
       </div>
 
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center flex-wrap gap-2 sm:gap-3">
         <!-- Botón Agregar Beneficiario -->
         {% if not beneficiario and (usuario_actual.puede_administrar() or
         usuario_actual.puede_agregar_beneficiarios()) %}
@@ -98,9 +98,9 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   <!-- Nota informativa para lectores -->
   {% if usuario_actual.rol == 'lector' and usuario_actual.id != usuario.id %}
   <div
-    class="mb-6 {% if usuario_actual.puede_modificar_archivos() %}bg-green-50 border border-green-200{% else %}bg-blue-50 border border-blue-200{% endif %} rounded-xl p-4"
+  class="mb-6 {% if usuario_actual.puede_modificar_archivos() %}bg-green-50 border border-green-200{% else %}bg-blue-50 border border-blue-200{% endif %} rounded-xl p-4"
   >
-    <div class="flex items-center space-x-3">
+    <div class="flex items-center flex-wrap gap-3">
       <i
         class="fas {% if usuario_actual.puede_modificar_archivos() %}fa-check-circle text-green-600{% else %}fa-info-circle text-blue-600{% endif %} text-xl"
       ></i>
@@ -140,8 +140,8 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
     <div
       class="bg-gradient-to-r from-slate-50 to-gray-50 px-6 py-4 border-b border-gray-200"
     >
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center flex-wrap gap-2 sm:gap-3">
           <svg
             class="w-6 h-6 text-indigo-600"
             fill="none"
@@ -187,7 +187,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       </div>
     </div>
 
-    <div class="p-6">
+    <div class="p-6 overflow-x-auto">
       {% if estructuras_usuarios and usuario_id in estructuras_usuarios %} {%
       set estructura_usuario = estructuras_usuarios[usuario_id] %} {% if
       estructura_usuario._subcarpetas or estructura_usuario._archivos %} {%
