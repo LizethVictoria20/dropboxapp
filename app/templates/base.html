@@ -9,6 +9,14 @@
       defer
       src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
     ></script>
+    <script>
+      // Store global para menús de usuario - debe estar antes de Alpine.js
+      document.addEventListener('alpine:init', () => {
+        Alpine.store('userMenu', {
+          openMenuId: null
+        });
+      });
+    </script>
     <link
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;600;700&display=swap"
       rel="stylesheet"
