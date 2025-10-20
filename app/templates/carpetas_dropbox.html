@@ -176,7 +176,7 @@ block content %}
               </div>
               <div>
                 <h3 class="text-lg font-semibold text-gray-900">
-                  {{ usuarios[usuario_id].email }}
+                  {{ usuarios[usuario_id].nombre }}{% if usuarios[usuario_id].apellido %} {{ usuarios[usuario_id].apellido }}{% endif %}
                 </h3>
                 <p class="text-sm text-gray-500">
                   {% if estructura._subcarpetas %} {{
@@ -195,61 +195,103 @@ block content %}
           </div>
         </div>
 
-        <div class="p-6">
-          {% if estructura._subcarpetas or estructura._archivos %} {% import
-          "tree_macros.html" as macros with context %} {{
-          macros.render_tree(estructura, '', usuario_id|string, usuario_actual,
-          folders_por_ruta, usuarios[usuario_id].email) }} {% else %}
-          <div class="text-center py-8">
-            <svg
-              class="w-12 h-12 text-gray-400 mx-auto mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-              />
-            </svg>
-            <p class="text-gray-500 font-medium">
-              No se encontraron carpetas para este usuario
-            </p>
-            <p class="text-sm text-gray-400 mt-1">
-              Crea una nueva carpeta para comenzar
-            </p>
+      <div class="p-6">
 
-            {# Botones para administradores y lectores con permisos cuando no
-            hay carpetas #} {% if usuario_actual.rol == 'admin' or
-            (usuario_actual.rol == 'lector' and
-            usuario_actual.puede_modificar_archivos()) %}
-            <div class="mt-6 flex justify-center space-x-4">
-              <button
-                onclick="openCreateFolderModal('', '{{ usuario_id }}')"
-                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-              >
-                <svg
-                  class="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                Crear Carpeta
-              </button>
-            </div>
+        {% macro render_files_only(tree, parent='') %}
+          {% if tree %}
+            {# Archivos del nivel actual #}
+            {% if tree._archivos %}
+              {% for archivo in tree._archivos %}
+                {% set filepath = (parent ~ '/' ~ archivo).replace('//','/') %}
+                <li class="flex items-center justify-between p-3 bg-white border rounded-md">
+                  <div class="flex items-center space-x-3 min-w-0">
+                    <div class="w-8 h-8 bg-blue-50 rounded-md flex items-center justify-center">
+                      <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                      </svg>
+                    </div>
+                    <div class="text-sm text-gray-700 truncate" title="{{ archivo }}">{{ archivo }}</div>
+                    <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ parent }}">{{ parent|default('') }}</div>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                  <button onclick="openPreviewModal({{ filepath|tojson }}, {{ (archivo.split('.')[-1] if '.' in archivo else '')|tojson }}, {{ archivo|tojson }})" class="px-2 py-1 text-xs bg-gray-100 rounded">Ver</button>
+                    <button onclick="descargarArchivo('', {{ filepath|tojson }}, {{ archivo|tojson }})" class="px-2 py-1 text-xs bg-gray-100 rounded">Descargar</button>
+                    {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+                    <button onclick="openMoveModal({{ archivo|tojson }}, {{ parent|tojson }}, {{ usuario_id|tojson }})" class="px-2 py-1 text-xs bg-amber-100 rounded">Mover</button>
+                      <button onclick="openRenameModal({{ archivo|tojson }}, {{ parent|tojson }}, {{ usuario_id|tojson }}, 'archivo')" class="px-2 py-1 text-xs bg-indigo-100 rounded">Renombrar</button>
+                    {% endif %}
+                  </div>
+                </li>
+              {% endfor %}
             {% endif %}
+
+            {# Recorrer subcarpetas pero NO renderizarlas; sólo extraer sus archivos #}
+            {% if tree._subcarpetas %}
+              {% for carpeta, contenido in tree._subcarpetas.items() %}
+                {% set new_parent = (parent ~ '/' ~ carpeta).replace('//','/') %}
+                {{ render_files_only(contenido, new_parent) }}
+              {% endfor %}
+            {% endif %}
+          {% endif %}
+        {% endmacro %}
+
+        <div class="space-y-3">
+          <div class="mb-4">
+            <h4 class="text-sm font-semibold text-gray-700">Archivos</h4>
+            <p class="text-xs text-gray-500 mt-1">
+              {% if estructura.files is defined %}
+                {{ estructura.files|length }} archivo(s)
+              {% endif %}
+            </p>
           </div>
+
+          <div>
+            <ul class="mt-2 space-y-2">
+              {# Si backend entrega estructura plana con "files" -> iterar sobre ella #}
+              {% if estructura.files is defined and estructura.files %}
+                {% for file_path in estructura.files %}
+                  {% set fname = file_path.split('/')[-1] %}
+                  {% set file_dir = file_path.rsplit('/',1)[0] if '/' in file_path else '' %}
+                  <li class="flex items-center justify-between p-3 bg-white border rounded-md">
+                    <div class="flex items-center space-x-3 min-w-0">
+                      <div class="w-8 h-8 bg-blue-50 rounded-md flex items-center justify-center">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                      </div>
+                      <div class="text-sm text-gray-700 truncate" title="{{ fname }}">{{ fname }}</div>
+                      <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ file_dir }}">{{ file_dir | default('') }}</div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                      <button onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')" class="px-2 py-1 text-xs bg-gray-100 rounded">Ver</button>
+                      <button onclick="descargarArchivo('', '{{ file_path }}', '{{ fname }}')" class="px-2 py-1 text-xs bg-gray-100 rounded">Descargar</button>
+                      {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+                        <button onclick="openMoveModal('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}')" class="px-2 py-1 text-xs bg-amber-100 rounded">Mover</button>
+                        <button onclick="openRenameModal('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}', 'archivo')" class="px-2 py-1 text-xs bg-indigo-100 rounded">Renombrar</button>
+                      {% endif %}
+                    </div>
+                  </li>
+                {% endfor %}
+              {% else %}
+                {# Si backend sigue entregando árbol, usar macro recursiva para listar todos los archivos #}
+                {% if estructura and (estructura._archivos or estructura._subcarpetas) %}
+                  {{ render_files_only(estructura, '') }}
+                {% else %}
+                  <li class="text-sm text-gray-500 p-3">No hay archivos para este usuario</li>
+                {% endif %}
+              {% endif %}
+            </ul>
+          </div>
+
+          {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+            <div class="mt-4 flex space-x-2">
+              <button onclick="openCreateFolderModal('', '{{ usuario_id }}')" class="px-3 py-2 text-sm bg-indigo-600 text-white rounded">Crear Carpeta</button>
+              <button onclick="openUploadModal('', '{{ usuario_id }}')" class="px-3 py-2 text-sm bg-blue-600 text-white rounded">Subir Archivo</button>
+            </div>
           {% endif %}
         </div>
+      </div>
+    </div>
       </div>
       {% endif %} {% endfor %}
     </div>

@@ -320,6 +320,29 @@ def obtener_estructura_dropbox_recursiva_limitada(path="", dbx=None, max_depth=3
 
     return estructura
 
+def flatten_estructura(estructura, prefix=""):
+    if not estructura:
+        return {"folders": [], "files": []}
+    folders = []
+    files = []
+
+    def _rec(node, current_prefix):
+        # archivos directos
+        for f in node.get("_archivos", []):
+            path = f"{current_prefix}/{f}".replace("//", "/")
+            files.append(path)
+        # subcarpetas
+        for subname, subnode in node.get("_subcarpetas", {}).items():
+            subpath = f"{current_prefix}/{subname}".replace("//", "/")
+            folders.append(subpath)
+            _rec(subnode, subpath)
+
+    base = (prefix or "").rstrip("/")
+    if base == "":
+        base = ""
+    _rec(estructura, base)
+    return {"folders": folders, "files": files}
+
 def filtra_archivos_ocultos(estructura, usuario_id, prefix=""):
     """
     Filtra los archivos ocultos de la estructura basándose en la base de datos Y la ruta del usuario.
@@ -516,149 +539,154 @@ def filtra_arbol_por_rutas(estructura, rutas_visibles, prefix, usuario_email):
 @bp.route("/carpetas_dropbox")
 @login_required
 def carpetas_dropbox():
-    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    # Verificar que el usuario esté autenticado y tenga rol
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
         return redirect(url_for("auth.login"))
-        
+
     try:
         estructuras_usuarios = {}
-        
+
         # Verificar configuración de Dropbox
         api_key = get_valid_dropbox_token()
         if not api_key:
-            return render_template("carpetas_dropbox.html", 
-                                    estructuras_usuarios={},
-                                    usuarios={},
-                                    usuario_actual=current_user,
-                                    estructuras_usuarios_json="{}",
-                                    usuarios_emails_json="{}",
-                                    folders_por_ruta={},
-                                    config_error=True)
-        
+            # Render con error de configuración (plantilla maneja config_error)
+            return render_template(
+                "carpetas_dropbox.html",
+                estructuras_usuarios={},
+                usuarios={},
+                usuario_actual=current_user,
+                estructuras_usuarios_json="{}",
+                usuarios_emails_json="{}",
+                folders_por_ruta={},
+                config_error=True,
+            )
         dbx = dropbox.Dropbox(api_key)
 
-        # Determina qué usuarios cargar
-        if current_user.rol == "admin" or current_user.rol == "superadmin":
+        # Determina qué usuarios cargar según rol
+        if current_user.rol in ("admin", "superadmin"):
             usuarios = User.query.all()
-            # Admin ve todas las carpetas
             folders = Folder.query.all()
         elif current_user.rol == "lector":
-            # Lector puede ver todas las carpetas de todos los usuarios
             usuarios = User.query.all()
             folders = Folder.query.all()
         elif current_user.rol == "cliente":
-            # Cliente ve solo sus propias carpetas (no beneficiarios en la vista principal)
             usuarios = [current_user]
-            
-            # Obtener carpetas del cliente y sus beneficiarios (para permisos)
             beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).all()
             user_ids = [current_user.id] + [b.id for b in beneficiarios]
             folders = Folder.query.filter(Folder.user_id.in_(user_ids)).all()
         else:
-            # Otros roles
             usuarios = [current_user]
             folders = Folder.query.filter_by(user_id=current_user.id, es_publica=True).all()
 
         usuarios_dict = {u.id: u for u in usuarios}
         folders_por_ruta = {f.dropbox_path: f for f in folders}
 
+        # Para cada usuario: obtener estructura, filtrar, aplanar y almacenar
         for user in usuarios:
-            # Crear carpeta raíz si no existe
-            if not user.dropbox_folder_path:
-                if hasattr(user, 'email'):  # Es un User
+            # Asegurar que exista dropbox_folder_path en DB; crear si falta
+            if not getattr(user, "dropbox_folder_path", None):
+                if hasattr(user, "email"):
                     user.dropbox_folder_path = f"/{user.email}"
-                else:  # Es un Beneficiario
-                    user.dropbox_folder_path = f"/{user.titular.email}/{user.nombre}"
-                
+                else:
+                    # Beneficiario sin ruta: intentar componer con titular
+                    try:
+                        user.dropbox_folder_path = f"/{user.titular.email}/{user.nombre}"
+                    except Exception:
+                        user.dropbox_folder_path = f"/usuario_{user.id}"
                 try:
                     dbx.files_create_folder_v2(with_base_folder(user.dropbox_folder_path))
                 except dropbox.exceptions.ApiError as e:
-                    if "conflict" not in str(e):
+                    # Ignorar conflict (ya existe), re-lanzar otros errores
+                    if "conflict" not in str(e).lower():
                         raise e
                 db.session.commit()
 
-            path = user.dropbox_folder_path
+            path = user.dropbox_folder_path or f"/{getattr(user, 'email', user.id)}"
+
             try:
-                # Intentar caché por usuario para evitar recomputar en cada navegación
+                # Intentar leer de caché
                 estructura = _get_cached_estructura(user.id)
                 if estructura is None:
-                    # Profundidad según rol para optimizar
+                    # Ajustar profundidad según rol para optimizar
                     if current_user.rol in ["admin", "superadmin", "lector"]:
                         max_depth = 4
                     else:
                         max_depth = 3
-                    # Obtener estructura en una sola pasada recursiva y guardar en caché
-                    estructura = obtener_estructura_dropbox_recursiva_limitada(path=path, dbx=dbx, max_depth=max_depth)
-                    _set_cached_estructura(user.id, estructura)
-                
-                # Filtrar archivos ocultos de la estructura para este usuario
-                print(f"DEBUG | Filtrando archivos ocultos para usuario {user.id} en carpetas_dropbox")
-                estructura = filtra_archivos_ocultos(estructura, user.id, path)
-                
-                # Filtrar carpetas ocultas de la estructura (exactamente como archivos)
-                print(f"DEBUG | Filtrando carpetas ocultas para usuario {user.id} en carpetas_dropbox")
-                estructura = filtra_carpetas_ocultas(estructura, user.id, path)
-                
-            except Exception as e:
-                user_identifier = user.email if hasattr(user, 'email') else user.nombre
-                print(f"Error obteniendo estructura para usuario {user_identifier}: {e}")
-                estructura = {"_subcarpetas": {}, "_archivos": []}
-            
-            # Filtrar la estructura según los permisos del usuario
-            if not current_user.is_authenticated or not hasattr(current_user, "rol"):
-                return redirect(url_for("auth.login"))
-            if current_user.rol == "cliente":
-                # Para clientes, solo mostrar carpetas públicas
-                print("🔧 Filtrando carpetas para cliente - solo mostrar públicas")
-                # No aplicar filtra_arbol_por_rutas porque ya se aplicó filtra_carpetas_ocultas
-                pass
-            elif current_user.rol == "lector":
-                # Para lectores, mostrar todas las carpetas sin filtrar
-                # No aplicar filtra_arbol_por_rutas porque ya se aplicó filtra_carpetas_ocultas
-                pass
-            elif current_user.rol != "admin" and current_user.rol != "superadmin":
-                # Para otros roles, solo mostrar carpetas públicas
-                # No aplicar filtra_arbol_por_rutas porque ya se aplicó filtra_carpetas_ocultas
-                pass
-            
-            estructuras_usuarios[user.id] = estructura
 
-        # Crear un diccionario con los emails de los usuarios
+                    # Obtener estructura recursiva limitada (una sola pasada)
+                    estructura = obtener_estructura_dropbox_recursiva_limitada(path=path, dbx=dbx, max_depth=max_depth)
+                    # Guardar en caché
+                    _set_cached_estructura(user.id, estructura)
+
+                # Aplicar filtros de ocultos (archivos y carpetas)
+                print(f"DEBUG | Filtrando archivos ocultos para usuario {user.id} (path={path})")
+                estructura = filtra_archivos_ocultos(estructura, user.id, path)
+
+                print(f"DEBUG | Filtrando carpetas ocultas para usuario {user.id} (path={path})")
+                estructura = filtra_carpetas_ocultas(estructura, user.id, path)
+
+            except Exception as e:
+                # En caso de fallo, asegurarse de devolver estructura vacía para este usuario
+                user_identifier = getattr(user, "email", getattr(user, "nombre", str(user.id)))
+                print(f"ERROR | No se pudo obtener/filtrar estructura para usuario {user_identifier}: {e}")
+                import traceback
+                traceback.print_exc()
+                estructura = {"_subcarpetas": {}, "_archivos": []}
+
+            # Para compatibilidad con diferentes roles, no se aplica filtra_arbol_por_rutas aquí:
+            # la lógica de visibilidad ya fue aplicada en filtra_* y en la selección de usuarios arriba.
+
+            # Aplanar la estructura para presentación PLANA
+            try:
+                estructura_plana = flatten_estructura(estructura, prefix=path)
+            except Exception as e:
+                print(f"ERROR | Error al aplanar estructura para usuario {user.id}: {e}")
+                estructura_plana = {"folders": [], "files": []}
+
+            # Guardar la estructura plana (clave = id de usuario)
+            estructuras_usuarios[user.id] = estructura_plana
+
+        # Preparar mapping de emails para la plantilla/JS
         usuarios_emails = {}
         for user in usuarios:
-            if hasattr(user, 'email'):
+            if hasattr(user, "email") and user.email:
                 usuarios_emails[user.id] = user.email
             else:
-                # Para beneficiarios, usar el email del titular
-                usuarios_emails[user.id] = user.titular.email if hasattr(user, 'titular') else str(user.id)
-        
-        # Asegurar que las claves de estructuras_usuarios sean strings para JSON
-        estructuras_usuarios_json = json.dumps({
-            str(uid): estructura for uid, estructura in estructuras_usuarios.items()
-        })
-        
+                # Beneficiario: usar email del titular si existe
+                try:
+                    usuarios_emails[user.id] = user.titular.email
+                except Exception:
+                    usuarios_emails[user.id] = str(user.id)
+
+        # Asegurar conversión a JSON con claves string (seguro para JS en plantilla)
+        estructuras_usuarios_json = json.dumps({str(uid): estructura for uid, estructura in estructuras_usuarios.items()})
+        usuarios_emails_json = json.dumps(usuarios_emails)
+
         return render_template(
             "carpetas_dropbox.html",
             estructuras_usuarios=estructuras_usuarios,
             usuarios=usuarios_dict,
             usuario_actual=current_user,
             estructuras_usuarios_json=estructuras_usuarios_json,
-            usuarios_emails_json=json.dumps(usuarios_emails),
+            usuarios_emails_json=usuarios_emails_json,
             folders_por_ruta=folders_por_ruta,
         )
-        
+
     except Exception as e:
-        print(f"Error general en carpetas_dropbox: {e}")
+        # Manejo general de errores: log y render con estructura vacía
+        print(f"ERROR general en carpetas_dropbox: {e}")
         import traceback
         traceback.print_exc()
         flash(f"Error al cargar carpetas: {str(e)}", "error")
-        return render_template("carpetas_dropbox.html", 
-                             estructuras_usuarios={},
-                             usuarios={},
-                             usuario_actual=current_user,
-                             estructuras_usuarios_json="{}",
-                             usuarios_emails_json="{}",
-                             folders_por_ruta={})
+        return render_template(
+            "carpetas_dropbox.html",
+            estructuras_usuarios={},
+            usuarios={},
+            usuario_actual=current_user,
+            estructuras_usuarios_json="{}",
+            usuarios_emails_json="{}",
+            folders_por_ruta={},
+        )
 
 @bp.route('/api/comentarios', methods=['GET'])
 @login_required
