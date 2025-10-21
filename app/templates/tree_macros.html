@@ -512,3 +512,79 @@ render_tree_readonly(tree, parent="") %}
   {% endfor %}
 </div>
 {% endmacro %}
+
+{% macro render_tree_flat(tree, parent="", usuario_id="", usuario_actual=None, folders_por_ruta={}, usuario_email="") %}
+  {% set archivos = tree["_archivos"] if "_archivos" in tree else [] %}
+  {% set subcarpetas = tree["_subcarpetas"] if "_subcarpetas" in tree else {} %}
+
+  {# Renderizar los archivos del nivel actual #}
+  {% for archivo in archivos %}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition mb-2">
+      <div class="flex items-center min-w-0 gap-3">
+        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-gray-700 font-medium truncate" style="max-width: 60vw">{{ archivo }}</span>
+          {% if parent %}
+            <span class="text-xs text-gray-400">📁 {{ parent }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if usuario_actual %}
+        <div class="relative">
+          <button
+            onclick="toggleFileMenu('file-menu-{{ parent.replace('/', '-').replace('\\', '-') }}-{{ archivo.replace('/', '-').replace('\\', '-') }}', event)"
+            class="p-1 hover:bg-gray-200 rounded-full transition"
+          >
+            <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+            </svg>
+          </button>
+
+          <div id="file-menu-{{ parent.replace('/', '-').replace('\\', '-') }}-{{ archivo.replace('/', '-').replace('\\', '-') }}"
+               class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden">
+            <div class="py-1">
+              <button
+                onclick="openPreviewModal('/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', '{{ archivo.split('.')[-1] if '.' in archivo else '' }}', '{{ archivo }}')"
+                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Ver archivo</button>
+              <button
+                onclick="descargarArchivo('', '/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', '{{ archivo }}')"
+                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Descargar</button>
+              {% if usuario_actual.rol in ['admin', 'lector'] %}
+                <!-- <button onclick="openMoveModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}', event)"
+                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mover</button> -->
+                <button onclick="openRenameModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}', 'archivo')"
+                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Renombrar</button>
+                <button onclick="openStatusModal('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
+                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Estado</button>
+              {% endif %}
+              <button onclick="openCommentsModal('/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', 'archivo')"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Comentarios</button>
+              {% if usuario_actual.rol in ['admin', 'lector'] %}
+                <button onclick="confirmarEliminarArchivo('{{ archivo }}', '{{ parent }}', '{{ usuario_id }}')"
+                        class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100">Eliminar</button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  {# Repetir para subcarpetas (recursivo) #}
+  {% for nombre, data in subcarpetas.items() %}
+    {{ render_tree_flat(data, parent ~ '/' ~ nombre, usuario_id, usuario_actual, folders_por_ruta, usuario_email) }}
+  {% endfor %}
+
+  {# Si no hay archivos ni subcarpetas #}
+  {% if archivos|length == 0 and subcarpetas|length == 0 %}
+    <div class="text-center text-gray-500 py-8">
+      <p>No se encontraron archivos.</p>
+    </div>
+  {% endif %}
+{% endmacro %}

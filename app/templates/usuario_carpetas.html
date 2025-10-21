@@ -5,7 +5,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   <!-- Header con información del usuario o beneficiario -->
   <div class="mb-6">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex items-center space-x-4">
+      <div class="flex items-center space-x-4 flex-col">
         <a
           href="{% if usuario_actual and usuario_actual.rol == 'lector' %}{{ url_for('main.listar_carpetas') }}{% else %}{{ url_for('usuarios.lista_usuarios') }}{% endif %}"
           class="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
@@ -26,7 +26,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
           Volver a carpetas
         </a>
 
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-3 mt-3">
           <div
             class="w-12 h-12 {% if beneficiario %}bg-green-100{% else %}bg-indigo-100{% endif %} rounded-full flex items-center justify-center"
           >
@@ -191,9 +191,8 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       {% if estructuras_usuarios and usuario_id in estructuras_usuarios %} {%
       set estructura_usuario = estructuras_usuarios[usuario_id] %} {% if
       estructura_usuario._subcarpetas or estructura_usuario._archivos %} {%
-      import "tree_macros.html" as macros with context %} {{
-      macros.render_tree(estructura_usuario, '', usuario_id, usuario_actual,
-      folders_por_ruta, usuario.email) }} {% else %}
+      import "tree_macros.html" as macros with context %} {{ macros.render_tree_flat(estructura_usuario, '', usuario_id, usuario_actual, folders_por_ruta, usuario.email) }}
+ {% else %}
       <div class="text-center py-12">
         <svg
           class="w-16 h-16 text-gray-400 mx-auto mb-4"

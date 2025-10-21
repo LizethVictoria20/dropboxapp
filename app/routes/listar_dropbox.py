@@ -3308,12 +3308,12 @@ def ver_usuario_carpetas(usuario_id):
         print(f"Error general en ver_usuario_carpetas: {e}")
         flash(f"Error al cargar carpetas: {str(e)}", "error")
         return render_template("usuario_carpetas.html", 
-                             usuario=usuario,
-                             usuario_id=usuario.id,
-                             estructuras_usuarios={},
-                             estructuras_usuarios_json="{}",
-                             folders_por_ruta={},
-                             usuario_actual=current_user)
+                            usuario=usuario,
+                            usuario_id=usuario.id,
+                            estructuras_usuarios={},
+                            estructuras_usuarios_json="{}",
+                            folders_por_ruta={},
+                            usuario_actual=current_user)
 
 @bp.route('/eliminar_archivo', methods=['POST'])
 @login_required
