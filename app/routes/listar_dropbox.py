@@ -1146,6 +1146,7 @@ def normaliza(nombre):
 def subir_archivo():
     from app.models import User, Beneficiario, Archivo, Folder
     import json
+    from app.categorias import CATEGORIAS
 
     if request.method == "GET":
         print("GET: Mostrando formulario de subida")
