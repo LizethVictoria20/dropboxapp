@@ -172,17 +172,6 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
             Sin carpetas
             {% endif %}
           </div>
-          {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
-          <button
-            onclick="openCreateFolderModal('', '{{ usuario_id }}')"
-            class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-          >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Crear Carpeta
-          </button>
-          {% endif %}
         </div>
       </div>
     </div>
@@ -495,77 +484,37 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 </div>
 
 <!-- Modal para subir archivo -->
-<div
-  id="uploadFileModal"
-  class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
->
-  <div
-    class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
-  >
-    <div class="mt-3">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Subir archivo</h3>
-        <button
-          onclick="closeModal('uploadFileModal')"
-          class="text-gray-400 hover:text-gray-600"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
+<div id="uploadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white rounded-lg w-full max-w-lg mx-4">
+    <div class="px-6 py-4 border-b">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-medium">Subir archivo para {{ usuario.nombre or usuario.email }}</h3>
+        <button type="button" onclick="closeUploadModal()" class="text-gray-600 hover:text-gray-900">&times;</button>
       </div>
-      <form
-        id="uploadFileForm"
-        action="{{ url_for('listar_dropbox.subir_archivo_rapido') }}"
-        method="post"
-        enctype="multipart/form-data"
-      >
-        <input
-          type="hidden"
-          name="usuario_id"
-          value="user-{{ usuario_id|string }}"
-        />
-        <div class="mb-4">
-          <label
-            for="fileInput"
-            class="block text-sm font-medium text-gray-700 mb-2"
-            >Seleccionar archivo</label
-          >
-          <input
-            type="file"
-            id="fileInput"
-            name="archivo"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
-        </div>
-        <div class="flex justify-end space-x-3">
-          <button
-            type="button"
-            onclick="closeModal('uploadFileModal')"
-            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Subir archivo
-          </button>
-        </div>
-      </form>
     </div>
+
+    <form id="uploadForm" action="{{ url_for('listar_dropbox.subir_archivo_rapido') }}" method="POST" enctype="multipart/form-data" class="px-6 py-4">
+      <input type="hidden" name="usuario_id" value="{{ 'user-' ~ usuario.id }}">
+      <input type="hidden" name="carpeta_destino" value="{{ usuario.dropbox_folder_path or ('/' ~ usuario.email) }}">
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Archivo</label>
+          <input required name="archivo" type="file" class="mt-1 block w-full"/>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Carpeta destino (opcional)</label>
+          <input name="carpeta_destino_visible" type="text" value="{{ usuario.dropbox_folder_path or ('/' ~ usuario.email) }}" class="mt-1 block w-full" placeholder="/ruta/destino/opcional" />
+          <p class="text-xs text-gray-500 mt-1">Si dejas esto, se usará la carpeta por defecto del usuario. Si cambiasla, se intentará usar la ruta indicada.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end space-x-2">
+        <button type="button" onclick="closeUploadModal()" class="px-4 py-2 rounded border bg-gray-100">Cancelar</button>
+        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Subir</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -2950,5 +2899,35 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   console.log("🔍 Verificación final de funciones en usuario_carpetas.html:");
   console.log("- openUploadModal:", typeof window.openUploadModal);
   console.log("- hideAllMenus:", typeof window.hideAllMenus);
+</script>
+
+<script>
+  function openUploadModal(){
+    const modal = document.getElementById('uploadModal');
+    if(!modal) return;
+    modal.classList.remove('hidden');
+    // sincronizar campo visible con el campo real carpeta_destino antes de mostrar
+    const visible = modal.querySelector('[name="carpeta_destino_visible"]');
+    const real = modal.querySelector('[name="carpeta_destino"]');
+    if(visible && real) visible.value = real.value;
+  }
+  function closeUploadModal(){
+    const modal = document.getElementById('uploadModal');
+    if(!modal) return;
+    modal.classList.add('hidden');
+  }
+
+  // Si el usuario edita la caja visible, copiar al campo real antes de enviar
+  document.addEventListener('submit', function(e){
+    if(e.target && e.target.id === 'uploadForm'){
+      const visible = e.target.querySelector('[name="carpeta_destino_visible"]');
+      const real = e.target.querySelector('[name="carpeta_destino"]');
+      if(visible && real){
+        // si el usuario dejó el campo vacío, mantener el valor real (ruta base)
+        const v = (visible.value || '').trim();
+        if(v) real.value = v;
+      }
+    }
+  });
 </script>
 {% endblock %}

@@ -285,7 +285,6 @@ block content %}
 
           {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
             <div class="mt-4 flex space-x-2">
-              <button onclick="openCreateFolderModal('', '{{ usuario_id }}')" class="px-3 py-2 text-sm bg-indigo-600 text-white rounded">Crear Carpeta</button>
               <button onclick="openUploadModal('', '{{ usuario_id }}')" class="px-3 py-2 text-sm bg-blue-600 text-white rounded">Subir Archivo</button>
             </div>
           {% endif %}
