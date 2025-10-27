@@ -4,7 +4,9 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 <div class="max-w-7xl mx-auto px-6 py-8">
   <!-- Header con información del usuario o beneficiario -->
   <div class="mb-6">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div class="flex items-center space-x-4 flex-col">
         <a
           href="{% if usuario_actual and usuario_actual.rol == 'lector' %}{{ url_for('main.listar_carpetas') }}{% else %}{{ url_for('usuarios.lista_usuarios') }}{% endif %}"
@@ -39,15 +41,11 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
           </div>
           <div>
             <h1 class="text-2xl font-bold text-gray-900">
-              {% if beneficiario %}
-                {{ (beneficiario.nombre ~ ' ' ~ (beneficiario.lastname or ''))|trim }}
-              {% else %}
-                {% if usuario.nombre or usuario.apellido %}
-                  {{ ((usuario.nombre or '') ~ ' ' ~ (usuario.apellido or ''))|trim }}
-                {% else %}
-                  {{ usuario.email.split('@')[0] }}
-                {% endif %}
-              {% endif %}
+              {% if beneficiario %} {{ (beneficiario.nombre ~ ' ' ~
+              (beneficiario.lastname or ''))|trim }} {% else %} {% if
+              usuario.nombre or usuario.apellido %} {{ ((usuario.nombre or '') ~
+              ' ' ~ (usuario.apellido or ''))|trim }} {% else %} {{
+              usuario.email.split('@')[0] }} {% endif %} {% endif %}
             </h1>
             <p class="text-gray-500">
               {% if beneficiario %} {{ beneficiario.email }}
@@ -98,7 +96,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   <!-- Nota informativa para lectores -->
   {% if usuario_actual.rol == 'lector' and usuario_actual.id != usuario.id %}
   <div
-  class="mb-6 {% if usuario_actual.puede_modificar_archivos() %}bg-green-50 border border-green-200{% else %}bg-blue-50 border border-blue-200{% endif %} rounded-xl p-4"
+    class="mb-6 {% if usuario_actual.puede_modificar_archivos() %}bg-green-50 border border-green-200{% else %}bg-blue-50 border border-blue-200{% endif %} rounded-xl p-4"
   >
     <div class="flex items-center flex-wrap gap-3">
       <i
@@ -132,7 +130,7 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
     {{ estructuras_usuarios_json|safe }}
   </script>
   <script>
-    window.CURRENT_USER_ROLE = '{{ usuario_actual.rol }}';
+    window.CURRENT_USER_ROLE = "{{ usuario_actual.rol }}";
   </script>
 
   <!-- Contenedor de carpetas -->
@@ -140,7 +138,9 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
     <div
       class="bg-gradient-to-r from-slate-50 to-gray-50 px-6 py-4 border-b border-gray-200"
     >
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div
+        class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div class="flex items-center flex-wrap gap-2 sm:gap-3">
           <svg
             class="w-6 h-6 text-indigo-600"
@@ -155,23 +155,25 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
               d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
             />
           </svg>
-          <h2 class="text-lg font-semibold text-gray-900">
-            Carpetas y Archivos
-          </h2>
+          <h2 class="text-lg font-semibold text-gray-900">Archivos</h2>
         </div>
         <div class="flex items-center space-x-3">
           <div class="text-sm text-gray-500">
             {% if estructuras_usuarios and usuario_id in estructuras_usuarios %}
-            {% set estructura_usuario = estructuras_usuarios[usuario_id] %}
-            {% if estructura_usuario._subcarpetas %}
-            {{ estructura_usuario._subcarpetas|length }} carpeta(s)
-            {% else %}
-            Sin carpetas
-            {% endif %}
-            {% else %}
-            Sin carpetas
-            {% endif %}
+            {% set estructura_usuario = estructuras_usuarios[usuario_id] %} {%
+            if estructura_usuario._subcarpetas %} {{
+            estructura_usuario._subcarpetas|length }} carpeta(s) {% else %} Sin
+            carpetas {% endif %} {% else %} Sin carpetas {% endif %}
           </div>
+          {% if usuario_actual.rol == 'admin' %}
+          <button
+            onclick="openUploadModal('', '{{ usuario_id }}')"
+            class="inline-flex items-center px-4 py-2 text-blue-600 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <i class="fas fa-upload mr-2"></i>
+            Subir archivo
+          </button>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -180,8 +182,9 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
       {% if estructuras_usuarios and usuario_id in estructuras_usuarios %} {%
       set estructura_usuario = estructuras_usuarios[usuario_id] %} {% if
       estructura_usuario._subcarpetas or estructura_usuario._archivos %} {%
-      import "tree_macros.html" as macros with context %} {{ macros.render_tree_flat(estructura_usuario, '', usuario_id, usuario_actual, folders_por_ruta, usuario.email) }}
- {% else %}
+      import "tree_macros.html" as macros with context %} {{
+      macros.render_tree_flat(estructura_usuario, '', usuario_id,
+      usuario_actual, folders_por_ruta, usuario.email) }} {% else %}
       <div class="text-center py-12">
         <svg
           class="w-16 h-16 text-gray-400 mx-auto mb-4"
@@ -202,9 +205,6 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
           {% else %} Este usuario aún no tiene carpetas creadas. {% endif %}
         </p>
         {% if usuario_actual.rol == 'admin' %}
-        <p class="text-sm text-gray-400">
-          Las carpetas se crearán automáticamente cuando se suban archivos.
-        </p>
         <button
           onclick="openUploadModal('', '{{ usuario_id }}')"
           class="inline-flex items-center px-4 py-2 mt-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -253,29 +253,63 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 </div>
 
 <!-- Modal Comentarios (igual que en carpetas_dropbox) -->
-<div id="commentsModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-50" onclick="if (event.target === this) closeCommentsModal()">
-  <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-auto mt-20 overflow-hidden">
+<div
+  id="commentsModal"
+  class="hidden fixed inset-0 z-50 bg-black bg-opacity-50"
+  onclick="if (event.target === this) closeCommentsModal()"
+>
+  <div
+    class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-auto mt-20 overflow-hidden"
+  >
     <div class="flex items-center justify-between p-4 border-b">
       <h3 class="text-lg font-semibold">Comentarios</h3>
-      <button onclick="closeCommentsModal()" class="text-gray-500 hover:text-gray-700">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      <button
+        onclick="closeCommentsModal()"
+        class="text-gray-500 hover:text-gray-700"
+      >
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
       </button>
     </div>
     <div class="p-4">
       <div id="commentsList" class="space-y-3 max-h-64 overflow-y-auto"></div>
-      {% if usuario_actual and (usuario_actual.rol == 'admin' or usuario_actual.rol == 'superadmin') %}
+      {% if usuario_actual and (usuario_actual.rol == 'admin' or
+      usuario_actual.rol == 'superadmin') %}
       <div class="mt-4">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Nuevo comentario</label>
-        <textarea id="newCommentText" class="w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="3" placeholder="Escribe tu comentario..."></textarea>
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+          >Nuevo comentario</label
+        >
+        <textarea
+          id="newCommentText"
+          class="w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          rows="3"
+          placeholder="Escribe tu comentario..."
+        ></textarea>
         <div class="mt-3 flex justify-end">
-          <button id="sendCommentBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Enviar</button>
+          <button
+            id="sendCommentBtn"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Enviar
+          </button>
         </div>
       </div>
       {% endif %}
     </div>
   </div>
-  <input type="hidden" id="commentsPath" value=""/>
-  <input type="hidden" id="commentsTipo" value="archivo"/>
+  <input type="hidden" id="commentsPath" value="" />
+  <input type="hidden" id="commentsTipo" value="archivo" />
   <script>
     async function fetchJSON(url, options={}) {
       const res = await fetch(url, options);
@@ -361,32 +395,66 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
   </script>
 </div>
 <!-- Modal para cambiar estado de archivo -->
-<div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+<div
+  id="statusModal"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center"
+>
   <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-gray-900">Cambiar estado del archivo</h3>
-      <button onclick="closeStatusModal()" class="text-gray-400 hover:text-gray-600">
+      <h3 class="text-lg font-semibold text-gray-900">
+        Cambiar estado del archivo
+      </h3>
+      <button
+        onclick="closeStatusModal()"
+        class="text-gray-400 hover:text-gray-600"
+      >
         <i class="fas fa-times"></i>
       </button>
     </div>
     <p id="statusFileName" class="text-sm text-gray-600 mb-4"></p>
     <div class="space-y-3">
       <label class="flex items-center space-x-3">
-        <input type="radio" name="estadoArchivo" value="en_revision" class="text-blue-600" checked />
+        <input
+          type="radio"
+          name="estadoArchivo"
+          value="en_revision"
+          class="text-blue-600"
+          checked
+        />
         <span>En proceso de revisión</span>
       </label>
       <label class="flex items-center space-x-3">
-        <input type="radio" name="estadoArchivo" value="validado" class="text-green-600" />
+        <input
+          type="radio"
+          name="estadoArchivo"
+          value="validado"
+          class="text-green-600"
+        />
         <span>Validado</span>
       </label>
       <label class="flex items-center space-x-3">
-        <input type="radio" name="estadoArchivo" value="rechazado" class="text-red-600" />
+        <input
+          type="radio"
+          name="estadoArchivo"
+          value="rechazado"
+          class="text-red-600"
+        />
         <span>Rechazado</span>
       </label>
     </div>
     <div class="flex justify-end space-x-3 mt-6">
-      <button onclick="closeStatusModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
-      <button onclick="saveStatus()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+      <button
+        onclick="closeStatusModal()"
+        class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+      >
+        Cancelar
+      </button>
+      <button
+        onclick="saveStatus()"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        Guardar
+      </button>
     </div>
   </div>
   <input type="hidden" id="statusFilePath" />
@@ -484,35 +552,70 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 </div>
 
 <!-- Modal para subir archivo -->
-<div id="uploadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+<div
+  id="uploadModal"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+>
   <div class="bg-white rounded-lg w-full max-w-lg mx-4">
     <div class="px-6 py-4 border-b">
       <div class="flex items-center justify-between">
-        <h3 class="text-lg font-medium">Subir archivo para {{ usuario.nombre or usuario.email }}</h3>
-        <button type="button" onclick="closeUploadModal()" class="text-gray-600 hover:text-gray-900">&times;</button>
+        <h3 class="text-lg font-medium">
+          Subir archivo para {{ usuario.nombre or usuario.email }}
+        </h3>
+        <button
+          type="button"
+          onclick="closeUploadModal()"
+          class="text-gray-600 hover:text-gray-900"
+        >
+          &times;
+        </button>
       </div>
     </div>
 
-    <form id="uploadForm" action="{{ url_for('listar_dropbox.subir_archivo_rapido') }}" method="POST" enctype="multipart/form-data" class="px-6 py-4">
-      <input type="hidden" name="usuario_id" value="{{ 'user-' ~ usuario.id }}">
-      <input type="hidden" name="carpeta_destino" value="{{ usuario.dropbox_folder_path or ('/' ~ usuario.email) }}">
+    <form
+      id="uploadForm"
+      action="{{ url_for('listar_dropbox.subir_archivo_rapido') }}"
+      method="POST"
+      enctype="multipart/form-data"
+      class="px-6 py-4"
+    >
+      <input
+        type="hidden"
+        name="usuario_id"
+        value="{{ 'user-' ~ usuario.id }}"
+      />
+      <input
+        type="hidden"
+        name="carpeta_destino"
+        value="{{ usuario.dropbox_folder_path or ('/' ~ usuario.email) }}"
+      />
 
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700">Archivo</label>
-          <input required name="archivo" type="file" class="mt-1 block w-full"/>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Carpeta destino (opcional)</label>
-          <input name="carpeta_destino_visible" type="text" value="{{ usuario.dropbox_folder_path or ('/' ~ usuario.email) }}" class="mt-1 block w-full" placeholder="/ruta/destino/opcional" />
-          <p class="text-xs text-gray-500 mt-1">Si dejas esto, se usará la carpeta por defecto del usuario. Si cambiasla, se intentará usar la ruta indicada.</p>
+          <input
+            required
+            name="archivo"
+            type="file"
+            class="mt-1 block w-full"
+          />
         </div>
       </div>
 
       <div class="mt-6 flex justify-end space-x-2">
-        <button type="button" onclick="closeUploadModal()" class="px-4 py-2 rounded border bg-gray-100">Cancelar</button>
-        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Subir</button>
+        <button
+          type="button"
+          onclick="closeUploadModal()"
+          class="px-4 py-2 rounded border bg-gray-100"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Subir
+        </button>
       </div>
     </form>
   </div>
@@ -2764,8 +2867,15 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
         <!-- Documento -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de documento <span class="text-red-500">*</span></label>
-            <select name="document_type" id="documentTypeBeneficiario" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <label class="block text-sm font-medium text-gray-700 mb-2"
+              >Tipo de documento <span class="text-red-500">*</span></label
+            >
+            <select
+              name="document_type"
+              id="documentTypeBeneficiario"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
               <option value="">Selecciona un tipo de documento</option>
               <option value="cedula">Cédula</option>
               <option value="pasaporte">Pasaporte</option>
@@ -2775,8 +2885,17 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Número de documento <span class="text-red-500">*</span></label>
-            <input type="text" name="document_number" id="documentNumberBeneficiario" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ingresa el número de documento" />
+            <label class="block text-sm font-medium text-gray-700 mb-2"
+              >Número de documento <span class="text-red-500">*</span></label
+            >
+            <input
+              type="text"
+              name="document_number"
+              id="documentNumberBeneficiario"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Ingresa el número de documento"
+            />
           </div>
         </div>
 
@@ -2902,30 +3021,32 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
 </script>
 
 <script>
-  function openUploadModal(){
-    const modal = document.getElementById('uploadModal');
-    if(!modal) return;
-    modal.classList.remove('hidden');
+  function openUploadModal() {
+    const modal = document.getElementById("uploadModal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
     // sincronizar campo visible con el campo real carpeta_destino antes de mostrar
     const visible = modal.querySelector('[name="carpeta_destino_visible"]');
     const real = modal.querySelector('[name="carpeta_destino"]');
-    if(visible && real) visible.value = real.value;
+    if (visible && real) visible.value = real.value;
   }
-  function closeUploadModal(){
-    const modal = document.getElementById('uploadModal');
-    if(!modal) return;
-    modal.classList.add('hidden');
+  function closeUploadModal() {
+    const modal = document.getElementById("uploadModal");
+    if (!modal) return;
+    modal.classList.add("hidden");
   }
 
   // Si el usuario edita la caja visible, copiar al campo real antes de enviar
-  document.addEventListener('submit', function(e){
-    if(e.target && e.target.id === 'uploadForm'){
-      const visible = e.target.querySelector('[name="carpeta_destino_visible"]');
+  document.addEventListener("submit", function (e) {
+    if (e.target && e.target.id === "uploadForm") {
+      const visible = e.target.querySelector(
+        '[name="carpeta_destino_visible"]'
+      );
       const real = e.target.querySelector('[name="carpeta_destino"]');
-      if(visible && real){
+      if (visible && real) {
         // si el usuario dejó el campo vacío, mantener el valor real (ruta base)
-        const v = (visible.value || '').trim();
-        if(v) real.value = v;
+        const v = (visible.value || "").trim();
+        if (v) real.value = v;
       }
     }
   });
