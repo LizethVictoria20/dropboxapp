@@ -2927,259 +2927,220 @@ def sincronizar_carpetas_dropbox():
 @bp.route("/subir_archivo_rapido", methods=["POST"])
 @login_required
 def subir_archivo_rapido():
-    """Endpoint para subir archivos directamente a una carpeta específica sin categorías"""
-    from app.models import User, Beneficiario, Archivo
-    import json
+    from app.models import User, Beneficiario, Archivo, Folder
+    from dropbox.files import WriteMode
+    import random
 
-    # Verificar que el usuario esté autenticado antes de acceder a sus atributos
+    # permisos / sesión
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
         flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
         return redirect(url_for("auth.login"))
 
-    # Verificar permisos del lector
-    if current_user.rol == 'lector' and not current_user.puede_modificar_archivos():
+    if current_user.rol == "lector" and not current_user.puede_modificar_archivos():
         flash("No tienes permisos para subir archivos.", "error")
         return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
-    print("POST: Procesando subida rápida de archivo")
-    
-    # Obtener datos del formulario
-    usuario_id = request.form.get("usuario_id")
-    carpeta_destino = request.form.get("carpeta_destino")
-    archivo = request.files.get("archivo")
-    
-    print("usuario_id recibido:", usuario_id)
-    print("carpeta_destino recibida:", carpeta_destino)
-    print("Archivo recibido:", archivo.filename if archivo else None)
+    usuario_id_field = (request.form.get("usuario_id") or "").strip()
+    carpeta_destino = (request.form.get("carpeta_destino") or "").strip()
+    archivo_file = request.files.get("archivo")
 
-    # Validar campos obligatorios
-    if not (usuario_id and carpeta_destino and archivo):
-        print("ERROR: Faltan campos obligatorios")
-        flash("Completa todos los campos obligatorios", "error")
-        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    if not usuario_id_field or not archivo_file:
+        flash("Completa todos los campos obligatorios.", "error")
+        return redirect(request.form.get("redirect_url") or url_for("listar_dropbox.carpetas_dropbox"))
 
-    # Validar y obtener usuario/beneficiario
+    # resolver usuario / beneficiario
     usuario = None
     try:
-        if usuario_id.startswith("user-"):
-            real_id = int(usuario_id[5:])
-            usuario = User.query.get(real_id)
-            print(f"Es titular (User), id extraído: {real_id}")
-        elif usuario_id.startswith("beneficiario-"):
-            real_id = int(usuario_id[13:])
-            usuario = Beneficiario.query.get(real_id)
-            print(f"Es beneficiario, id extraído: {real_id}")
+        if usuario_id_field.startswith("user-"):
+            uid = int(usuario_id_field.split("user-")[1])
+            usuario = User.query.get(uid)
+        elif usuario_id_field.startswith("beneficiario-"):
+            uid = int(usuario_id_field.split("beneficiario-")[1])
+            usuario = Beneficiario.query.get(uid)
         else:
-            # Caso especial: usuario_id es un número directo (sin prefijo)
-            try:
-                real_id = int(usuario_id)
-                # Intentar primero como User
-                usuario = User.query.get(real_id)
-                if usuario:
-                    print(f"Es titular (User), id directo: {real_id}")
-                else:
-                    # Si no es User, intentar como Beneficiario
-                    usuario = Beneficiario.query.get(real_id)
-                    if usuario:
-                        print(f"Es beneficiario, id directo: {real_id}")
-                    else:
-                        print(f"usuario_id no encontrado: {real_id}")
-                        flash("Usuario no encontrado en la base de datos", "error")
-                        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
-            except ValueError:
-                print(f"usuario_id inválido: '{usuario_id}' (no es un número válido)")
-                flash("Formato de usuario inválido. Debe seleccionar un usuario del formulario.", "error")
-                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
-    except (ValueError, IndexError) as e:
-        print(f"Error al procesar usuario_id: {e}")
-        flash("Error al procesar el usuario seleccionado", "error")
-        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            uid = int(usuario_id_field)
+            usuario = User.query.get(uid) or Beneficiario.query.get(uid)
+    except Exception:
+        flash("Usuario seleccionado inválido.", "error")
+        return redirect(request.form.get("redirect_url") or url_for("listar_dropbox.carpetas_dropbox"))
 
     if not usuario:
-        print("ERROR: Usuario no encontrado o inválido")
-        flash("Usuario no encontrado en la base de datos", "error")
-        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+        flash("Usuario no encontrado en la base de datos.", "error")
+        return redirect(request.form.get("redirect_url") or url_for("listar_dropbox.carpetas_dropbox"))
 
-    # Leer el archivo una sola vez
-    archivo_content = archivo.read()
-    archivo.seek(0)  # Resetear el puntero del archivo para futuras lecturas
+    try:
+        if current_user.rol == "cliente":
+            if usuario_id_field.startswith("user-") and int(usuario_id_field.split("user-")[1]) != current_user.id:
+                flash("No tienes permisos para subir archivos a este usuario.", "error")
+                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+            if usuario_id_field.startswith("beneficiario-"):
+                bid = int(usuario_id_field.split("beneficiario-")[1])
+                ben = Beneficiario.query.get(bid)
+                if not ben or ben.titular_id != current_user.id:
+                    flash("No tienes permisos para subir archivos a este beneficiario.", "error")
+                    return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    except Exception:
+        pass
+
+    archivo_content = archivo_file.read()
+    archivo_file.seek(0)
 
     try:
         dbx = get_dbx()
-        
-        # Construir la ruta completa usando el dropbox_folder_path del usuario
-        if hasattr(usuario, 'dropbox_folder_path') and usuario.dropbox_folder_path:
+        if not dbx:
+            flash("Error de configuración de Dropbox.", "error")
+            return redirect(request.form.get("redirect_url") or url_for("listar_dropbox.carpetas_dropbox"))
+
+        if getattr(usuario, "dropbox_folder_path", None):
             ruta_base = usuario.dropbox_folder_path
         else:
-            # Determinar la ruta según el tipo de usuario y crearla si no existe
             if isinstance(usuario, User) and not getattr(usuario, "es_beneficiario", False):
-                # TITULAR - usar su email
                 ruta_base = f"/{usuario.email}"
                 usuario.dropbox_folder_path = ruta_base
             elif isinstance(usuario, Beneficiario):
-                # BENEFICIARIO - crear carpeta dentro del titular
-                if hasattr(usuario, "titular") and usuario.titular:
-                    # Asegurar que el titular tenga su carpeta raíz
-                    if not usuario.titular.dropbox_folder_path:
-                        usuario.titular.dropbox_folder_path = f"/{usuario.titular.email}"
-                        try:
-                            dbx.files_create_folder_v2(with_base_folder(usuario.titular.dropbox_folder_path))
-                            print("Carpeta raíz del titular creada:", usuario.titular.dropbox_folder_path)
-                        except dropbox.exceptions.ApiError as e:
-                            if "conflict" not in str(e):
-                                raise e
-                        db.session.commit()
-                    
-                    # Crear carpeta del beneficiario dentro del titular
-                    ruta_base = f"{usuario.titular.dropbox_folder_path}/Beneficiarios/{usuario.nombre}"
-                    usuario.dropbox_folder_path = ruta_base
-                else:
-                    # Fallback si no hay titular
-                    ruta_base = f"/{usuario.email}"
-                    usuario.dropbox_folder_path = ruta_base
-            else:
-                # Usuario genérico
-                ruta_base = f"/{usuario.email}" if hasattr(usuario, 'email') else f"/usuario_{usuario.id}"
-                usuario.dropbox_folder_path = ruta_base
-            
-            # Crear la estructura de carpetas si no existe
-            try:
-                # Para beneficiarios, crear primero la carpeta "Beneficiarios" si no existe
-                if isinstance(usuario, Beneficiario) and hasattr(usuario, "titular") and usuario.titular:
-                    carpeta_beneficiarios = f"{usuario.titular.dropbox_folder_path}/Beneficiarios"
+                titular = getattr(usuario, "titular", None)
+                if titular and not getattr(titular, "dropbox_folder_path", None):
+                    titular.dropbox_folder_path = f"/{titular.email}"
                     try:
-                        dbx.files_create_folder_v2(with_base_folder(carpeta_beneficiarios))
-                        print("Carpeta 'Beneficiarios' creada:", carpeta_beneficiarios)
+                        dbx.files_create_folder_v2(with_base_folder(titular.dropbox_folder_path))
                     except dropbox.exceptions.ApiError as e:
-                        if "conflict" not in str(e):
+                        if "conflict" not in str(e).lower():
                             raise e
-                
-                # Crear la carpeta del usuario/beneficiario
+                    db.session.commit()
+                if titular:
+                    ruta_base = f"{titular.dropbox_folder_path}/Beneficiarios/{usuario.nombre}"
+                else:
+                    ruta_base = f"/{usuario.email}"
+                usuario.dropbox_folder_path = ruta_base
+            else:
+                ruta_base = f"/{getattr(usuario, 'email', usuario.id)}"
+                usuario.dropbox_folder_path = ruta_base
+
+            try:
+                if isinstance(usuario, Beneficiario) and getattr(usuario, "titular", None):
+                    carpeta_benef = f"{usuario.titular.dropbox_folder_path}/Beneficiarios"
+                    try:
+                        dbx.files_create_folder_v2(with_base_folder(carpeta_benef))
+                    except dropbox.exceptions.ApiError as e:
+                        if "conflict" not in str(e).lower():
+                            raise e
                 dbx.files_create_folder_v2(with_base_folder(ruta_base))
-                print("Carpeta raíz creada:", ruta_base)
             except dropbox.exceptions.ApiError as e:
-                if "conflict" not in str(e):
+                if "conflict" not in str(e).lower():
                     raise e
-                print("La carpeta raíz ya existía:", ruta_base)
-            
-            # Guardar en la base de datos
             db.session.commit()
-            print("Ruta guardada en DB:", ruta_base)
-        
-        # Construir la ruta completa de destino
-        if carpeta_destino.startswith("/"):
-            # Si la carpeta destino ya empieza con /, verificar si incluye la ruta base del usuario
-            if carpeta_destino.startswith(ruta_base):
-                # Ya incluye la ruta base, usar directamente
-                carpeta_destino_completa = carpeta_destino
-                print(f"🔧 Carpeta destino ya incluye ruta base, usando directamente")
-            else:
-                # No incluye la ruta base, agregarla
-                carpeta_destino_completa = f"{ruta_base}{carpeta_destino}"
-                print(f"🔧 Carpeta destino no incluye ruta base, agregándola")
+
+        # normalizar carpeta_destino -> carpeta_destino_completa
+        if not carpeta_destino:
+            carpeta_destino_completa = ruta_base
         else:
-            # Si no empieza con /, construir la ruta completa
-            carpeta_destino_completa = f"{ruta_base}/{carpeta_destino}"
-            print(f"🔧 Construyendo ruta completa desde ruta relativa")
-        
-        print(f"🔧 Ruta base del usuario: {ruta_base}")
-        print(f"🔧 Carpeta destino original: {carpeta_destino}")
-        print(f"🔧 Carpeta destino completa: {carpeta_destino_completa}")
-        print(f"🔧 Tipo de usuario: {type(usuario).__name__}")
-        print(f"🔧 Usuario ID: {getattr(usuario, 'id', 'N/A')}")
-        print(f"🔧 Usuario email: {getattr(usuario, 'email', 'N/A')}")
-        
-        # Verificar que la carpeta destino existe, si no, crearla
+            if carpeta_destino.startswith("/"):
+                carpeta_destino_completa = carpeta_destino if carpeta_destino.startswith(ruta_base) else f"{ruta_base}{carpeta_destino}"
+            else:
+                carpeta_destino_completa = f"{ruta_base.rstrip('/')}/{carpeta_destino}"
+        carpeta_destino_completa = carpeta_destino_completa.replace("//", "/")
+
+        # verificar/crear carpeta destino
         try:
-            dbx.files_get_metadata(carpeta_destino_completa)
-            print(f"Carpeta destino ya existe: {carpeta_destino_completa}")
+            dbx.files_get_metadata(with_base_folder(carpeta_destino_completa))
         except dropbox.exceptions.ApiError as e:
-            if "not_found" in str(e):
-                print(f"Creando carpeta destino: {carpeta_destino_completa}")
-                dbx.files_create_folder_v2(with_base_folder(carpeta_destino_completa))
-                
-                # Guardar carpeta en la base de datos
-                from app.models import Folder
-                carpeta_nombre = carpeta_destino_completa.split('/')[-1]
-                nueva_carpeta = Folder(  # type: ignore[call-arg]
-                    name=carpeta_nombre,
-                    user_id=getattr(usuario, "id", None),
-                    dropbox_path=carpeta_destino_completa,
-                    es_publica=True
-                )
-                db.session.add(nueva_carpeta)
-                db.session.commit()
-                print(f"Carpeta destino creada y registrada en BD: {carpeta_destino_completa}")
+            # intentar crear si no existe
+            if "not_found" in str(e).lower() or "not_found" in getattr(getattr(e, "error", ""), "get_path", lambda: "")().__str__().lower():
+                try:
+                    dbx.files_create_folder_v2(with_base_folder(carpeta_destino_completa))
+                    # registrar en BD si procede
+                    carpeta_nombre = carpeta_destino_completa.rstrip("/").split("/")[-1]
+                    if Folder.query.filter_by(dropbox_path=carpeta_destino_completa).first() is None:
+                        nueva = Folder(  # type: ignore[call-arg]
+                            name=carpeta_nombre,
+                            user_id=getattr(usuario, "id", None),
+                            dropbox_path=carpeta_destino_completa,
+                            es_publica=True
+                        )
+                        db.session.add(nueva)
+                        db.session.commit()
+                except dropbox.exceptions.ApiError as e2:
+                    if "conflict" not in str(e2).lower():
+                        raise e2
             else:
                 raise e
 
-        # Subir archivo directamente a la carpeta destino (sin sobrescribir)
-        nombre_base = archivo.filename
-        ext = ""
-        if "." in archivo.filename:
-            nombre_base = archivo.filename.rsplit(".", 1)[0]
-            ext = "." + archivo.filename.rsplit(".", 1)[1].lower()
-        
-        nombre_normalizado = f"{normaliza(nombre_base)}{ext}"
-        dropbox_dest = f"{carpeta_destino_completa}/{nombre_normalizado}"
-        
+        # preparar nombre de archivo normalizado y destino final
+        orig_name = archivo_file.filename or "upload.bin"
+        name_base = orig_name.rsplit(".", 1)[0]
+        ext = ("." + orig_name.rsplit(".", 1)[1]) if "." in orig_name else ""
+        nombre_normalizado = f"{normaliza(name_base)}{ext}"
+        dropbox_dest = f"{carpeta_destino_completa.rstrip('/')}/{nombre_normalizado}".replace("//", "/")
+
+        # intentar subir (mode=add). si conflicto, añadir sufijo
         try:
-            dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
+            dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=WriteMode.add)
         except dropbox.exceptions.ApiError as e:
-            if "conflict" in str(e):
-                # Si hay conflicto, agregar un sufijo adicional
-                import random
-                sufijo_random = str(random.randint(1000, 9999))
-                nombre_normalizado = f"{normaliza(nombre_base)}_{sufijo_random}{ext}"
-                dropbox_dest = f"{carpeta_destino_completa}/{nombre_normalizado}"
-                dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
+            if "conflict" in str(e).lower():
+                sufijo = str(random.randint(1000, 9999))
+                nombre_normalizado = f"{normaliza(name_base)}_{sufijo}{ext}"
+                dropbox_dest = f"{carpeta_destino_completa.rstrip('/')}/{nombre_normalizado}"
+                dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=WriteMode.add)
             else:
                 raise e
-        print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
 
-        # Guardar en la base de datos con categoría y subcategoría genéricas
-        print(f"🔧 Guardando en BD con ruta: {dropbox_dest}")
-        nuevo_archivo = Archivo(  # type: ignore[call-arg]
-            nombre=nombre_normalizado,  # Usar el nombre normalizado sin timestamp
-            categoria="Subida Rápida",  # Categoría genérica
-            subcategoria="Directo",     # Subcategoría genérica
-            dropbox_path=dropbox_dest,
+        # registrar en BD (guardar ruta lógica sin carpeta base para consistencia)
+        try:
+            ruta_logica = without_base_folder(dropbox_dest)
+        except Exception:
+            ruta_logica = dropbox_dest
+        nuevo = Archivo(  # type: ignore[call-arg]
+            nombre=nombre_normalizado,
+            categoria="Subida Rápida",
+            subcategoria="Directo",
+            dropbox_path=ruta_logica,
             usuario_id=getattr(usuario, "id", None),
-            estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
+            estado="en_revision"
         )
-        db.session.add(nuevo_archivo)
+        db.session.add(nuevo)
         db.session.commit()
-        print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
 
-        # Registrar actividad
-        current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a Subida Rápida/Directo')
+        # invalidar caché de estructuras si aplica
+        try:
+            uid = getattr(usuario, "id", None)
+            if uid in _estructuras_cache:
+                _estructuras_cache.pop(uid, None)
+        except Exception:
+            pass
 
-        # Redirección correcta según si es AJAX o no
-        # Usar el usuario_id específico para redirigir a la carpeta del usuario
-        usuario_id_redirect = getattr(usuario, "id", None)
-        redirect_url = url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_redirect)
-        
-        print(f"🔧 Redirigiendo a usuario específico: /usuario/{usuario_id_redirect}/carpetas")
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        current_user.registrar_actividad('file_uploaded', f'Archivo "{orig_name}" subido a {carpeta_destino_completa}')
+
+        redirect_url = request.form.get("redirect_url") or url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=getattr(usuario, "id", current_user.id))
+        flash("Archivo subido y registrado exitosamente.", "success")
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return jsonify({"success": True, "redirectUrl": redirect_url})
-        else:
-            return redirect(redirect_url)
+        return redirect(redirect_url)
+
+    except dropbox.exceptions.AuthError as e:
+        db.session.rollback()
+        current_app.logger.exception("ERROR de autenticación Dropbox:")
+        flash("Tokens de Dropbox expirados o inválidos. Contacta al administrador.", "error")
+        return redirect(request.form.get("redirect_url") or url_for("listar_dropbox.carpetas_dropbox"))
+
+    except dropbox.exceptions.ApiError as e:
+        db.session.rollback()
+        current_app.logger.exception("ERROR API de Dropbox:")
+        flash(f"Error de Dropbox: {str(e)}", "error")
+        return redirect(request.form.get("redirect_url") or url_for("listar_dropbox.carpetas_dropbox"))
 
     except Exception as e:
-        print(f"ERROR general en subida rápida de archivo: {e}")
         db.session.rollback()
-        
-        # En caso de error, intentar redirigir al usuario específico si es posible
+        current_app.logger.exception("ERROR general en subida rápida de archivo:")
+        flash(f"Error al subir archivo: {str(e)}", "error")
         try:
-            usuario_id_redirect = getattr(usuario, "id", None) if 'usuario' in locals() else None
-            if usuario_id_redirect:
-                return redirect(url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_redirect))
-            else:
-                return redirect(url_for("listar_dropbox.carpetas_dropbox"))
-        except:
-            return redirect(url_for("listar_dropbox.carpetas_dropbox"))
-
+            uid = getattr(usuario, "id", None)
+            if uid:
+                return redirect(url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=uid))
+        except Exception:
+            pass
+        return redirect(url_for("listar_dropbox.carpetas_dropbox"))
+    
+    
 @bp.route("/usuario/<int:usuario_id>/carpetas")
 @login_required
 def ver_usuario_carpetas(usuario_id):
