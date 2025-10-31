@@ -581,6 +581,9 @@ def eliminar_usuario(usuario_id):
             Folder.query.filter_by(user_id=usuario_id).delete(synchronize_session=False)
             Beneficiario.query.filter_by(titular_id=usuario_id).delete(synchronize_session=False)
             UserActivityLog.query.filter_by(user_id=usuario_id).delete(synchronize_session=False)
+            # Eliminar notificaciones del usuario para evitar errores de clave externa NOT NULL
+            from app.models import Notification
+            Notification.query.filter_by(user_id=usuario_id).delete(synchronize_session=False)
             db.session.delete(usuario)
             actividad = UserActivityLog(
                 user_id=current_user.id,
