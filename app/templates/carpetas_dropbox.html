@@ -210,7 +210,10 @@ block content %}
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                       </svg>
                     </div>
-                    <div class="text-sm text-gray-700 truncate" title="{{ archivo }}">{{ archivo }}</div>
+                    <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium truncate" title="{{ archivo }}"
+                          onclick="openPreviewModal({{ filepath|tojson }}, {{ (archivo.split('.')[-1] if '.' in archivo else '')|tojson }}, {{ archivo|tojson }})">
+                      {{ archivo }}
+                    </span>
                     <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ parent }}">{{ parent|default('') }}</div>
                   </div>
                   <div class="flex items-center space-x-2">
@@ -259,7 +262,10 @@ block content %}
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                       </div>
-                      <div class="text-sm text-gray-700 truncate" title="{{ fname }}">{{ fname }}</div>
+                      <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium truncate" title="{{ fname }}"
+                            onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')">
+                        {{ fname }}
+                      </span>
                       <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ file_dir }}">{{ file_dir | default('') }}</div>
                     </div>
                     <div class="flex items-center space-x-2">
@@ -1377,7 +1383,10 @@ block content %}
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
               </div>
-              <span class="text-gray-700 font-medium">${archivo}</span>
+              <span class="text-blue-700 hover:underline cursor-pointer font-medium" 
+                    onclick="openPreviewModal('/${limpiarRuta(rutaBase)}/${archivo}', '${archivo.split('.').pop() || ''}', '${archivo}')">
+                ${archivo}
+              </span>
             </div>
             <div class="relative">
               <button onclick="toggleFileMenu('file-menu-${parent.replace(
