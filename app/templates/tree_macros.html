@@ -528,10 +528,13 @@ render_tree_readonly(tree, parent="") %}
           </svg>
         </div>
         <div class="flex flex-col">
-          <span onclick="openPreviewModal('/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', '{{ archivo.split('.')[-1] if '.' in archivo else '' }}', '{{ archivo }}')"
-                class="text-blue-700 hover:underline cursor-pointer font-medium truncate" style="max-width: 60vw">
-            {{ archivo }}
-          </span>
+          <div class="flex items-center gap-2">
+            <span onclick="openPreviewModal('/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', '{{ archivo.split('.')[-1] if '.' in archivo else '' }}', '{{ archivo }}')"
+                  class="text-blue-700 hover:underline cursor-pointer font-medium truncate" style="max-width: 60vw">
+              {{ archivo }}
+            </span>
+            <span id="status-badge-{{ (parent.replace('/', '-').replace('\\', '-')) ~ '-' ~ (archivo.replace('/', '-').replace('\\', '-')) }}" data-file-path="/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}" class="text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
+          </div>
           {% if parent %}
             <span class="text-xs text-gray-400">📁 {{ parent }}</span>
           {% endif %}

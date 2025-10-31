@@ -210,10 +210,13 @@ block content %}
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                       </svg>
                     </div>
-                    <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium truncate" title="{{ archivo }}"
-                          onclick="openPreviewModal({{ filepath|tojson }}, {{ (archivo.split('.')[-1] if '.' in archivo else '')|tojson }}, {{ archivo|tojson }})">
-                      {{ archivo }}
-                    </span>
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                      <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium truncate" title="{{ archivo }}"
+                            onclick="openPreviewModal({{ filepath|tojson }}, {{ (archivo.split('.')[-1] if '.' in archivo else '')|tojson }}, {{ archivo|tojson }})">
+                        {{ archivo }}
+                      </span>
+                      <span id="status-badge-{{ filepath.replace('/', '-').replace('\\', '-') }}" data-file-path="{{ filepath }}" class="text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
+                    </div>
                     <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ parent }}">{{ parent|default('') }}</div>
                   </div>
                   <div class="flex items-center space-x-2">
@@ -262,10 +265,13 @@ block content %}
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                       </div>
-                      <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium truncate" title="{{ fname }}"
-                            onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')">
-                        {{ fname }}
-                      </span>
+                      <div class="flex items-center gap-2 min-w-0 flex-1">
+                        <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium truncate" title="{{ fname }}"
+                              onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')">
+                          {{ fname }}
+                        </span>
+                        <span id="status-badge-{{ file_path.replace('/', '-').replace('\\', '-') }}" data-file-path="{{ file_path }}" class="text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
+                      </div>
                       <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ file_dir }}">{{ file_dir | default('') }}</div>
                     </div>
                     <div class="flex items-center space-x-2">
@@ -1383,10 +1389,13 @@ block content %}
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
               </div>
-              <span class="text-blue-700 hover:underline cursor-pointer font-medium" 
-                    onclick="openPreviewModal('/${limpiarRuta(rutaBase)}/${archivo}', '${archivo.split('.').pop() || ''}', '${archivo}')">
-                ${archivo}
-              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-blue-700 hover:underline cursor-pointer font-medium" 
+                      onclick="openPreviewModal('/${limpiarRuta(rutaBase)}/${archivo}', '${archivo.split('.').pop() || ''}', '${archivo}')">
+                  ${archivo}
+                </span>
+                <span id="status-badge-${archivo.replace(/[^a-zA-Z0-9]/g, '-')}" data-file-path="/${limpiarRuta(rutaBase)}/${archivo}" class="text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
+              </div>
             </div>
             <div class="relative">
               <button onclick="toggleFileMenu('file-menu-${parent.replace(
@@ -3173,7 +3182,9 @@ block content %}
             badge.textContent = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'Pendiente para revisión');
             badge.className = `ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${estado === 'validado' ? 'bg-green-100 text-green-700' : estado === 'rechazado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`;
           } else {
-            badge.classList.add('hidden');
+            badge.classList.remove('hidden');
+            badge.textContent = 'Nuevo';
+            badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
           }
         })
         .catch(() => {});

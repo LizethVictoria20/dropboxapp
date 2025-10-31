@@ -1900,17 +1900,18 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
                 badge.textContent = estadoTexto;
               });
           } else {
-            // Sin estado; mostrar sólo privacidad si es privada
+            // Sin estado; mostrar como "Nuevo" si es público, o "Privada" si es privado
+            badge.classList.remove('hidden');
             fetch(`/api/archivo/estado?path=${encodeURIComponent(path)}`)
               .then(rr => rr.json())
               .then(dd => {
                 const esPublica = !(dd && dd.hasOwnProperty('es_publica')) ? true : !!dd.es_publica;
                 if (esPublica === false) {
-                  badge.classList.remove('hidden');
                   badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700';
                   badge.textContent = 'Privada';
                 } else {
-                  badge.classList.add('hidden');
+                  badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
+                  badge.textContent = 'Nuevo';
                 }
               }).catch(() => {
                 badge.classList.add('hidden');
@@ -1957,13 +1958,14 @@ beneficiario.nombre }}{% else %}{{ usuario.nombre or usuario.email }}{% endif
             badge.textContent = esPublica ? estadoTexto : `${estadoTexto} · Privada`;
             badge.className = `ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${estado === 'validado' ? 'bg-green-100 text-green-700' : estado === 'rechazado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`;
           } else {
-            // Sin estado; si es privada, mostrarlo
+            // Sin estado definido; mostrar como "Nuevo" si es público, o "Privada" si es privado
+            badge.classList.remove('hidden');
             if (esPublica === false) {
-              badge.classList.remove('hidden');
               badge.textContent = 'Privada';
               badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700';
             } else {
-              badge.classList.add('hidden');
+              badge.textContent = 'Nuevo';
+              badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
             }
           }
         })
