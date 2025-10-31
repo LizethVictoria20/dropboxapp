@@ -528,7 +528,10 @@ render_tree_readonly(tree, parent="") %}
           </svg>
         </div>
         <div class="flex flex-col">
-          <span class="text-gray-700 font-medium truncate" style="max-width: 60vw">{{ archivo }}</span>
+          <span onclick="openPreviewModal('/{{ usuario_email ~ '/' ~ (parent + '/' if parent else '') ~ archivo }}', '{{ archivo.split('.')[-1] if '.' in archivo else '' }}', '{{ archivo }}')"
+                class="text-blue-700 hover:underline cursor-pointer font-medium truncate" style="max-width: 60vw">
+            {{ archivo }}
+          </span>
           {% if parent %}
             <span class="text-xs text-gray-400">📁 {{ parent }}</span>
           {% endif %}
