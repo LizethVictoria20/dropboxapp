@@ -8,6 +8,8 @@ from app import db
 from sqlalchemy import or_
 import dropbox
 from datetime import datetime
+from dropbox.exceptions import ApiError
+from sqlalchemy.exc import IntegrityError
 
 bp = Blueprint('usuarios', __name__)
 
@@ -527,83 +529,75 @@ def editar_usuario(usuario_id):
         flash(f"Error al actualizar usuario: {str(e)}", "error")
         return redirect(url_for('usuarios.editar_usuario', usuario_id=usuario_id))
 
+def _safe_delete_dropbox_folder(dbx, path):
+    if not path:
+        return
+    full_path = with_base_folder(path)
+    try:
+        dbx.files_delete_v2(full_path)
+    except ApiError as e:
+        err = str(e)
+        if "path_lookup/not_found" in err or "not_found" in err:
+            return
+        raise
+    
 @bp.route('/usuarios/<int:usuario_id>/eliminar', methods=['POST'])
 @login_required
 def eliminar_usuario(usuario_id):
-    """Eliminar un usuario y todas sus carpetas/archivos de Dropbox"""
     if not current_user.puede_administrar():
-        flash("No tienes permisos para realizar esta acción.", "error")
-        return redirect(url_for('usuarios.lista_usuarios'))
-    
+        return jsonify({"success": False, "error": "No tienes permisos"}), 403
+
     usuario = User.query.get_or_404(usuario_id)
-    
-    # No permitir eliminar al usuario actual
+
     if usuario.id == current_user.id:
-        flash("No puedes eliminar tu propia cuenta.", "error")
-        return redirect(url_for('usuarios.lista_usuarios'))
-    
+        return jsonify({"success": False, "error": "No puedes eliminar tu propia cuenta."}), 400
+
     try:
-        # Conectar a Dropbox
-        from flask import current_app
         dbx = get_dbx()
-        
-        # Eliminar carpetas y archivos de Dropbox
-        if usuario.dropbox_folder_path:
+        if dbx is None:
+            return jsonify({'success': False, 'error': 'No se pudo conectar a Dropbox (token inválido o no configurado)'}), 500
+        dropbox_path = getattr(usuario, 'dropbox_folder_path', None)
+        if dropbox_path:
             try:
-                # Listar todo el contenido de la carpeta del usuario
-                res = dbx.files_list_folder(with_base_folder(usuario.dropbox_folder_path), recursive=True)
-                
-                # Eliminar archivos primero
-                for entry in res.entries:
-                    if hasattr(entry, 'path_display'):
-                        try:
-                            # path_display ya incluye la ruta completa devuelta por Dropbox
-                            dbx.files_delete_v2(entry.path_display)
-                        except dropbox.exceptions.ApiError as e:
-                            if "not_found" not in str(e):
-                                print(f"Error eliminando {entry.path_display}: {e}")
-                
-                # Eliminar la carpeta raíz del usuario
-                dbx.files_delete_v2(with_base_folder(usuario.dropbox_folder_path))
-                
-            except dropbox.exceptions.ApiError as e:
-                if "not_found" not in str(e):
-                    print(f"Error eliminando carpeta de usuario: {e}")
-        
-        # Eliminar registros de la base de datos respetando dependencias
-        # 1) Eliminar permisos asociados a las carpetas del usuario
-        carpetas_usuario = Folder.query.with_entities(Folder.id).filter_by(user_id=usuario_id).all()
-        carpeta_ids = [c.id for c in carpetas_usuario]
-        if carpeta_ids:
-            FolderPermiso.query.filter(FolderPermiso.folder_id.in_(carpeta_ids)).delete(synchronize_session=False)
-
-        # 2) Eliminar archivos del usuario
-        Archivo.query.filter_by(usuario_id=usuario_id).delete()
-
-        # 3) Eliminar carpetas del usuario
-        Folder.query.filter_by(user_id=usuario_id).delete()
-
-        # 4) Eliminar beneficiarios asociados al titular (clave foránea a user.id)
-        Beneficiario.query.filter_by(titular_id=usuario_id).delete()
-
-        # 5) Eliminar actividades del usuario
-        UserActivityLog.query.filter_by(user_id=usuario_id).delete()
-        
-        # Eliminar el usuario
-        db.session.delete(usuario)
-        
-        # Registrar actividad
-        actividad = UserActivityLog(
-            user_id=current_user.id,
-            accion="eliminar_usuario",
-            descripcion=f"Eliminó usuario {usuario.email} y todo su contenido"
-        )
-        db.session.add(actividad)
-        
-        db.session.commit()
-        
+                full_path = with_base_folder(dropbox_path)
+                dbx.files_delete_v2(full_path)
+            except ApiError as e:
+                # Ignorar error not_found (la carpeta ya no existe o nunca existió)
+                if (
+                    hasattr(e, "error") 
+                    and hasattr(e.error, "is_path_lookup") 
+                    and e.error.is_path_lookup()
+                    and hasattr(e.error.get_path_lookup(), "is_not_found")
+                    and e.error.get_path_lookup().is_not_found()
+                ):
+                    pass  # continuar con la eliminación, no es crítico
+                else:
+                    return jsonify({"success": False, "step": "dropbox_delete", "error": str(e)}), 500
+        carpeta_ids = [c.id for c in Folder.query.with_entities(Folder.id).filter_by(user_id=usuario_id).all()]
+        try:
+            if carpeta_ids:
+                FolderPermiso.query.filter(FolderPermiso.folder_id.in_(carpeta_ids)).delete(synchronize_session=False)
+            Archivo.query.filter_by(usuario_id=usuario_id).delete(synchronize_session=False)
+            Folder.query.filter_by(user_id=usuario_id).delete(synchronize_session=False)
+            Beneficiario.query.filter_by(titular_id=usuario_id).delete(synchronize_session=False)
+            UserActivityLog.query.filter_by(user_id=usuario_id).delete(synchronize_session=False)
+            db.session.delete(usuario)
+            actividad = UserActivityLog(
+                user_id=current_user.id,
+                accion="eliminar_usuario",
+                descripcion=f"Eliminó usuario {usuario.email} y todo su contenido (PRODUCCION)"
+            )
+            db.session.add(actividad)
+            db.session.commit()
+        except IntegrityError as ie:
+            db.session.rollback()
+            return jsonify({"success": False, "step": "db_commit", "error": str(ie.orig if getattr(ie, 'orig', None) else ie)}), 500
+        except Exception as db_e:
+            db.session.rollback()
+            return jsonify({"success": False, "step": "db_other", "error": str(db_e)}), 500
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True}), 200
+        flash('Usuario y toda su información eliminados correctamente.', 'success')
         return redirect(url_for('usuarios.lista_usuarios'))
-        
     except Exception as e:
-        db.session.rollback()
-        return redirect(url_for('usuarios.lista_usuarios'))
+        return jsonify({"success": False, "step": "unexpected", "error": str(e)}), 500

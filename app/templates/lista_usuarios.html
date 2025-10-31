@@ -1135,10 +1135,8 @@ block content %}
 <script>
   // Funciones para el modal de eliminar
   function confirmarEliminarUsuario(usuarioId, nombreUsuario) {
-    document.getElementById("nombreUsuarioEliminar").textContent =
-      nombreUsuario;
+    document.getElementById("nombreUsuarioEliminar").textContent = nombreUsuario;
     document.getElementById("modalEliminar").classList.remove("hidden");
-
     document.getElementById("btnConfirmarEliminar").onclick = function () {
       // Crear formulario temporal para enviar POST
       const form = document.createElement("form");
