@@ -24,13 +24,21 @@ def notificar_archivo_subido(nombre_archivo: str, usuario_subio, categoria: str,
         if isinstance(usuario_subio, Beneficiario):
             nombre_usuario = f"{usuario_subio.nombre} {usuario_subio.lastname or ''}".strip()
             tipo_usuario = "beneficiario"
+            rol_usuario = None
         else:
             nombre_usuario = usuario_subio.nombre_completo
-            tipo_usuario = "usuario"
+            rol_usuario = getattr(usuario_subio, 'rol', None)
+            tipo_usuario = rol_usuario or "usuario"
         
-        # Preparar mensaje
+        # Preparar mensaje según quién subió
         titulo = "Nuevo archivo subido"
-        mensaje = f"{nombre_usuario} ({tipo_usuario}) ha subido un nuevo archivo: {nombre_archivo}"
+        if rol_usuario in ['admin', 'superadmin', 'lector']:
+            # Mensaje para cuando un admin/lector sube archivo
+            mensaje = f"Has subido un nuevo archivo: {nombre_archivo}"
+        else:
+            # Mensaje para cuando un cliente/beneficiario sube archivo
+            mensaje = f"{nombre_usuario} ({tipo_usuario}) ha subido un nuevo archivo: {nombre_archivo}"
+        
         if categoria:
             mensaje += f" en la categoría {categoria}"
         
@@ -54,23 +62,32 @@ def notificar_archivo_subido(nombre_archivo: str, usuario_subio, categoria: str,
         notificaciones_creadas = []
         
         for usuario in usuarios_notificar:
-            # Solo omitir notificación si el que subió es un cliente (no admin/lector)
-            # Si un admin sube en nombre de un cliente, todos los admins deben recibir notificación
-            if isinstance(usuario_subio, User) and usuario.id == usuario_subio.id:
-                # Si quien subió es cliente, omitir la notificación
-                if usuario_subio.rol == 'cliente':
-                    try:
-                        current_app.logger.info(f"⏭️ Omitiendo notificación para cliente que subió archivo (ID: {usuario.id})")
-                    except Exception:
-                        print(f"⏭️ Omitiendo notificación para cliente que subió archivo (ID: {usuario.id})")
-                    continue
+            # Notificar a todos los admin/lector, incluyendo quien subió el archivo
+            # Solo omitir si quien subió es un cliente
+            if isinstance(usuario_subio, User) and usuario.id == usuario_subio.id and usuario_subio.rol == 'cliente':
+                try:
+                    current_app.logger.info(f"⏭️ Omitiendo notificación para cliente que subió archivo (ID: {usuario.id})")
+                except Exception:
+                    print(f"⏭️ Omitiendo notificación para cliente que subió archivo (ID: {usuario.id})")
+                continue
             
             try:
+                # Personalizar el mensaje según quién recibe la notificación
+                mensaje_personalizado = mensaje
+                titulo_personalizado = titulo
+                
+                # Si quien recibe es quien subió el archivo
+                if isinstance(usuario_subio, User) and usuario.id == usuario_subio.id:
+                    titulo_personalizado = "Archivo subido exitosamente"
+                    mensaje_personalizado = f"Has subido exitosamente el archivo: {nombre_archivo}"
+                    if categoria:
+                        mensaje_personalizado += f" en la categoría {categoria}"
+                
                 notificacion = Notification(
                     user_id=usuario.id,
                     archivo_id=archivo_id,
-                    titulo=titulo,
-                    mensaje=mensaje,
+                    titulo=titulo_personalizado,
+                    mensaje=mensaje_personalizado,
                     tipo='info',
                     leida=False,
                     fecha_creacion=datetime.utcnow()

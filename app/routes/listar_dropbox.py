@@ -84,8 +84,40 @@ def actualizar_estado_archivo():
     if current_user.rol == 'lector' and not current_user.puede_modificar_archivos():
         return jsonify({'success': False, 'error': 'Sin permisos'}), 403
 
+    # Guardar estado anterior para comparar
+    estado_anterior = archivo.estado
     archivo.estado = nuevo_estado
     db.session.commit()
+    
+    # Crear notificación para el cliente si el estado cambió
+    if estado_anterior != nuevo_estado and archivo.usuario_id:
+        from app.models import Notification
+        from datetime import datetime
+        
+        # Mensajes según el nuevo estado
+        mensajes_estado = {
+            'en_revision': f'Tu archivo "{archivo.nombre}" está ahora en revisión.',
+            'validado': f'¡Buenas noticias! Tu archivo "{archivo.nombre}" ha sido validado.',
+            'rechazado': f'Tu archivo "{archivo.nombre}" ha sido rechazado. Por favor, revisa los comentarios.'
+        }
+        
+        titulo = f'Cambio de estado: {archivo.nombre}'
+        mensaje = mensajes_estado.get(nuevo_estado, f'El estado de tu archivo "{archivo.nombre}" ha cambiado.')
+        
+        notificacion = Notification(
+            user_id=archivo.usuario_id,
+            titulo=titulo,
+            mensaje=mensaje,
+            tipo='estado_archivo',
+            leida=False,
+            fecha_creacion=datetime.utcnow(),
+            archivo_id=archivo.id
+        )
+        db.session.add(notificacion)
+        db.session.commit()
+        
+        current_app.logger.info(f'Notificación creada para usuario {archivo.usuario_id}: {titulo}')
+    
     return jsonify({'success': True})
 
 @bp.route('/api/mis-archivos', methods=['GET'])
@@ -3132,6 +3164,26 @@ def subir_archivo_rapido():
             import traceback
             traceback.print_exc()
             # No interrumpir el flujo de subida si falla la notificación
+        
+        # Si un admin/lector sube archivo a carpeta de un cliente, notificar al cliente
+        try:
+            if current_user.rol in ['admin', 'superadmin', 'lector'] and usuario and getattr(usuario, 'rol', None) == 'cliente':
+                from app.models import Notification
+                notif_cliente = Notification(
+                    user_id=usuario.id,
+                    archivo_id=nuevo.id,
+                    titulo="Nuevo archivo subido a tu carpeta",
+                    mensaje=f'Se ha subido un nuevo archivo "{nombre_normalizado}" a tu carpeta.',
+                    tipo='file_upload',
+                    leida=False,
+                    fecha_creacion=datetime.utcnow()
+                )
+                db.session.add(notif_cliente)
+                db.session.commit()
+                current_app.logger.info(f"✅ Notificación enviada al cliente {usuario.id} por subida de archivo")
+        except Exception as e_notif_cliente:
+            print(f"⚠️ Error al notificar al cliente: {e_notif_cliente}")
+            # No interrumpir el flujo
 
         redirect_url = request.form.get("redirect_url") or url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=getattr(usuario, "id", current_user.id))
         flash("Archivo subido y registrado exitosamente.", "success")

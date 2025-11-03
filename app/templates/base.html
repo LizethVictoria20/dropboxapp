@@ -293,7 +293,7 @@
     </style>
     {% block styles %}{% endblock %}
   </head>
-  <body class="bg-surface" data-notif-enabled="{{ 1 if current_user.is_authenticated and (user_role == 'admin' or user_role == 'superadmin' or user_role == 'lector') else 0 }}">
+  <body class="bg-surface" data-notif-enabled="{{ 1 if current_user.is_authenticated and (user_role == 'admin' or user_role == 'superadmin' or user_role == 'lector' or user_role == 'cliente') else 0 }}">
     <div id="page-container">
       <!-- Header - Solo mostrar cuando el usuario esté autenticado -->
       {% if current_user.is_authenticated %}
@@ -412,8 +412,8 @@
             </div>
 
             <div class="flex items-center space-x-6">
-              <!-- Notificaciones (solo para admin, superadmin y lector) -->
-              {% if current_user.is_authenticated and (user_role == 'admin' or user_role == 'superadmin' or user_role == 'lector') %}
+              <!-- Notificaciones (para admin, superadmin, lector y cliente) -->
+              {% if current_user.is_authenticated and (user_role == 'admin' or user_role == 'superadmin' or user_role == 'lector' or user_role == 'cliente') %}
               <div class="relative group">
                 <button
                   id="notificationButton"
@@ -422,10 +422,10 @@
                   <i class="fas fa-bell"></i>
                   <span
                     id="notificationBadge"
-                    class="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-white text-xs font-bold rounded-full hidden"
+                    class="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-white text-xs font-bold rounded-full {{ 'hidden' if (header_unread_count or 0) == 0 else '' }}"
                     style="background-color:#0176a8;"
                   >
-                    0
+                    {{ header_unread_count or 0 }}
                   </span>
                 </button>
 
@@ -461,9 +461,6 @@
                   </div>
                   <div class="p-3 border-t border-gray-100">
                     <div class="flex items-center justify-end text-xs gap-2">
-                      <button id="markAllReadButton" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-medium" style="background-color:#E6F3F9;color:#0176a8;">
-                        Marcar todas como leídas
-                      </button>
                       <span aria-hidden="true" class="text-gray-300">·</span>
                       <a href="{{ url_for('main.ver_notificaciones') }}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-medium" style="background-color:#E6F3F9;color:#0176a8;">Ver todas</a>
                     </div>
@@ -2545,6 +2542,14 @@
       const notificationDropdown = document.getElementById('notificationDropdown');
       const markAllReadButton = document.getElementById('markAllReadButton');
       let unreadCount = 0;
+      
+      console.log('🔧 Elementos de notificaciones inicializados:', {
+        notificationButton: !!notificationButton,
+        notificationBadge: !!notificationBadge,
+        notificationList: !!notificationList,
+        notificationDropdown: !!notificationDropdown,
+        markAllReadButton: !!markAllReadButton
+      });
 
       // Cargar notificaciones al iniciar
       function loadNotifications() {
@@ -2651,24 +2656,13 @@
 
       // Marcar todas como leídas
       if (markAllReadButton) {
+        console.log('✅ Botón markAllReadButton encontrado, registrando evento...');
         markAllReadButton.addEventListener('click', function(e) {
+          e.preventDefault();
           e.stopPropagation();
-          console.log('Iniciando marcar todas como leídas...');
+          console.log('🔔 Click en marcar todas como leídas detectado');
           
-          // Ocultar INMEDIATAMENTE sin esperar
-          unreadCount = 0;
-          notificationBadge.style.display = 'none';
-          notificationBadge.style.opacity = '0';
-          notificationBadge.style.visibility = 'hidden';
-          notificationBadge.textContent = '0';
-        
-          if (notificationList) {
-            notificationList.innerHTML = `
-              <div class=\"p-8 text-center\">\n                <i class=\"fas fa-bell-slash text-gray-300 text-3xl mb-2\"></i>\n                <p class=\"text-sm text-gray-500\">No hay notificaciones</p>\n              </div>
-            `;
-          }
-          
-          // Luego hacer la llamada API
+          // Hacer la llamada API
           fetch('/api/notificaciones/marcar_todas_leidas', {
             method: 'POST',
             headers: {
@@ -2677,44 +2671,60 @@
           })
             .then(response => response.json())
             .then(data => {
-              console.log('Respuesta marcar todas:', data);
-              if (data.success) {
-                // Refrescar desde servidor después de 1s para asegurar consistencia
-                setTimeout(loadNotifications, 1000);
+              console.log('✅ Respuesta marcar todas:', data);
+              if (data && data.success) {
+                console.log('✅ Notificaciones marcadas como leídas exitosamente');
+                
+                // Ocultar badge inmediatamente
+                if (notificationBadge) {
+                  notificationBadge.style.display = 'none';
+                  notificationBadge.style.opacity = '0';
+                  notificationBadge.style.visibility = 'hidden';
+                  notificationBadge.textContent = '0';
+                }
+                
+                // Recargar la página para reflejar los cambios
+                location.reload();
               }
             })
             .catch(error => {
-              console.error('Error al marcar todas como leídas:', error);
-              // Si falla, recargar para revertir cambios locales
-              setTimeout(loadNotifications, 1000);
+              console.error('❌ Error al marcar todas como leídas:', error);
             });
         });
       } else {
+        console.warn('⚠️ Botón markAllReadButton NO encontrado, usando fallback delegado');
         // Fallback delegado: garantiza funcionalidad aunque el botón se mueva en el DOM
         document.addEventListener('click', function(ev) {
           const btn = ev.target && ev.target.closest && ev.target.closest('#markAllReadButton');
           if (!btn) return;
+          ev.preventDefault();
           ev.stopPropagation();
-          console.log('Iniciando marcar todas como leídas (delegado)...');
-
-          unreadCount = 0;
-          notificationBadge.style.display = 'none';
-          notificationBadge.style.opacity = '0';
-          notificationBadge.style.visibility = 'hidden';
-          notificationBadge.textContent = '0';
-          if (notificationList) {
-            notificationList.innerHTML = `
-              <div class=\"p-8 text-center\">\n                <i class=\"fas fa-bell-slash text-gray-300 text-3xl mb-2\"></i>\n                <p class=\"text-sm text-gray-500\">No hay notificaciones</p>\n              </div>
-            `;
-          }
+          console.log('🔔 Click en marcar todas como leídas detectado (delegado)');
 
           fetch('/api/notificaciones/marcar_todas_leidas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
           })
             .then(response => response.json())
-            .then(data => { if (data && data.success) setTimeout(loadNotifications, 1000); })
-            .catch(() => setTimeout(loadNotifications, 1000));
+            .then(data => { 
+              if (data && data.success) {
+                console.log('✅ Notificaciones marcadas como leídas (delegado)');
+                
+                // Ocultar badge inmediatamente
+                if (notificationBadge) {
+                  notificationBadge.style.display = 'none';
+                  notificationBadge.style.opacity = '0';
+                  notificationBadge.style.visibility = 'hidden';
+                  notificationBadge.textContent = '0';
+                }
+                
+                // Recargar la página
+                location.reload();
+              }
+            })
+            .catch(error => {
+              console.error('❌ Error al marcar todas como leídas (delegado):', error);
+            });
         });
       }
       
