@@ -272,6 +272,7 @@ class Notification(db.Model):
     """Modelo para notificaciones de usuarios"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    archivo_id = db.Column(db.Integer, db.ForeignKey('archivo.id'), nullable=True)  # ID del archivo asociado
     titulo = db.Column(db.String(200), nullable=False)
     mensaje = db.Column(db.Text, nullable=False)
     tipo = db.Column(db.String(50), nullable=False, default='info')  # info, success, warning, error
@@ -279,8 +280,9 @@ class Notification(db.Model):
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     fecha_leida = db.Column(db.DateTime, nullable=True)
     
-    # Relación con usuario
+    # Relaciones
     usuario = db.relationship('User', backref=db.backref('notificaciones', lazy=True))
+    archivo = db.relationship('Archivo', backref=db.backref('notificaciones', lazy=True))
     
     def marcar_como_leida(self):
         """Marca la notificación como leída"""

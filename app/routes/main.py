@@ -12,6 +12,10 @@ from app.utils.dashboard_stats import (
     get_dashboard_stats, get_charts_data, get_file_types_stats, 
     get_recent_files_with_users, get_recent_activity
 )
+from app.utils.notification_utils import (
+    obtener_notificaciones_no_leidas, contar_notificaciones_no_leidas,
+    marcar_notificacion_leida, marcar_todas_notificaciones_leidas
+)
 
 bp = Blueprint('main', __name__)
 
@@ -722,7 +726,8 @@ def listar_usuarios_admin():
     rol_filtro = request.args.get('rol', '')
     estado_filtro = request.args.get('estado', '')
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    # Mostrar 10 notificaciones por página
+    per_page = 10
     
     # Query base - SOLO usuarios administrativos (admin, lector, superadmin)
     query = User.query.filter(User.rol.in_(['admin', 'lector', 'superadmin']))
@@ -770,15 +775,8 @@ def listar_usuarios_admin():
 @bp.route('/notificaciones')
 @login_required
 def notificaciones():
-    """Ver notificaciones del usuario"""
-    
-    # Obtener notificaciones del usuario (paginadas)
-    page = request.args.get('page', 1, type=int)
-    notificaciones = Notification.query.filter_by(user_id=current_user.id)\
-                                      .order_by(desc(Notification.fecha_creacion))\
-                                      .paginate(page=page, per_page=10, error_out=False)
-    
-    return render_template('notifications/list.html', notificaciones=notificaciones)
+    """Compat: redirige a la nueva página de historial de notificaciones"""
+    return redirect(url_for('main.ver_notificaciones'))
 
 @bp.route('/notificaciones/<int:notif_id>/marcar_leida', methods=['POST'])
 @login_required
@@ -1412,4 +1410,267 @@ def debug_file_extensions_route():
         'general_stats': general_stats,
         'month_stats': month_stats,
         'total_files': sum([count for _, count in results])
-    }) 
+    })
+
+
+# Endpoints para notificaciones
+@bp.route('/api/notificaciones', methods=['GET'])
+@login_required
+def obtener_notificaciones():
+    """Obtiene las notificaciones no leídas del usuario actual"""
+    try:
+        notificaciones = obtener_notificaciones_no_leidas(current_user.id)
+        
+        # Preparar datos para JSON
+        notificaciones_data = []
+        for notif in notificaciones:
+            datos = {
+                'id': notif.id,
+                'titulo': notif.titulo,
+                'mensaje': notif.mensaje,
+                'tipo': notif.tipo,
+                'fecha_creacion': notif.fecha_creacion.strftime('%d/%m/%Y %H:%M'),
+                'leida': notif.leida,
+                'archivo_id': notif.archivo_id
+            }
+            
+            # Si hay un archivo asociado, agregar información adicional
+            if notif.archivo:
+                datos['archivo_nombre'] = notif.archivo.nombre
+                datos['archivo_categoria'] = notif.archivo.categoria
+            
+            notificaciones_data.append(datos)
+        
+        return jsonify({
+            'success': True,
+            'notificaciones': notificaciones_data,
+            'total': len(notificaciones_data)
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener notificaciones: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Error al cargar notificaciones'
+        }), 500
+
+
+@bp.route('/api/notificaciones/ultimas', methods=['GET'])
+@login_required
+def obtener_ultimas_notificaciones():
+    """Obtiene notificaciones del usuario actual con soporte de paginación (page/per_page).
+
+    Si no se provee paginación, respeta "limit" para compatibilidad.
+    """
+    try:
+        from app.models import Notification
+        q = Notification.query \
+            .filter_by(user_id=current_user.id) \
+            .order_by(Notification.fecha_creacion.desc())
+
+        # Soporta page/per_page. Si no vienen, usa "limit" como compatibilidad.
+        page = request.args.get('page', type=int)
+        per_page = request.args.get('per_page', type=int)
+        if page and per_page:
+            pagination = q.paginate(page=page, per_page=per_page, error_out=False)
+            items = pagination.items
+            total = pagination.total
+            meta = {
+                'page': pagination.page,
+                'pages': pagination.pages,
+                'has_prev': pagination.has_prev,
+                'has_next': pagination.has_next,
+                'prev_num': pagination.prev_num if pagination.has_prev else None,
+                'next_num': pagination.next_num if pagination.has_next else None,
+                'per_page': pagination.per_page,
+                'total': total,
+            }
+        else:
+            try:
+                limit = int(request.args.get('limit', '5'))
+            except Exception:
+                limit = 5
+            items = q.limit(limit).all()
+            total = len(items)
+            meta = {
+                'page': 1,
+                'pages': 1,
+                'has_prev': False,
+                'has_next': False,
+                'prev_num': None,
+                'next_num': None,
+                'per_page': limit,
+                'total': total,
+            }
+
+        data = []
+        for n in items:
+            item = {
+                'id': n.id,
+                'titulo': n.titulo,
+                'mensaje': n.mensaje,
+                'tipo': n.tipo,
+                'leida': n.leida,
+                'fecha_creacion': n.fecha_creacion.strftime('%d/%m/%Y %H:%M'),
+                'archivo_id': getattr(n, 'archivo_id', None)
+            }
+            if getattr(n, 'archivo', None):
+                item['archivo_nombre'] = n.archivo.nombre
+                item['archivo_categoria'] = n.archivo.categoria
+            data.append(item)
+
+        return jsonify({'success': True, 'notificaciones': data, **meta})
+    except Exception as e:
+        current_app.logger.exception('Error al obtener ultimas notificaciones')
+        return jsonify({'success': False, 'error': 'Error al cargar notificaciones'}), 500
+
+
+@bp.route('/notificaciones/historial', methods=['GET'])
+@login_required
+def ver_notificaciones():
+    """Página con el historial completo de notificaciones del usuario actual (paginado)."""
+    from app.models import Notification
+    try:
+        page = int(request.args.get('page', '1'))
+    except Exception:
+        page = 1
+    # Mostrar 10 notificaciones por página
+    per_page = 10
+
+    q = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.fecha_creacion.desc())
+    pagination = q.paginate(page=page, per_page=per_page, error_out=False)
+
+    return render_template(
+        'notificaciones.html',
+        notificaciones=pagination.items,
+        pagination=pagination,
+        user_role=getattr(current_user, 'rol', None)
+    )
+
+@bp.route('/api/notificaciones/count', methods=['GET'])
+@login_required
+def contar_notificaciones():
+    """Cuenta las notificaciones no leídas del usuario actual"""
+    try:
+        count = contar_notificaciones_no_leidas(current_user.id)
+        return jsonify({
+            'success': True,
+            'count': count
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al contar notificaciones: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Error al contar notificaciones'
+        }), 500
+
+
+@bp.route('/api/notificaciones/<int:notif_id>/marcar_leida', methods=['POST'])
+@login_required
+def marcar_notif_leida(notif_id):
+    """Marca una notificación específica como leída"""
+    try:
+        success = marcar_notificacion_leida(notif_id, current_user.id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Notificación marcada como leída'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Notificación no encontrada o ya está leída'
+            }), 404
+            
+    except Exception as e:
+        current_app.logger.error(f"Error al marcar notificación como leída: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Error al procesar la solicitud'
+        }), 500
+
+
+@bp.route('/api/notificaciones/marcar_todas_leidas', methods=['POST'])
+@login_required
+def marcar_todas_notif_leidas():
+    """Marca todas las notificaciones del usuario como leídas"""
+    try:
+        success = marcar_todas_notificaciones_leidas(current_user.id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Todas las notificaciones marcadas como leídas'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Error al marcar las notificaciones'
+            }), 500
+            
+    except Exception as e:
+        current_app.logger.error(f"Error al marcar todas las notificaciones como leídas: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Error al procesar la solicitud'
+        }), 500 
+
+
+@bp.route('/api/diag/notificaciones', methods=['GET'])
+@login_required
+def diag_notificaciones():
+    """Diagnóstico rápido de notificaciones/actividades y base de datos en uso."""
+    try:
+        from sqlalchemy import func
+        from app.models import Notification, Archivo, UserActivityLog
+
+        db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI')
+
+        # Conteos principales
+        notif_count = Notification.query.filter_by(user_id=current_user.id).count()
+        notif_unread = Notification.query.filter_by(user_id=current_user.id, leida=False).count()
+        last_notifs = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.fecha_creacion.desc()).limit(5).all()
+
+        # Actividades recientes
+        recent_activities = UserActivityLog.query.filter_by(user_id=current_user.id).order_by(UserActivityLog.fecha.desc()).limit(5).all()
+
+        # Archivos recientes (últimas 24h)
+        from datetime import datetime, timedelta
+        since = datetime.utcnow() - timedelta(hours=24)
+        archivos_24h = Archivo.query.filter(Archivo.fecha_subida >= since).count()
+
+        return jsonify({
+            'success': True,
+            'db_uri': db_uri,
+            'current_user': {
+                'id': current_user.id,
+                'rol': getattr(current_user, 'rol', None),
+                'email': getattr(current_user, 'email', None)
+            },
+            'notifications': {
+                'total_for_user': notif_count,
+                'unread_for_user': notif_unread,
+                'last_5': [
+                    {
+                        'id': n.id,
+                        'titulo': n.titulo,
+                        'archivo_id': n.archivo_id,
+                        'fecha_creacion': n.fecha_creacion.isoformat(timespec='seconds')
+                    } for n in last_notifs
+                ]
+            },
+            'activities': [
+                {
+                    'id': a.id,
+                    'accion': a.accion,
+                    'descripcion': a.descripcion,
+                    'fecha': a.fecha.isoformat(timespec='seconds') if a.fecha else None
+                } for a in recent_activities
+            ],
+            'files': {
+                'uploaded_last_24h': archivos_24h
+            }
+        })
+    except Exception as e:
+        current_app.logger.exception('Error en diagnóstico de notificaciones')
+        return jsonify({'success': False, 'error': str(e)}), 500

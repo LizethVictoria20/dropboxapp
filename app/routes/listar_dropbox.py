@@ -8,6 +8,7 @@ from app import db
 import unicodedata
 from datetime import datetime
 from app.dropbox_utils import get_dbx, get_valid_dropbox_token, with_base_folder, without_base_folder, sanitize_dropbox_segment, _normalize_dropbox_path
+from app.utils.notification_utils import notificar_archivo_subido
 import time
 
 bp = Blueprint("listar_dropbox", __name__)
@@ -1436,6 +1437,17 @@ def subir_archivo():
 
         # Registrar actividad
         current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a {categoria}')
+        
+        # Enviar notificaciones a admins y lectores
+        try:
+            resultado = notificar_archivo_subido(nombre_final, current_user, categoria, nuevo_archivo.id)
+            if not resultado:
+                print(f"⚠️ WARNING: La función de notificaciones retornó False")
+        except Exception as e_notif:
+            print(f"❌ ERROR al llamar notificar_archivo_subido: {e_notif}")
+            import traceback
+            traceback.print_exc()
+            # No interrumpir el flujo de subida si falla la notificación
 
         # Redirección correcta según si es AJAX o no
         redirect_url = url_for("listar_dropbox.carpetas_dropbox")
@@ -3109,6 +3121,17 @@ def subir_archivo_rapido():
             pass
 
         current_user.registrar_actividad('file_uploaded', f'Archivo "{orig_name}" subido a {carpeta_destino_completa}')
+        
+        # Enviar notificaciones a admins y lectores
+        try:
+            resultado = notificar_archivo_subido(nombre_normalizado, current_user, "Subida Rápida", nuevo.id)
+            if not resultado:
+                print(f"⚠️ WARNING: La función de notificaciones retornó False")
+        except Exception as e_notif:
+            print(f"❌ ERROR al llamar notificar_archivo_subido: {e_notif}")
+            import traceback
+            traceback.print_exc()
+            # No interrumpir el flujo de subida si falla la notificación
 
         redirect_url = request.form.get("redirect_url") or url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=getattr(usuario, "id", current_user.id))
         flash("Archivo subido y registrado exitosamente.", "success")
