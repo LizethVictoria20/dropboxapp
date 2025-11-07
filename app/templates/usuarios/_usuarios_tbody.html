@@ -34,78 +34,115 @@
             >
             {% endif %}
           </td>
-          <td class="px-2 text-right">
-            <div class="relative" x-data="{ open: false }">
-              <button
-                @click="open = !open"
-                class="p-2 rounded hover:bg-gray-100 group relative"
-              >
-                <i class="fas fa-ellipsis-v text-gray-400"></i>
-              </button>
-
-              <!-- Menú desplegable de acciones -->
-              <div
-                x-show="open"
-                @click.away="open = false"
-                x-transition:enter="transition ease-out duration-100"
-                x-transition:enter-start="transform opacity-0 scale-95"
-                x-transition:enter-end="transform opacity-100 scale-100"
-                x-transition:leave="transition ease-in duration-75"
-                x-transition:leave-start="transform opacity-100 scale-100"
-                x-transition:leave-end="transform opacity-0 scale-95"
-                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
-              >
-                <!-- Ver Carpetas -->
-                <a
-                  href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
-                  class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <i class="fas fa-folder-open mr-3 text-blue-500"></i>
-                  Ver Carpetas
-                </a>
-
-                <!-- Ver Historial -->
-                <button
-                  onclick="abrirModalHistorial({{ u.id }}, '{{ u.nombre or u.email }}')"
-                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <i class="fas fa-history mr-3 text-green-500"></i>
-                  Ver Historial
-                </button>
-
-                <!-- Importar Archivo -->
-                <button
-                  onclick="abrirModalImportar({{ u.id }}, '{{ u.nombre or u.email }}')"
-                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <i class="fas fa-upload mr-3 text-purple-500"></i>
-                  Importar Archivo
-                </button>
-
-                <!-- Editar Usuario -->
-                <button
-                  onclick="abrirModalEditar({{ u.id }}, '{{ u.nombre or u.email }}')"
-                  class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <i class="fas fa-edit mr-3 text-yellow-500"></i>
-                  Editar Cliente
-                </button>
-
-                <!-- Separador -->
-                <div class="border-t border-gray-100"></div>
-
-                <!-- Eliminar Usuario -->
-                <button
-                  onclick="confirmarEliminarUsuario({{ u.id }}, '{{ u.nombre or u.email }}')"
-                  class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                >
-                  <i class="fas fa-trash mr-3"></i>
-                  Eliminar Usuario
-                </button>
-              </div>
-            </div>
+          <td class="px-2 text-right" x-data="{ 
+            get isOpen() { return $store.userMenu.openMenuId === 'user-menu-{{ u.id }}' },
+            toggle() { 
+              $store.userMenu.openMenuId = ($store.userMenu.openMenuId === 'user-menu-{{ u.id }}' ? null : 'user-menu-{{ u.id }}')
+            }
+          }">
+            <button
+              @click="toggle()"
+              class="p-2 rounded hover:bg-gray-100 group relative"
+              data-menu-button="user-menu-{{ u.id }}"
+              onclick="event.stopPropagation()"
+            >
+              <i class="fas fa-ellipsis-v text-gray-400"></i>
+            </button>
           </td>
         </tr>
+        
+        <!-- Menú desplegable de acciones - Renderizado fuera del flujo -->
+        <template x-if="$store.userMenu.openMenuId === 'user-menu-{{ u.id }}'">
+          <div
+            x-data="{ menuId: 'user-menu-{{ u.id }}' }"
+            x-init="
+              $nextTick(() => {
+                const menuId = 'user-menu-{{ u.id }}';
+                const button = document.querySelector(`[data-menu-button='${menuId}']`);
+                const menu = $el;
+                if (button && menu) {
+                  const buttonRect = button.getBoundingClientRect();
+                  const menuHeight = menu.offsetHeight || 200;
+                  const spaceBelow = window.innerHeight - buttonRect.bottom;
+                  const spaceAbove = buttonRect.top;
+                  
+                  let top, right;
+                  
+                  if (spaceBelow < menuHeight && spaceAbove > menuHeight) {
+                    top = buttonRect.top - menuHeight - 8;
+                  } else {
+                    top = buttonRect.bottom + 8;
+                  }
+                  
+                  right = window.innerWidth - buttonRect.right;
+                  
+                  menu.style.position = 'fixed';
+                  menu.style.top = top + 'px';
+                  menu.style.right = right + 'px';
+                  menu.style.zIndex = '9999';
+                }
+              })
+            "
+            @click.away="$store.userMenu.openMenuId = null"
+            x-transition:enter="transition ease-out duration-100"
+            x-transition:enter-start="transform opacity-0 scale-95"
+            x-transition:enter-end="transform opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-75"
+            x-transition:leave-start="transform opacity-100 scale-100"
+            x-transition:leave-end="transform opacity-0 scale-95"
+            class="w-48 bg-white rounded-md shadow-lg border border-gray-200"
+            id="user-menu-{{ u.id }}"
+          >
+            <!-- Ver Carpetas -->
+            <a
+              href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
+              @click="$store.userMenu.openMenuId = null"
+              class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+            >
+              <i class="fas fa-folder-open mr-3 text-blue-500"></i>
+              Ver Carpetas
+            </a>
+
+            <!-- Ver Historial -->
+            <button
+              @click="abrirModalHistorial({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
+              class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+            >
+              <i class="fas fa-history mr-3 text-green-500"></i>
+              Ver Historial
+            </button>
+
+            <!-- Importar Archivo -->
+            <button
+              @click="abrirModalImportar({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
+              class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+            >
+              <i class="fas fa-upload mr-3 text-purple-500"></i>
+              Importar Archivo
+            </button>
+
+            <!-- Editar Usuario -->
+            <button
+              @click="abrirModalEditar({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
+              class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+            >
+              <i class="fas fa-edit mr-3 text-yellow-500"></i>
+              Editar Cliente
+            </button>
+
+            <!-- Separador -->
+            <div class="border-t border-gray-100"></div>
+
+            <!-- Eliminar Usuario -->
+            <button
+              @click="confirmarEliminarUsuario({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
+              class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+            >
+              <i class="fas fa-trash mr-3"></i>
+              Eliminar Usuario
+            </button>
+          </div>
+        </template>
 
         <!-- Tarjeta en móvil -->
         <tr class="md:hidden">
