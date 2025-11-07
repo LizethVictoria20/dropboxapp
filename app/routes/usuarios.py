@@ -600,7 +600,6 @@ def eliminar_usuario(usuario_id):
             return jsonify({"success": False, "step": "db_other", "error": str(db_e)}), 500
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': True}), 200
-        flash('Usuario y toda su información eliminados correctamente.', 'success')
         return redirect(url_for('usuarios.lista_usuarios'))
     except Exception as e:
         return jsonify({"success": False, "step": "unexpected", "error": str(e)}), 500
