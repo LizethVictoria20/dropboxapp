@@ -111,7 +111,7 @@ Inmigración OK{% endblock %} {% block styles %}
 </style>
 {% endblock %} {% block content %}
 <div class="min-h-screen bg-surface py-8" x-data>
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="max-w-5xl mx-auto px-3 sm:px-4 lg:px-6">
     <!-- Header -->
     <div class="mb-8">
       <div class="flex items-center justify-between">
@@ -190,27 +190,27 @@ Inmigración OK{% endblock %} {% block styles %}
           <thead class="bg-blue-50">
             <tr>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 Usuario
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 Contacto
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 Rol
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 Fecha Registro
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 Acciones
               </th>
@@ -222,34 +222,34 @@ Inmigración OK{% endblock %} {% block styles %}
           >
             {% for usuario in usuarios %}
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-3 py-3">
                 <div class="flex items-center">
-                  <div class="flex-shrink-0 h-10 w-10">
+                  <div class="flex-shrink-0 h-8 w-8">
                     <div
-                      class="h-10 w-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0"
+                      class="h-8 w-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0"
                     >
-                      <span class="text-white font-medium text-sm">
+                      <span class="text-white font-medium text-xs">
                         {{ usuario.nombre[0] if usuario.nombre else
                         usuario.email[0].upper() }}
                       </span>
                     </div>
                   </div>
-                  <div class="ml-4">
-                    <div class="text-sm font-medium text-gray-900">
+                  <div class="ml-2 min-w-0">
+                    <div class="text-sm font-medium text-gray-900 truncate">
                       {{ (usuario.nombre or '') ~ (' ' if usuario.apellido else '') ~ (usuario.apellido or '') or usuario.nombre_completo or usuario.email }}
                     </div>
-                    <div class="text-sm text-gray-500">
+                    <div class="text-xs text-gray-500">
                       ID: {{ usuario.id }}
                     </div>
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">{{ usuario.email }}</div>
+              <td class="px-3 py-3">
+                <div class="text-sm text-gray-900 truncate max-w-xs">{{ usuario.email }}</div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-3 py-3">
                 <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if usuario.rol == 'superadmin' %}bg-purple-100 text-purple-800 {% elif usuario.rol == 'admin' %}bg-red-100 text-red-800 {% elif usuario.rol == 'lector' %}bg-blue-100 text-blue-800 {% else %}bg-green-100 text-green-800{% endif %}"
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {% if usuario.rol == 'superadmin' %}bg-purple-100 text-purple-800 {% elif usuario.rol == 'admin' %}bg-red-100 text-red-800 {% elif usuario.rol == 'lector' %}bg-blue-100 text-blue-800 {% else %}bg-green-100 text-green-800{% endif %}"
                 >
                   {% if usuario.rol == 'superadmin' %}
                   <i class="fas fa-crown mr-1"></i>
@@ -271,7 +271,7 @@ Inmigración OK{% endblock %} {% block styles %}
                     {% set permisos = usuario.lector_extra_permissions|from_json
                     %} {% for permiso in permisos %}
                     <span
-                      class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-700"
+                      class="inline-flex items-center px-1 py-0.5 rounded text-xs bg-gray-100 text-gray-700"
                     >
                       {{ permiso|replace('_', ' ')|title }}
                     </span>
@@ -280,11 +280,11 @@ Inmigración OK{% endblock %} {% block styles %}
                 </div>
                 {% endif %}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td class="px-3 py-3 text-sm text-gray-500 whitespace-nowrap">
                 {{ usuario.fecha_registro.strftime('%d/%m/%Y') if
                 usuario.fecha_registro else 'N/A' }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" x-data="{ 
+              <td class="px-3 py-3 text-sm font-medium" x-data="{ 
                 get isOpen() { return $store.userMenu.openMenuId === 'user-menu-{{ usuario.id }}' },
                 toggle() { 
                   $store.userMenu.openMenuId = ($store.userMenu.openMenuId === 'user-menu-{{ usuario.id }}' ? null : 'user-menu-{{ usuario.id }}')
