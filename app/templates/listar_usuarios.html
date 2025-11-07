@@ -110,7 +110,7 @@ Inmigración OK{% endblock %} {% block styles %}
   }
 </style>
 {% endblock %} {% block content %}
-<div class="min-h-screen bg-surface py-8">
+<div class="min-h-screen bg-surface py-8" x-data>
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Header -->
     <div class="mb-8">
@@ -284,75 +284,102 @@ Inmigración OK{% endblock %} {% block styles %}
                 {{ usuario.fecha_registro.strftime('%d/%m/%Y') if
                 usuario.fecha_registro else 'N/A' }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div class="relative" x-data="{ 
-                  get isOpen() { return $store.userMenu.openMenuId === 'user-menu-{{ usuario.id }}' },
-                  toggle() { 
-                    if (this.isOpen) {
-                      $store.userMenu.openMenuId = null 
-                    } else {
-                      $store.userMenu.openMenuId = 'user-menu-{{ usuario.id }}'
-                    }
-                  }
-                }" onclick="event.stopPropagation()">
-                  <button
-                    @click="toggle()"
-                    class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary rounded-full p-1"
-                  >
-                    <i class="fas fa-ellipsis-v"></i>
-                  </button>
-
-                  <!-- Menú desplegable -->
-                  <div
-                    x-show="isOpen"
-                    @click.away="$store.userMenu.openMenuId = null"
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="transform opacity-0 scale-95"
-                    x-transition:enter-end="transform opacity-100 scale-100"
-                    x-transition:leave="transition ease-in duration-75"
-                    x-transition:leave-start="transform opacity-100 scale-100"
-                    x-transition:leave-end="transform opacity-0 scale-95"
-                    class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
-                  >
-                    <!-- Ver historial -->
-                    <button
-                      onclick="openHistoryModal({{ usuario.id }})"
-                      class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                    >
-                      <i
-                        class="fas fa-history mr-3 text-gray-400 group-hover:text-gray-500"
-                      ></i>
-                      Ver historial
-                    </button>
-
-                    <!-- Editar -->
-                    <button
-                      onclick="openEditModal({{ usuario.id }})"
-                      class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                    >
-                      <i
-                        class="fas fa-edit mr-3 text-gray-400 group-hover:text-blue-500"
-                      ></i>
-                      Editar
-                    </button>
-
-                    <!-- Separador -->
-                    <div class="border-t border-gray-100 my-1"></div>
-
-                    <!-- Eliminar -->
-                    <button
-                      onclick="confirmDeleteUser({{ usuario.id }}, '{{ usuario.nombre_completo or usuario.email }}')"
-                      class="group flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
-                    >
-                      <i
-                        class="fas fa-trash mr-3 text-red-400 group-hover:text-red-500"
-                      ></i>
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" x-data="{ 
+                get isOpen() { return $store.userMenu.openMenuId === 'user-menu-{{ usuario.id }}' },
+                toggle() { 
+                  $store.userMenu.openMenuId = ($store.userMenu.openMenuId === 'user-menu-{{ usuario.id }}' ? null : 'user-menu-{{ usuario.id }}')
+                }
+              }">
+                <button
+                  @click="toggle()"
+                  class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary rounded-full p-1"
+                  data-menu-button="user-menu-{{ usuario.id }}"
+                  onclick="event.stopPropagation()"
+                >
+                  <i class="fas fa-ellipsis-v"></i>
+                </button>
               </td>
             </tr>
+            
+            <!-- Menú desplegable - Renderizado fuera del flujo -->
+            <template x-if="$store.userMenu.openMenuId === 'user-menu-{{ usuario.id }}'">
+              <div
+                x-data="{ menuId: 'user-menu-{{ usuario.id }}' }"
+                x-init="
+                  $nextTick(() => {
+                    const menuId = 'user-menu-{{ usuario.id }}';
+                    const button = document.querySelector(`[data-menu-button='${menuId}']`);
+                    const menu = $el;
+                    if (button && menu) {
+                      const buttonRect = button.getBoundingClientRect();
+                      const menuHeight = menu.offsetHeight || 200;
+                      const spaceBelow = window.innerHeight - buttonRect.bottom;
+                      const spaceAbove = buttonRect.top;
+                      
+                      let top, right;
+                      
+                      if (spaceBelow < menuHeight && spaceAbove > menuHeight) {
+                        top = buttonRect.top - menuHeight - 8;
+                      } else {
+                        top = buttonRect.bottom + 8;
+                      }
+                      
+                      right = window.innerWidth - buttonRect.right;
+                      
+                      menu.style.position = 'fixed';
+                      menu.style.top = top + 'px';
+                      menu.style.right = right + 'px';
+                      menu.style.zIndex = '9999';
+                    }
+                  })
+                "
+                @click.away="$store.userMenu.openMenuId = null"
+                x-transition:enter="transition ease-out duration-100"
+                x-transition:enter-start="transform opacity-0 scale-95"
+                x-transition:enter-end="transform opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-75"
+                x-transition:leave-start="transform opacity-100 scale-100"
+                x-transition:leave-end="transform opacity-0 scale-95"
+                class="w-48 bg-white rounded-md shadow-lg border border-gray-200"
+                id="user-menu-{{ usuario.id }}"
+              >
+                <!-- Ver historial -->
+                <button
+                  @click="openHistoryModal({{ usuario.id }}); $store.userMenu.openMenuId = null;"
+                  class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                >
+                  <i
+                    class="fas fa-history mr-3 text-gray-400 group-hover:text-gray-500"
+                  ></i>
+                  Ver historial
+                </button>
+
+                <!-- Editar -->
+                <button
+                  @click="openEditModal({{ usuario.id }}); $store.userMenu.openMenuId = null;"
+                  class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                >
+                  <i
+                    class="fas fa-edit mr-3 text-gray-400 group-hover:text-blue-500"
+                  ></i>
+                  Editar
+                </button>
+
+                <!-- Separador -->
+                <div class="border-t border-gray-100 my-1"></div>
+
+                <!-- Eliminar -->
+                <button
+                  @click="confirmDeleteUser({{ usuario.id }}, '{{ usuario.nombre_completo or usuario.email }}'); $store.userMenu.openMenuId = null;"
+                  class="group flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                  <i
+                    class="fas fa-trash mr-3 text-red-400 group-hover:text-red-500"
+                  ></i>
+                  Eliminar
+                </button>
+              </div>
+            </template>
             {% endfor %}
           </tbody>
         </table>
