@@ -1470,6 +1470,52 @@ def subir_archivo():
         # Registrar actividad
         current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a {categoria}')
         
+        # Enviar notificación al propietario o titular cuando otro usuario sube archivos a su carpeta
+        try:
+            destinatarios = []
+            if isinstance(usuario, User):
+                destinatarios.append(usuario)
+            elif isinstance(usuario, Beneficiario):
+                titular = getattr(usuario, "titular", None)
+                if titular:
+                    destinatarios.append(titular)
+
+            if destinatarios:
+                notificaciones_creadas = 0
+                for destinatario in destinatarios:
+                    destinatario_id = getattr(destinatario, "id", None)
+                    if not destinatario_id:
+                        continue
+                    if getattr(current_user, "id", None) == destinatario_id:
+                        continue
+
+                    mensaje_destino = f'Se ha subido un nuevo archivo "{nombre_final}".'
+                    if categoria:
+                        mensaje_destino += f" Categoría: {categoria}."
+                    if isinstance(usuario, Beneficiario):
+                        mensaje_destino += f" Beneficiario: {usuario.nombre}."
+
+                    notificacion_usuario = Notification(
+                        user_id=destinatario_id,
+                        archivo_id=nuevo_archivo.id,
+                        titulo="Nuevo archivo subido a tu carpeta",
+                        mensaje=mensaje_destino,
+                        tipo="file_upload",
+                        leida=False,
+                        fecha_creacion=datetime.utcnow()
+                    )
+                    db.session.add(notificacion_usuario)
+                    notificaciones_creadas += 1
+
+                if notificaciones_creadas:
+                    db.session.commit()
+        except Exception as notif_error:
+            db.session.rollback()
+            try:
+                current_app.logger.warning(f"⚠️ Error al crear notificación para el destinatario del archivo: {notif_error}")
+            except Exception:
+                print(f"⚠️ Error al crear notificación para el destinatario del archivo: {notif_error}")
+
         # Enviar notificaciones a admins y lectores
         try:
             resultado = notificar_archivo_subido(nombre_final, current_user, categoria, nuevo_archivo.id)

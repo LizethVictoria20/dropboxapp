@@ -2728,6 +2728,22 @@
         });
       }
       
+      const scheduleNotificationRefresh = () => {
+        try { loadNotifications(); } catch {}
+      };
+
+      window.addEventListener('focus', scheduleNotificationRefresh);
+      window.addEventListener('spa:navigation', scheduleNotificationRefresh);
+      if (notificationButton) {
+        notificationButton.addEventListener('click', () => {
+          try { loadNotifications(); } catch {}
+        });
+      }
+      const NOTIFICATION_POLL_INTERVAL_MS = 60000;
+      setInterval(() => {
+        try { loadNotifications(); } catch {}
+      }, NOTIFICATION_POLL_INTERVAL_MS);
+      
       // Inicializar conteo e indicadores al cargar la página
       try { loadNotifications(); } catch {}
       }
