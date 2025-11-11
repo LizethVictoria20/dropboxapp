@@ -1211,17 +1211,22 @@ def subir_archivo():
     
     categoria = request.form.get("categoria") or ""  # Categoría ahora es opcional
     subcategoria = (request.form.get("subcategoria") or "").strip()
-    archivo = request.files.get("archivo")
+    archivos = request.files.getlist("archivo")  # Obtener lista de archivos
     
+    print("=" * 60)
+    print("POST: Procesando subida de archivos")
     print("usuario_id recibido:", usuario_id)
     print("Categoría recibida:", categoria)
     print("Subcategoría recibida:", subcategoria)
-    print("Archivo recibido:", archivo.filename if archivo else None)
+    print("Archivos recibidos:", len(archivos), "archivo(s)")
+    for idx, archivo in enumerate(archivos, 1):
+        print(f"  Archivo {idx}: {archivo.filename} ({archivo.content_length if hasattr(archivo, 'content_length') else 'N/A'} bytes)")
+    print("=" * 60)
 
     # Validar campos obligatorios (solo archivo es requerido ahora)
-    if not archivo:
-        print("ERROR: Falta el archivo")
-        flash("Debes seleccionar un archivo para subir", "error")
+    if not archivos or len(archivos) == 0:
+        print("ERROR: No se recibieron archivos")
+        flash("Debes seleccionar al menos un archivo para subir", "error")
         return redirect(url_for("listar_dropbox.subir_archivo"))
 
     # Validar y obtener usuario/beneficiario
@@ -1278,10 +1283,6 @@ def subir_archivo():
             if not beneficiario or beneficiario.titular_id != current_user.id:
                 flash("No tienes permisos para subir archivos a esta carpeta.", "error")
                 return redirect(url_for("listar_dropbox.subir_archivo"))
-
-    # Leer el archivo una sola vez
-    archivo_content = archivo.read()
-    archivo.seek(0)  # Resetear el puntero del archivo para futuras lecturas
 
     try:
         # Obtener cliente Dropbox con manejo específico de errores de autenticación
@@ -1385,72 +1386,112 @@ def subir_archivo():
             print("No se especificó categoría, usando carpeta raíz:", ruta_categoria)
             
         # Subcategoría eliminada del flujo
-
-        # Generar nombre final del archivo incluyendo nombre original y timestamp
+        
+        # Procesar múltiples archivos
         import time
-        nombre_original = archivo.filename
-        nombre_base = nombre_original
-        ext = ""
-        if "." in nombre_original:
-            nombre_base = nombre_original.rsplit(".", 1)[0]
-            ext = "." + nombre_original.rsplit(".", 1)[1].lower()
+        import random
+        archivos_subidos = 0
+        archivos_fallidos = 0
+        archivos_procesados = []
         
-        # Normalizar el nombre base del archivo
-        nombre_base_normalizado = sanitize_dropbox_segment(nombre_base)
+        print(f"🔄 Iniciando procesamiento de {len(archivos)} archivo(s)...")
         
-        # Generar timestamp único
-        timestamp = str(int(time.time()))
+        for idx, archivo in enumerate(archivos, 1):
+            try:
+                # Leer el contenido del archivo
+                archivo_content = archivo.read()
+                archivo.seek(0)  # Resetear el puntero del archivo
+                
+                # Generar nombre final del archivo incluyendo nombre original y timestamp
+                nombre_original = archivo.filename
+                nombre_base = nombre_original
+                ext = ""
+                if "." in nombre_original:
+                    nombre_base = nombre_original.rsplit(".", 1)[0]
+                    ext = "." + nombre_original.rsplit(".", 1)[1].lower()
+                
+                # Normalizar el nombre base del archivo
+                nombre_base_normalizado = sanitize_dropbox_segment(nombre_base)
+                
+                # Generar timestamp único para cada archivo
+                # Agregar un pequeño delay y número aleatorio para asegurar timestamps únicos
+                time.sleep(0.001)  # 1 milisegundo de delay entre archivos
+                timestamp = str(int(time.time() * 1000)) + str(random.randint(100, 999))  # Timestamp + random para mayor unicidad
+                
+                # Determinar tipo de usuario y generar nombre único
+                if isinstance(usuario, User) and not getattr(usuario, "es_beneficiario", False):
+                    # TITULAR
+                    nombre_titular = sanitize_dropbox_segment(usuario.nombre or usuario.email.split('@')[0])
+                    nombre_final = f"TITULAR_{nombre_titular}_{nombre_base_normalizado}_{timestamp}{ext}"
+                elif isinstance(usuario, Beneficiario):
+                    # BENEFICIARIO
+                    nombre_ben = sanitize_dropbox_segment(usuario.nombre)
+                    if hasattr(usuario, "titular") and usuario.titular:
+                        nombre_titular = sanitize_dropbox_segment(usuario.titular.nombre)
+                    else:
+                        nombre_titular = "SIN_TITULAR"
+                    nombre_final = f"{nombre_ben}_TITULAR_{nombre_titular}_{nombre_base_normalizado}_{timestamp}{ext}"
+                else:
+                    # Usuario genérico
+                    nombre_final = f"{sanitize_dropbox_segment(usuario.nombre or usuario.email.split('@')[0])}_{nombre_base_normalizado}_{timestamp}{ext}"
 
-        # Determinar tipo de usuario y generar nombre único
-        if isinstance(usuario, User) and not getattr(usuario, "es_beneficiario", False):
-            # TITULAR
-            nombre_titular = sanitize_dropbox_segment(usuario.nombre or usuario.email.split('@')[0])
-            nombre_final = f"TITULAR_{nombre_titular}_{nombre_base_normalizado}{ext}"
-        elif isinstance(usuario, Beneficiario):
-            # BENEFICIARIO
-            nombre_ben = sanitize_dropbox_segment(usuario.nombre)
-            if hasattr(usuario, "titular") and usuario.titular:
-                nombre_titular = sanitize_dropbox_segment(usuario.titular.nombre)
-            else:
-                nombre_titular = "SIN_TITULAR"
-            nombre_final = f"{nombre_ben}_TITULAR_{nombre_titular}_{nombre_base_normalizado}{ext}"
-        else:
-            # Usuario genérico
-            nombre_final = f"{sanitize_dropbox_segment(usuario.nombre or usuario.email.split('@')[0])}_{nombre_base_normalizado}{ext}"
+                print(f"📄 Procesando archivo {idx}/{len(archivos)}: {nombre_original} -> {nombre_final}")
 
-        print("DEBUG | Nombre final para guardar/subir:", nombre_final)
-
-        # Subir archivo con nombre final (sin sobrescribir)
-        dropbox_dest = f"{ruta_categoria}/{nombre_final}"
-        try:
-            dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
-        except dropbox.exceptions.ApiError as e:
-            if "conflict" in str(e):
-                # Si hay conflicto, agregar un sufijo adicional
-                import random
-                sufijo_random = str(random.randint(1000, 9999))
-                nombre_sin_ext = nombre_final.rsplit(".", 1)[0] if "." in nombre_final else nombre_final
-                ext_final = "." + nombre_final.rsplit(".", 1)[1] if "." in nombre_final else ""
-                nombre_final = f"{nombre_sin_ext}_{sufijo_random}{ext_final}"
+                # Subir archivo con nombre final (sin sobrescribir)
                 dropbox_dest = f"{ruta_categoria}/{nombre_final}"
-                dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
-            else:
-                raise e
-        print("Archivo subido exitosamente a Dropbox:", dropbox_dest)
+                try:
+                    dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
+                except dropbox.exceptions.ApiError as e:
+                    if "conflict" in str(e):
+                        # Si hay conflicto, agregar un sufijo adicional
+                        sufijo_random = str(random.randint(1000, 9999))
+                        nombre_sin_ext = nombre_final.rsplit(".", 1)[0] if "." in nombre_final else nombre_final
+                        ext_final = "." + nombre_final.rsplit(".", 1)[1] if "." in nombre_final else ""
+                        nombre_final = f"{nombre_sin_ext}_{sufijo_random}{ext_final}"
+                        dropbox_dest = f"{ruta_categoria}/{nombre_final}"
+                        dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
+                    else:
+                        raise e
+                print(f"✅ Archivo {idx}/{len(archivos)} subido exitosamente a Dropbox: {dropbox_dest}")
 
-        # Guardar en la base de datos
-        # Guardar ruta lógica sin carpeta base
-        dropbox_dest_logico = without_base_folder(dropbox_dest)
-        nuevo_archivo = Archivo(  # type: ignore[call-arg]
-            nombre=nombre_final,
-            categoria=categoria,
-            subcategoria="",
-            dropbox_path=dropbox_dest_logico,
-            usuario_id=getattr(usuario, "id", None),
-            estado="en_revision"  # Automáticamente asignar "Pendiente para revisión"
-        )
-        db.session.add(nuevo_archivo)
-        db.session.commit()
+                # Guardar en la base de datos
+                dropbox_dest_logico = without_base_folder(dropbox_dest)
+                nuevo_archivo = Archivo(  # type: ignore[call-arg]
+                    nombre=nombre_final,
+                    categoria=categoria,
+                    subcategoria="",
+                    dropbox_path=dropbox_dest_logico,
+                    usuario_id=getattr(usuario, "id", None),
+                    estado="en_revision"
+                )
+                db.session.add(nuevo_archivo)
+                archivos_procesados.append(nuevo_archivo)
+                archivos_subidos += 1
+                
+            except Exception as e_archivo:
+                archivos_fallidos += 1
+                print(f"❌ ERROR al procesar archivo {idx}/{len(archivos)} ({archivo.filename}): {e_archivo}")
+                import traceback
+                traceback.print_exc()
+                # Continuar con el siguiente archivo
+                continue
+        
+        # Commit de todos los archivos procesados
+        if archivos_procesados:
+            try:
+                db.session.commit()
+                print(f"✅ {archivos_subidos} archivo(s) registrado(s) en la base de datos")
+            except Exception as e_commit:
+                db.session.rollback()
+                print(f"❌ ERROR al hacer commit de archivos: {e_commit}")
+                import traceback
+                traceback.print_exc()
+                archivos_fallidos += len(archivos_procesados)
+                archivos_subidos = 0
+                archivos_procesados = []
+        
+        print(f"📊 Resumen: {archivos_subidos} exitoso(s), {archivos_fallidos} fallido(s) de {len(archivos)} total")
+        
         # Invalidar caché de estructura para el usuario afectado
         try:
             afectado_id = getattr(usuario, "id", None)
@@ -1458,83 +1499,108 @@ def subir_archivo():
                 _estructuras_cache.pop(afectado_id, None)
         except Exception:
             pass
-        print("Archivo registrado en la base de datos con ID:", nuevo_archivo.id)
 
         # Registrar actividad
-        current_user.registrar_actividad('file_uploaded', f'Archivo "{archivo.filename}" subido a {categoria}')
+        if archivos_subidos > 0:
+            nombres_archivos = ", ".join([a.nombre for a in archivos_procesados[:3]])
+            if archivos_subidos > 3:
+                nombres_archivos += f" y {archivos_subidos - 3} más"
+            current_user.registrar_actividad('file_uploaded', f'{archivos_subidos} archivo(s) subido(s): {nombres_archivos}')
         
-        # Enviar notificación al propietario o titular cuando otro usuario sube archivos a su carpeta
-        try:
-            destinatarios = []
-            if isinstance(usuario, User):
-                destinatarios.append(usuario)
-            elif isinstance(usuario, Beneficiario):
-                titular = getattr(usuario, "titular", None)
-                if titular:
-                    destinatarios.append(titular)
-
-            if destinatarios:
-                notificaciones_creadas = 0
-                for destinatario in destinatarios:
-                    destinatario_id = getattr(destinatario, "id", None)
-                    if not destinatario_id:
-                        continue
-                    if getattr(current_user, "id", None) == destinatario_id:
-                        continue
-
-                    mensaje_destino = f'Se ha subido un nuevo archivo "{nombre_final}".'
-                    if categoria:
-                        mensaje_destino += f" Categoría: {categoria}."
-                    if isinstance(usuario, Beneficiario):
-                        mensaje_destino += f" Beneficiario: {usuario.nombre}."
-
-                    notificacion_usuario = Notification(
-                        user_id=destinatario_id,
-                        archivo_id=nuevo_archivo.id,
-                        titulo="Nuevo archivo subido a tu carpeta",
-                        mensaje=mensaje_destino,
-                        tipo="file_upload",
-                        leida=False,
-                        fecha_creacion=datetime.utcnow()
-                    )
-                    db.session.add(notificacion_usuario)
-                    notificaciones_creadas += 1
-
-                if notificaciones_creadas:
-                    db.session.commit()
-        except Exception as notif_error:
-            db.session.rollback()
+        # Enviar notificaciones al propietario o titular cuando otro usuario sube archivos a su carpeta
+        if archivos_procesados:
             try:
-                current_app.logger.warning(f"⚠️ Error al crear notificación para el destinatario del archivo: {notif_error}")
-            except Exception:
-                print(f"⚠️ Error al crear notificación para el destinatario del archivo: {notif_error}")
+                destinatarios = []
+                if isinstance(usuario, User):
+                    destinatarios.append(usuario)
+                elif isinstance(usuario, Beneficiario):
+                    titular = getattr(usuario, "titular", None)
+                    if titular:
+                        destinatarios.append(titular)
 
-        # Enviar notificaciones a admins y lectores
-        try:
-            resultado = notificar_archivo_subido(nombre_final, current_user, categoria, nuevo_archivo.id)
-            if not resultado:
-                print(f"⚠️ WARNING: La función de notificaciones retornó False")
-        except Exception as e_notif:
-            print(f"❌ ERROR al llamar notificar_archivo_subido: {e_notif}")
-            import traceback
-            traceback.print_exc()
-            # No interrumpir el flujo de subida si falla la notificación
+                if destinatarios:
+                    notificaciones_creadas = 0
+                    for destinatario in destinatarios:
+                        destinatario_id = getattr(destinatario, "id", None)
+                        if not destinatario_id:
+                            continue
+                        if getattr(current_user, "id", None) == destinatario_id:
+                            continue
+
+                        mensaje_destino = f'Se ha{"n" if archivos_subidos > 1 else ""} subido {archivos_subidos} archivo{"s" if archivos_subidos > 1 else ""} a tu carpeta.'
+                        if categoria:
+                            mensaje_destino += f" Categoría: {categoria}."
+                        if isinstance(usuario, Beneficiario):
+                            mensaje_destino += f" Beneficiario: {usuario.nombre}."
+
+                        # Usar el ID del primer archivo para la notificación
+                        notificacion_usuario = Notification(
+                            user_id=destinatario_id,
+                            archivo_id=archivos_procesados[0].id,
+                            titulo=f"{archivos_subidos} archivo(s) subido(s) a tu carpeta",
+                            mensaje=mensaje_destino,
+                            tipo="file_upload",
+                            leida=False,
+                            fecha_creacion=datetime.utcnow()
+                        )
+                        db.session.add(notificacion_usuario)
+                        notificaciones_creadas += 1
+
+                    if notificaciones_creadas:
+                        db.session.commit()
+            except Exception as notif_error:
+                db.session.rollback()
+                try:
+                    current_app.logger.warning(f"⚠️ Error al crear notificación para el destinatario del archivo: {notif_error}")
+                except Exception:
+                    print(f"⚠️ Error al crear notificación para el destinatario del archivo: {notif_error}")
+
+            # Enviar notificaciones a admins y lectores (solo para el primer archivo)
+            try:
+                resultado = notificar_archivo_subido(
+                    f"{archivos_subidos} archivo(s)" if archivos_subidos > 1 else archivos_procesados[0].nombre,
+                    current_user,
+                    categoria,
+                    archivos_procesados[0].id
+                )
+                if not resultado:
+                    print(f"⚠️ WARNING: La función de notificaciones retornó False")
+            except Exception as e_notif:
+                print(f"❌ ERROR al llamar notificar_archivo_subido: {e_notif}")
+                import traceback
+                traceback.print_exc()
 
         # Redirección correcta según si es AJAX o no
         redirect_url = url_for("listar_dropbox.carpetas_dropbox")
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({"success": True, "redirectUrl": redirect_url})
+        if archivos_fallidos > 0 and archivos_subidos == 0:
+            # Si todos fallaron
+            flash(f"Error: No se pudo subir ningún archivo. {archivos_fallidos} archivo(s) fallaron.", "error")
+        elif archivos_fallidos > 0:
+            # Si algunos fallaron
+            flash(f"{archivos_subidos} archivo(s) subido(s) exitosamente. {archivos_fallidos} archivo(s) fallaron.", "warning")
         else:
-            flash("Archivo subido y registrado exitosamente.", "success")
+            # Si todos fueron exitosos
+            flash(f"{archivos_subidos} archivo(s) subido(s) y registrado(s) exitosamente.", "success")
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                "success": archivos_subidos > 0,
+                "archivos_subidos": archivos_subidos,
+                "archivos_fallidos": archivos_fallidos,
+                "redirectUrl": redirect_url
+            })
+        else:
             return redirect(redirect_url)
 
 
     except dropbox.exceptions.AuthError as e:
         db.session.rollback()
-        print(f"ERROR de autenticación Dropbox: {e}")
+        print(f"❌ ERROR de autenticación Dropbox: {e}")
+        import traceback
+        traceback.print_exc()
         error_msg = "Tokens de Dropbox expirados o inválidos. Contacta al administrador para reconfigurar la conexión con Dropbox."
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({"success": False, "error": error_msg}), 401
+            return jsonify({"success": False, "error": error_msg, "archivos_subidos": 0, "archivos_fallidos": len(archivos)}), 401
         else:
             flash(error_msg, "error")
             return redirect(url_for("listar_dropbox.subir_archivo"))
@@ -1559,11 +1625,19 @@ def subir_archivo():
     
     except Exception as e:
         db.session.rollback()
-        print(f"ERROR general en subida de archivo: {e}")
+        print(f"❌ ERROR general en subida de archivos: {e}")
+        import traceback
+        traceback.print_exc()
+        error_msg = f"Error al subir archivos: {str(e)}"
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({"success": False, "error": str(e)}), 500
+            return jsonify({
+                "success": False, 
+                "error": error_msg,
+                "archivos_subidos": 0,
+                "archivos_fallidos": len(archivos) if 'archivos' in locals() else 0
+            }), 500
         else:
-            flash(f"Error al subir archivo: {str(e)}", "error")
+            flash(error_msg, "error")
             return redirect(url_for("listar_dropbox.subir_archivo"))
 
  
@@ -3025,9 +3099,18 @@ def subir_archivo_rapido():
 
     usuario_id_field = (request.form.get("usuario_id") or "").strip()
     carpeta_destino = (request.form.get("carpeta_destino") or "").strip()
-    archivo_file = request.files.get("archivo")
+    archivos = request.files.getlist("archivo")  # Obtener lista de archivos
 
-    if not usuario_id_field or not archivo_file:
+    print("=" * 60)
+    print("POST subir_archivo_rapido: Procesando subida de archivos")
+    print("usuario_id recibido:", usuario_id_field)
+    print("carpeta_destino recibida:", carpeta_destino)
+    print("Archivos recibidos:", len(archivos), "archivo(s)")
+    for idx, archivo in enumerate(archivos, 1):
+        print(f"  Archivo {idx}: {archivo.filename} ({archivo.content_length if hasattr(archivo, 'content_length') else 'N/A'} bytes)")
+    print("=" * 60)
+
+    if not usuario_id_field or not archivos or len(archivos) == 0:
         flash("Completa todos los campos obligatorios.", "error")
         return redirect(request.form.get("redirect_url") or url_for("listar_dropbox.carpetas_dropbox"))
 
@@ -3064,9 +3147,6 @@ def subir_archivo_rapido():
                     return redirect(url_for("listar_dropbox.carpetas_dropbox"))
     except Exception:
         pass
-
-    archivo_content = archivo_file.read()
-    archivo_file.seek(0)
 
     try:
         dbx = get_dbx()
@@ -3148,40 +3228,87 @@ def subir_archivo_rapido():
             else:
                 raise e
 
-        # preparar nombre de archivo normalizado y destino final
-        orig_name = archivo_file.filename or "upload.bin"
-        name_base = orig_name.rsplit(".", 1)[0]
-        ext = ("." + orig_name.rsplit(".", 1)[1]) if "." in orig_name else ""
-        nombre_normalizado = f"{normaliza(name_base)}{ext}"
-        dropbox_dest = f"{carpeta_destino_completa.rstrip('/')}/{nombre_normalizado}".replace("//", "/")
+        # Procesar múltiples archivos
+        import time
+        archivos_subidos = 0
+        archivos_fallidos = 0
+        archivos_procesados = []
+        
+        print(f"🔄 Iniciando procesamiento de {len(archivos)} archivo(s) en subida rápida...")
+        
+        for idx, archivo_file in enumerate(archivos, 1):
+            try:
+                # Leer el contenido del archivo
+                archivo_content = archivo_file.read()
+                archivo_file.seek(0)
+                
+                # preparar nombre de archivo normalizado y destino final
+                orig_name = archivo_file.filename or "upload.bin"
+                name_base = orig_name.rsplit(".", 1)[0]
+                ext = ("." + orig_name.rsplit(".", 1)[1]) if "." in orig_name else ""
+                
+                # Generar timestamp único para cada archivo
+                time.sleep(0.001)  # 1 milisegundo de delay entre archivos
+                timestamp = str(int(time.time() * 1000)) + str(random.randint(100, 999))
+                
+                nombre_normalizado = f"{normaliza(name_base)}_{timestamp}{ext}"
+                dropbox_dest = f"{carpeta_destino_completa.rstrip('/')}/{nombre_normalizado}".replace("//", "/")
 
-        # intentar subir (mode=add). si conflicto, añadir sufijo
-        try:
-            dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=WriteMode.add)
-        except dropbox.exceptions.ApiError as e:
-            if "conflict" in str(e).lower():
-                sufijo = str(random.randint(1000, 9999))
-                nombre_normalizado = f"{normaliza(name_base)}_{sufijo}{ext}"
-                dropbox_dest = f"{carpeta_destino_completa.rstrip('/')}/{nombre_normalizado}"
-                dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=WriteMode.add)
-            else:
-                raise e
+                print(f"📄 Procesando archivo {idx}/{len(archivos)}: {orig_name} -> {nombre_normalizado}")
 
-        # registrar en BD (guardar ruta lógica sin carpeta base para consistencia)
-        try:
-            ruta_logica = without_base_folder(dropbox_dest)
-        except Exception:
-            ruta_logica = dropbox_dest
-        nuevo = Archivo(  # type: ignore[call-arg]
-            nombre=nombre_normalizado,
-            categoria="Subida Rápida",
-            subcategoria="Directo",
-            dropbox_path=ruta_logica,
-            usuario_id=getattr(usuario, "id", None),
-            estado="en_revision"
-        )
-        db.session.add(nuevo)
-        db.session.commit()
+                # intentar subir (mode=add). si conflicto, añadir sufijo
+                try:
+                    dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=WriteMode.add)
+                except dropbox.exceptions.ApiError as e:
+                    if "conflict" in str(e).lower():
+                        sufijo = str(random.randint(1000, 9999))
+                        nombre_normalizado = f"{normaliza(name_base)}_{timestamp}_{sufijo}{ext}"
+                        dropbox_dest = f"{carpeta_destino_completa.rstrip('/')}/{nombre_normalizado}"
+                        dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=WriteMode.add)
+                    else:
+                        raise e
+
+                print(f"✅ Archivo {idx}/{len(archivos)} subido exitosamente a Dropbox: {dropbox_dest}")
+
+                # registrar en BD (guardar ruta lógica sin carpeta base para consistencia)
+                try:
+                    ruta_logica = without_base_folder(dropbox_dest)
+                except Exception:
+                    ruta_logica = dropbox_dest
+                nuevo = Archivo(  # type: ignore[call-arg]
+                    nombre=nombre_normalizado,
+                    categoria="Subida Rápida",
+                    subcategoria="Directo",
+                    dropbox_path=ruta_logica,
+                    usuario_id=getattr(usuario, "id", None),
+                    estado="en_revision"
+                )
+                db.session.add(nuevo)
+                archivos_procesados.append(nuevo)
+                archivos_subidos += 1
+                
+            except Exception as e_archivo:
+                archivos_fallidos += 1
+                print(f"❌ ERROR al procesar archivo {idx}/{len(archivos)} ({archivo_file.filename}): {e_archivo}")
+                import traceback
+                traceback.print_exc()
+                continue
+        
+        # Commit de todos los archivos procesados
+        if archivos_procesados:
+            try:
+                db.session.commit()
+                print(f"✅ {archivos_subidos} archivo(s) registrado(s) en la base de datos")
+            except Exception as e_commit:
+                db.session.rollback()
+                print(f"❌ ERROR al hacer commit de archivos: {e_commit}")
+                import traceback
+                traceback.print_exc()
+                archivos_fallidos += len(archivos_procesados)
+                archivos_subidos = 0
+                archivos_procesados = []
+        
+        print(f"📊 Resumen subida rápida: {archivos_subidos} exitoso(s), {archivos_fallidos} fallido(s) de {len(archivos)} total")
 
         # invalidar caché de estructuras si aplica
         try:
@@ -3191,43 +3318,68 @@ def subir_archivo_rapido():
         except Exception:
             pass
 
-        current_user.registrar_actividad('file_uploaded', f'Archivo "{orig_name}" subido a {carpeta_destino_completa}')
-        
-        # Enviar notificaciones a admins y lectores
-        try:
-            resultado = notificar_archivo_subido(nombre_normalizado, current_user, "Subida Rápida", nuevo.id)
-            if not resultado:
-                print(f"⚠️ WARNING: La función de notificaciones retornó False")
-        except Exception as e_notif:
-            print(f"❌ ERROR al llamar notificar_archivo_subido: {e_notif}")
-            import traceback
-            traceback.print_exc()
-            # No interrumpir el flujo de subida si falla la notificación
-        
-        # Si un admin/lector sube archivo a carpeta de un cliente, notificar al cliente
-        try:
-            if current_user.rol in ['admin', 'superadmin', 'lector'] and usuario and getattr(usuario, 'rol', None) == 'cliente':
-                from app.models import Notification
-                notif_cliente = Notification(
-                    user_id=usuario.id,
-                    archivo_id=nuevo.id,
-                    titulo="Nuevo archivo subido a tu carpeta",
-                    mensaje=f'Se ha subido un nuevo archivo "{nombre_normalizado}" a tu carpeta.',
-                    tipo='file_upload',
-                    leida=False,
-                    fecha_creacion=datetime.utcnow()
-                )
-                db.session.add(notif_cliente)
-                db.session.commit()
-                current_app.logger.info(f"✅ Notificación enviada al cliente {usuario.id} por subida de archivo")
-        except Exception as e_notif_cliente:
-            print(f"⚠️ Error al notificar al cliente: {e_notif_cliente}")
-            # No interrumpir el flujo
+        # Registrar actividad y enviar notificaciones
+        if archivos_subidos > 0:
+            nombres_archivos = [a.nombre for a in archivos_procesados]
+            if archivos_subidos == 1:
+                current_user.registrar_actividad('file_uploaded', f'Archivo "{nombres_archivos[0]}" subido a {carpeta_destino_completa}')
+            else:
+                current_user.registrar_actividad('file_uploaded', f'{archivos_subidos} archivos subidos a {carpeta_destino_completa}')
+            
+            # Enviar notificaciones a admins y lectores (solo para el primer archivo)
+            if archivos_procesados:
+                try:
+                    resultado = notificar_archivo_subido(
+                        f"{archivos_subidos} archivo(s)" if archivos_subidos > 1 else archivos_procesados[0].nombre,
+                        current_user,
+                        "Subida Rápida",
+                        archivos_procesados[0].id
+                    )
+                    if not resultado:
+                        print(f"⚠️ WARNING: La función de notificaciones retornó False")
+                except Exception as e_notif:
+                    print(f"❌ ERROR al llamar notificar_archivo_subido: {e_notif}")
+                    import traceback
+                    traceback.print_exc()
+            
+            # Si un admin/lector sube archivo a carpeta de un cliente, notificar al cliente
+            try:
+                if current_user.rol in ['admin', 'superadmin', 'lector'] and usuario and getattr(usuario, 'rol', None) == 'cliente':
+                    from app.models import Notification
+                    mensaje_notif = f'Se ha{"n" if archivos_subidos > 1 else ""} subido {archivos_subidos} archivo{"s" if archivos_subidos > 1 else ""} a tu carpeta.'
+                    notif_cliente = Notification(
+                        user_id=usuario.id,
+                        archivo_id=archivos_procesados[0].id,
+                        titulo=f"{archivos_subidos} archivo(s) subido(s) a tu carpeta",
+                        mensaje=mensaje_notif,
+                        tipo='file_upload',
+                        leida=False,
+                        fecha_creacion=datetime.utcnow()
+                    )
+                    db.session.add(notif_cliente)
+                    db.session.commit()
+                    current_app.logger.info(f"✅ Notificación enviada al cliente {usuario.id} por subida de {archivos_subidos} archivo(s)")
+            except Exception as e_notif_cliente:
+                print(f"⚠️ Error al notificar al cliente: {e_notif_cliente}")
+                # No interrumpir el flujo
 
         redirect_url = request.form.get("redirect_url") or url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=getattr(usuario, "id", current_user.id))
-        flash("Archivo subido y registrado exitosamente.", "success")
+        
+        if archivos_subidos > 0:
+            if archivos_subidos == 1:
+                flash("Archivo subido y registrado exitosamente.", "success")
+            else:
+                flash(f"{archivos_subidos} archivos subidos y registrados exitosamente.", "success")
+        else:
+            flash("No se pudo subir ningún archivo. Por favor, inténtalo de nuevo.", "error")
+        
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return jsonify({"success": True, "redirectUrl": redirect_url})
+            return jsonify({
+                "success": archivos_subidos > 0,
+                "archivos_subidos": archivos_subidos,
+                "archivos_fallidos": archivos_fallidos,
+                "redirectUrl": redirect_url
+            })
         return redirect(redirect_url)
 
     except dropbox.exceptions.AuthError as e:

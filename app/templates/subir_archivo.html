@@ -129,6 +129,7 @@ styles %}
         action="{{ url_for('listar_dropbox.subir_archivo') }}"
         method="post"
         enctype="multipart/form-data"
+        novalidate
       >
         <!-- Upload Area -->
         <div
@@ -156,6 +157,7 @@ styles %}
               type="file"
               name="archivo"
               id="archivo"
+              multiple
               required
               class="hidden"
               onchange="updateFileName(this)"
@@ -163,9 +165,9 @@ styles %}
 
             <div class="mb-2">
               <p id="fileNameDisplay" class="text-sm font-medium text-text">
-                Selecciona un archivo para importar
+                Selecciona uno o varios archivos para importar
               </p>
-              <div id="fileListContainer" class="mt-1 text-xs"></div>
+              <div id="fileListContainer" class="mt-2 space-y-1 max-h-32 overflow-y-auto"></div>
               <span class="text-xs text-text-secondary"
                 >o arrastra y suelta aquí</span
               >
@@ -417,7 +419,7 @@ styles %}
 </div>
 
 <script>
-  // File name update function
+  // File name update function - ahora maneja múltiples archivos
   function updateFileName(input) {
     const fileNameDisplay = document.getElementById("fileNameDisplay");
     const fileListContainer = document.getElementById("fileListContainer");
@@ -426,16 +428,30 @@ styles %}
     fileListContainer.innerHTML = "";
 
     if (input.files.length > 0) {
-      const file = input.files[0];
-      const fileSizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-
-      fileNameDisplay.innerHTML = `<span class="font-medium text-primary">${file.name}</span>`;
-      fileListContainer.innerHTML = `<span class="text-gray-500">(${fileSizeInMB} MB)</span>`;
+      const totalFiles = input.files.length;
+      let totalSize = 0;
+      
+      // Mostrar lista de archivos seleccionados
+      const fileList = Array.from(input.files).map((file, index) => {
+        const fileSizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+        totalSize += file.size;
+        return `
+          <div class="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
+            <span class="text-gray-700 truncate flex-1">${file.name}</span>
+            <span class="text-gray-500 ml-2">${fileSizeInMB} MB</span>
+          </div>
+        `;
+      }).join('');
+      
+      const totalSizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
+      
+      fileNameDisplay.innerHTML = `<span class="font-medium text-primary">${totalFiles} archivo${totalFiles > 1 ? 's' : ''} seleccionado${totalFiles > 1 ? 's' : ''}</span>`;
+      fileListContainer.innerHTML = fileList + `<div class="text-xs text-gray-500 mt-1 font-medium">Total: ${totalSizeInMB} MB</div>`;
 
       dropZone.classList.add("border-primary");
       dropZone.classList.add("bg-blue-50");
     } else {
-      fileNameDisplay.textContent = "Selecciona un archivo para importar";
+      fileNameDisplay.textContent = "Selecciona uno o varios archivos para importar";
       dropZone.classList.remove("border-primary");
       dropZone.classList.remove("bg-blue-50");
     }
@@ -686,17 +702,37 @@ styles %}
 
           const fileInput = document.getElementById("archivo");
           if (!fileInput.files.length) {
-            alert("Selecciona un archivo");
+            alert("Selecciona al menos un archivo");
             return;
           }
 
-          const file = fileInput.files[0];
-          fileSize = file.size; // Guardar el tamaño del archivo
+          // Calcular tamaño total de todos los archivos
+          const files = Array.from(fileInput.files);
+          fileSize = files.reduce((total, file) => total + file.size, 0);
+          const totalFiles = files.length;
           
-          // Mostrar modal de progreso
+          console.log(`📤 Preparando subida de ${totalFiles} archivo(s), tamaño total: ${(fileSize / (1024 * 1024)).toFixed(2)} MB`);
+          
+          // Mostrar modal de progreso con información de múltiples archivos
           showProgressModal();
+          if (totalFiles > 1) {
+            updateProgress(0, `Preparando ${totalFiles} archivos...`, "Iniciando proceso de carga");
+          } else {
+            updateProgress(0, "Preparando subida...", "Iniciando proceso de carga");
+          }
 
           const formData = new FormData(form);
+          
+          // El FormData ya incluye los archivos del input, pero verificamos que estén todos
+          // Los archivos múltiples se envían automáticamente cuando el input tiene el atributo 'multiple'
+          console.log(`📎 Archivos en FormData: ${fileInput.files.length} archivo(s)`);
+          
+          // Verificar que todos los archivos estén en el FormData
+          for (let i = 0; i < fileInput.files.length; i++) {
+            const file = fileInput.files[i];
+            console.log(`📎 Archivo ${i + 1}/${fileInput.files.length}: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
+          }
+          
           const xhr = new XMLHttpRequest();
           xhr.open("POST", form.action, true);
           xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
@@ -705,17 +741,31 @@ styles %}
           xhr.upload.onprogress = function (event) {
             if (event.lengthComputable) {
               const realProgress = (event.loaded / event.total) * 100;
-              console.log(`Real upload progress: ${realProgress.toFixed(1)}%`);
+              const loadedMB = (event.loaded / (1024 * 1024)).toFixed(2);
+              const totalMB = (event.total / (1024 * 1024)).toFixed(2);
+              console.log(`📊 Progreso: ${realProgress.toFixed(1)}% (${loadedMB} MB / ${totalMB} MB)`);
+              
+              // Actualizar mensaje con información de progreso
+              if (totalFiles > 1) {
+                updateProgress(realProgress, `Subiendo ${totalFiles} archivos: ${realProgress.toFixed(0)}%`, `${loadedMB} MB de ${totalMB} MB`);
+              } else {
+                updateProgress(realProgress, `Subiendo archivo: ${realProgress.toFixed(0)}%`, `${loadedMB} MB de ${totalMB} MB`);
+              }
               
               // Animar suavemente hacia el progreso real
               animateToProgress(realProgress);
+            } else {
+              console.log("⚠️ Progreso no calculable");
             }
           };
 
           // Cuando la subida se completa
           xhr.onload = function () {
+            console.log(`📥 Respuesta recibida - Status: ${xhr.status}, ReadyState: ${xhr.readyState}`);
+            console.log(`📄 Response text (primeros 500 chars): ${xhr.responseText.substring(0, 500)}`);
+            
             if (xhr.status === 200) {
-              console.log("Upload completed, current displayed progress:", lastDisplayedProgress);
+              console.log("✅ Upload completed, current displayed progress:", lastDisplayedProgress);
               
               // Detener la animación de progreso
               stopProgressAnimation();
@@ -737,18 +787,42 @@ styles %}
               function proceedWithFinalSteps() {
                 // Procesamiento del archivo en el servidor
                 setTimeout(() => {
-                  updateProgress(99, "Procesando archivo...", "Validando y guardando en servidor");
+                  if (totalFiles > 1) {
+                    updateProgress(99, `Procesando ${totalFiles} archivos...`, "Validando y guardando en servidor");
+                  } else {
+                    updateProgress(99, "Procesando archivo...", "Validando y guardando en servidor");
+                  }
                 }, 800);
                 
                 // Sincronización con Dropbox
                 setTimeout(() => {
-                  updateProgress(99.5, "Sincronizando con Dropbox...", "Almacenando en la nube");
+                  if (totalFiles > 1) {
+                    updateProgress(99.5, `Sincronizando ${totalFiles} archivos con Dropbox...`, "Almacenando en la nube");
+                  } else {
+                    updateProgress(99.5, "Sincronizando con Dropbox...", "Almacenando en la nube");
+                  }
                 }, 1600);
                 
                 // Finalización exitosa - AQUÍ permitimos llegar al 100%
                 setTimeout(() => {
                   animateToProgress(100, true); // Permitir progreso completo
-                  updateProgress(100, "¡Archivo subido exitosamente!", "Proceso completado");
+                  
+                  // Obtener información de la respuesta si está disponible
+                  let successMessage = "¡Archivo subido exitosamente!";
+                  try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.archivos_subidos) {
+                      if (response.archivos_subidos > 1) {
+                        successMessage = `¡${response.archivos_subidos} archivos subidos exitosamente!`;
+                      } else {
+                        successMessage = "¡Archivo subido exitosamente!";
+                      }
+                    }
+                  } catch (e) {
+                    // Si no se puede parsear, usar mensaje por defecto
+                  }
+                  
+                  updateProgress(100, successMessage, "Proceso completado");
                   
                   // Disparar evento para forzar actualización de notificaciones
                   try {
@@ -777,28 +851,59 @@ styles %}
               }
               
             } else {
+              console.error(`❌ Error en la respuesta: Status ${xhr.status}`);
+              console.error(`Response: ${xhr.responseText}`);
               stopProgressAnimation();
               hideProgressModal();
-              alert("Error al subir el archivo. Por favor, inténtelo de nuevo.");
+              
+              let errorMsg = "Error al subir el archivo. Por favor, inténtelo de nuevo.";
+              try {
+                const errorResponse = JSON.parse(xhr.responseText);
+                if (errorResponse.error) {
+                  errorMsg = errorResponse.error;
+                }
+              } catch (e) {
+                // Usar mensaje por defecto
+              }
+              alert(errorMsg);
             }
           };
 
           // Manejo de errores
           xhr.onerror = function () {
+            console.error("❌ Error de red en la petición XHR");
             stopProgressAnimation();
             hideProgressModal();
             alert("Error de conexión. Verifique su conexión a internet e inténtelo de nuevo.");
           };
 
           xhr.ontimeout = function () {
+            console.error(`⏱️ Timeout alcanzado después de ${(xhr.timeout / 1000).toFixed(0)} segundos`);
             stopProgressAnimation();
             hideProgressModal();
-            alert("El tiempo de espera se agotó. El archivo puede ser muy grande o la conexión muy lenta.");
+            alert("El tiempo de espera se agotó. Los archivos pueden ser muy grandes o la conexión muy lenta.");
+          };
+          
+          // Agregar listener para cambios de estado
+          xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.LOADING) {
+              console.log("📡 Cargando respuesta...");
+            } else if (xhr.readyState === XMLHttpRequest.DONE) {
+              console.log("✅ Petición completada");
+            }
           };
 
           // Configurar timeout más generoso (60 segundos por MB, mínimo 2 minutos)
-          xhr.timeout = Math.max(120000, file.size / (1024 * 1024) * 60000);
+          // Usar el tamaño total de todos los archivos
+          const totalSizeMB = fileSize / (1024 * 1024);
+          xhr.timeout = Math.max(300000, totalSizeMB * 60000); // Mínimo 5 minutos, 60 segundos por MB
+          console.log(`⏱️ Timeout configurado: ${(xhr.timeout / 1000).toFixed(0)} segundos para ${totalSizeMB.toFixed(2)} MB`);
 
+          // Agregar logging para debugging
+          xhr.onloadstart = function() {
+            console.log('🚀 Iniciando subida de archivos...');
+          };
+          
           xhr.send(formData);
         });
       }
