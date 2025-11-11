@@ -1518,10 +1518,17 @@ def obtener_ultimas_notificaciones():
                 item['archivo_categoria'] = n.archivo.categoria
             data.append(item)
 
-        return jsonify({'success': True, 'notificaciones': data, **meta})
+        response = jsonify({'success': True, 'notificaciones': data, **meta})
+        # Headers anti-caché para asegurar datos frescos
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
     except Exception as e:
         current_app.logger.exception('Error al obtener ultimas notificaciones')
-        return jsonify({'success': False, 'error': 'Error al cargar notificaciones'}), 500
+        response = jsonify({'success': False, 'error': 'Error al cargar notificaciones'})
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response, 500
 
 
 @bp.route('/notificaciones/historial', methods=['GET'])
@@ -1552,16 +1559,23 @@ def contar_notificaciones():
     """Cuenta las notificaciones no leídas del usuario actual"""
     try:
         count = contar_notificaciones_no_leidas(current_user.id)
-        return jsonify({
+        response = jsonify({
             'success': True,
             'count': count
         })
+        # Headers anti-caché para asegurar datos frescos
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
     except Exception as e:
         current_app.logger.error(f"Error al contar notificaciones: {e}")
-        return jsonify({
+        response = jsonify({
             'success': False,
             'error': 'Error al contar notificaciones'
-        }), 500
+        })
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response, 500
 
 
 @bp.route('/api/notificaciones/<int:notif_id>/marcar_leida', methods=['POST'])

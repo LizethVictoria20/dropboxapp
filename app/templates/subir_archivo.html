@@ -837,6 +837,17 @@ styles %}
                 setTimeout(() => {
                   animateToProgress(100, true); // Permitir progreso completo
                   updateProgress(100, "¡Archivo subido exitosamente!", "Proceso completado");
+                  
+                  // Disparar evento para forzar actualización de notificaciones
+                  try {
+                    const notifEvent = new CustomEvent('file:uploaded', { 
+                      detail: { timestamp: Date.now() } 
+                    });
+                    window.dispatchEvent(notifEvent);
+                    console.log('🔔 Evento file:uploaded disparado para actualizar notificaciones');
+                  } catch (e) {
+                    console.error('Error disparando evento de notificación:', e);
+                  }
                 }, 2400);
 
                 // Redireccionar después de mostrar el éxito completo

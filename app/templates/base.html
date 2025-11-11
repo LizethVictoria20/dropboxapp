@@ -1031,6 +1031,21 @@
             try {
               const navEvent = new CustomEvent('spa:navigation', { detail: { url } });
               window.dispatchEvent(navEvent);
+              
+              // Si la URL contiene carpetas_dropbox o usuario_carpetas, puede ser después de subir archivo
+              if (url.includes('carpetas_dropbox') || url.includes('usuario_carpetas')) {
+                setTimeout(() => {
+                  try {
+                    const notifEvent = new CustomEvent('file:uploaded', { 
+                      detail: { timestamp: Date.now(), source: 'navigation' } 
+                    });
+                    window.dispatchEvent(notifEvent);
+                    console.log('🔔 Evento file:uploaded disparado después de navegación');
+                  } catch (e) {
+                    console.error('Error disparando evento de notificación:', e);
+                  }
+                }, 2000); // Esperar 2 segundos para que el servidor procese
+              }
             } catch (e) { /* noop */ }
 
             // Inicializaciones específicas por ruta (ej. dashboard admin)
@@ -2553,17 +2568,39 @@
 
       // Cargar notificaciones al iniciar
       function loadNotifications() {
+        const timestamp = Date.now();
+        const fetchOptions = {
+          headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          },
+          cache: 'no-store',
+          credentials: 'same-origin'
+        };
+        
         // Cargar conteo no leídas
-        fetch(`/api/notificaciones/count?t=${Date.now()}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' })
-          .then(r => r.json())
-          .then(d => { if (d.success) updateNotificationBadge(d.count || 0); })
-          .catch(e => console.error('Error count notificaciones:', e));
+        fetch(`/api/notificaciones/count?t=${timestamp}`, fetchOptions)
+          .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+          })
+          .then(d => { 
+            if (d.success) {
+              updateNotificationBadge(d.count || 0);
+            }
+          })
+          .catch(e => {
+            console.error('Error count notificaciones:', e);
+          });
 
         // Cargar últimas 5 (leídas y no leídas)
-        fetch(`/api/notificaciones/ultimas?limit=5&t=${Date.now()}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' })
-          .then(response => response.json())
+        fetch(`/api/notificaciones/ultimas?limit=5&t=${timestamp}`, fetchOptions)
+          .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
           .then(data => {
-            console.debug('Ultimas notificaciones:', data);
             if (data.success) {
               updateNotificationList(data.notificaciones || []);
             }
@@ -2734,15 +2771,57 @@
 
       window.addEventListener('focus', scheduleNotificationRefresh);
       window.addEventListener('spa:navigation', scheduleNotificationRefresh);
+      // Escuchar evento personalizado cuando se sube un archivo
+      window.addEventListener('file:uploaded', (event) => {
+        console.log('🔔 Evento file:uploaded recibido, actualizando notificaciones...');
+        // Esperar un momento para que el servidor procese la notificación
+        setTimeout(() => {
+          try { 
+            loadNotifications(); 
+            console.log('✅ Notificaciones actualizadas después de subir archivo');
+          } catch (e) {
+            console.error('Error actualizando notificaciones después de subir archivo:', e);
+          }
+        }, 1000);
+      });
       if (notificationButton) {
         notificationButton.addEventListener('click', () => {
           try { loadNotifications(); } catch {}
         });
       }
-      const NOTIFICATION_POLL_INTERVAL_MS = 60000;
-      setInterval(() => {
-        try { loadNotifications(); } catch {}
-      }, NOTIFICATION_POLL_INTERVAL_MS);
+      // Polling más frecuente para detectar notificaciones nuevas (15 segundos)
+      const NOTIFICATION_POLL_INTERVAL_MS = 15000;
+      let notificationPollInterval = null;
+      
+      const startNotificationPolling = () => {
+        if (notificationPollInterval) {
+          clearInterval(notificationPollInterval);
+        }
+        notificationPollInterval = setInterval(() => {
+          try { 
+            loadNotifications(); 
+          } catch (e) {
+            console.error('Error en polling de notificaciones:', e);
+          }
+        }, NOTIFICATION_POLL_INTERVAL_MS);
+      };
+      
+      // Detener polling cuando la página no está visible (ahorra recursos)
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          if (notificationPollInterval) {
+            clearInterval(notificationPollInterval);
+            notificationPollInterval = null;
+          }
+        } else {
+          // Cuando la página vuelve a ser visible, recargar inmediatamente y reiniciar polling
+          try { loadNotifications(); } catch {}
+          startNotificationPolling();
+        }
+      });
+      
+      // Iniciar polling
+      startNotificationPolling();
       
       // Inicializar conteo e indicadores al cargar la página
       try { loadNotifications(); } catch {}
