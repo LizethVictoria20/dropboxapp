@@ -116,6 +116,14 @@ def logout():
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
     """Página de registro de clientes"""
+    # Si el usuario ya está autenticado, redirigir al dashboard
+    if current_user.is_authenticated:
+        flash('Ya tienes una cuenta activa. Si necesitas crear otra cuenta, cierra sesión primero.', 'info')
+        if current_user.rol == 'cliente':
+            return redirect(url_for('listar_dropbox.subir_archivo'))
+        else:
+            return redirect(url_for('main.dashboard'))
+    
     from forms import ClienteRegistrationForm
     from app.utils.countries import get_countries_list, get_nationalities_list
     
@@ -137,15 +145,42 @@ def register():
                 email = (form.email.data or '').strip().lower()
                 telefono = (form.telephone.data or '').strip()
                 document_number = (form.document_number.data or '').strip().upper()
-                if User.query.filter_by(email=email).first():
-                    errors['email'] = 'Ese correo electrónico ya está registrado.'
+                
+                # Validaciones estrictas para evitar registros duplicados
+                existing_user_email = User.query.filter_by(email=email).first()
+                if existing_user_email:
+                    errors['email'] = 'Este correo electrónico ya está registrado. Si ya tienes una cuenta, inicia sesión en lugar de registrarte nuevamente.'
+                    flash('Este correo electrónico ya está registrado. Por favor, inicia sesión si ya tienes una cuenta.', 'error')
                     raise ValueError('duplicate_email')
-                if telefono and User.query.filter_by(telefono=telefono).first():
-                    errors['telephone'] = 'Ese número de teléfono ya está registrado.'
-                    raise ValueError('duplicate_phone')
-                if document_number and User.query.filter_by(document_number=document_number).first():
-                    errors['document_number'] = 'Ese número de documento ya está registrado.'
-                    raise ValueError('duplicate_doc')
+                
+                if telefono:
+                    existing_user_phone = User.query.filter_by(telefono=telefono).first()
+                    if existing_user_phone:
+                        errors['telephone'] = 'Este número de teléfono ya está registrado. Si ya tienes una cuenta, inicia sesión.'
+                        flash('Este número de teléfono ya está registrado. Por favor, inicia sesión si ya tienes una cuenta.', 'error')
+                        raise ValueError('duplicate_phone')
+                
+                if document_number:
+                    existing_user_doc = User.query.filter_by(document_number=document_number).first()
+                    if existing_user_doc:
+                        errors['document_number'] = 'Este número de documento ya está registrado. Si ya tienes una cuenta, inicia sesión.'
+                        flash('Este número de documento ya está registrado. Por favor, inicia sesión si ya tienes una cuenta.', 'error')
+                        raise ValueError('duplicate_doc')
+                
+                # Validación adicional: verificar si hay un usuario con el mismo nombre y apellido Y mismo documento
+                # (esto ayuda a detectar intentos de registro duplicado con datos similares)
+                nombre = (form.name.data or '').strip()
+                apellido = (form.lastname.data or '').strip()
+                if nombre and apellido and document_number:
+                    existing_similar = User.query.filter(
+                        User.nombre.ilike(f'%{nombre}%'),
+                        User.apellido.ilike(f'%{apellido}%'),
+                        User.document_number == document_number
+                    ).first()
+                    if existing_similar:
+                        errors['general'] = 'Ya existe una cuenta con información similar (mismo nombre y documento). Si ya te registraste, por favor inicia sesión.'
+                        flash('Ya existe una cuenta con información similar. Si ya te registraste, por favor inicia sesión.', 'error')
+                        raise ValueError('duplicate_user')
                 # Crear el usuario cliente
                 user = User(
                     email=email,
@@ -204,10 +239,12 @@ def register():
                 
             except Exception as e:
                 db.session.rollback()
-                if str(e) in ['duplicate_email', 'duplicate_phone', 'duplicate_doc']:
+                if str(e) in ['duplicate_email', 'duplicate_phone', 'duplicate_doc', 'duplicate_user']:
+                    # Los errores ya fueron manejados arriba con flash y errors
                     pass
                 else:
                     errors['general'] = f"Error al crear la cuenta: {str(e)}"
+                    flash(f"Error al crear la cuenta: {str(e)}", 'error')
         else:
             # Errores de validación del formulario
             for field, field_errors in form.errors.items():

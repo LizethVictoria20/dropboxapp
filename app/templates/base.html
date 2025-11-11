@@ -772,8 +772,9 @@
               
               <div class="border-t border-gray-100 my-4"></div>
               
+              {% if not current_user.is_authenticated %}
               <a
-                href="{{ url_for('web_register.register') }}"
+                href="{{ url_for('auth.register') }}"
                 class="text-gray-600 hover:bg-gray-50 block px-3 py-3 rounded-lg font-medium transition-colors"
               >
                 <i class="fas fa-user-plus mr-3 w-5 text-center"></i>
@@ -787,6 +788,12 @@
                 <i class="fas fa-sign-in-alt mr-3 w-5 text-center"></i>
                 Iniciar Sesión
               </a>
+              {% else %}
+              <div class="px-3 py-3 text-sm text-gray-500">
+                <i class="fas fa-user-check mr-3 w-5 text-center"></i>
+                Sesión activa
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>
