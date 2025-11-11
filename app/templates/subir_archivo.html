@@ -519,344 +519,374 @@ styles %}
     }
   }
 
-  // Initialize page
-  document.addEventListener("DOMContentLoaded", function () {
-    const dropZone = document.getElementById("dropZone");
-    const fileInput = document.getElementById("archivo");
-    const categoriaSelect = document.getElementById("categoria");
-    const subcategoriaSelect = null;
-    const subcategoriaContainer = null;
+  (function () {
+    let initialized = false;
 
-    // Populate categories
-    for (const cat in categorias) {
-      const opt = document.createElement("option");
-      opt.value = cat;
-      opt.innerText = cat;
-      categoriaSelect.appendChild(opt);
-    }
+    const initSubirArchivoForm = () => {
+      if (initialized) return;
+      initialized = true;
 
-    // Sin subcategorías: no hay manejador
+      const dropZone = document.getElementById("dropZone");
+      const fileInput = document.getElementById("archivo");
+      const categoriaSelect = document.getElementById("categoria");
 
-    // Drag and drop functionality
-    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
-      dropZone.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    ["dragenter", "dragover"].forEach((eventName) => {
-      dropZone.addEventListener(eventName, highlight, false);
-    });
-
-    ["dragleave", "drop"].forEach((eventName) => {
-      dropZone.addEventListener(eventName, unhighlight, false);
-    });
-
-    function highlight() {
-      dropZone.classList.add("border-primary");
-      dropZone.classList.add("bg-blue-50");
-    }
-
-    function unhighlight() {
-      dropZone.classList.remove("border-primary");
-      dropZone.classList.remove("bg-blue-50");
-    }
-
-    dropZone.addEventListener("drop", handleDrop, false);
-
-    function handleDrop(e) {
-      const dt = e.dataTransfer;
-      const files = dt.files;
-      fileInput.files = files;
-      updateFileName(fileInput);
-    }
-  });
-</script>
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Elementos del modal de progreso
-    const form = document.getElementById("formSubidaNormal");
-    const progressModal = document.getElementById("progressModal");
-    const progressBar = document.getElementById("progressBar");
-    const progressText = document.getElementById("progressText");
-    const progressSubtext = document.getElementById("progressSubtext");
-
-    // Variables para controlar el progreso real
-    let lastDisplayedProgress = 0;
-    let targetProgress = 0;
-    let currentProgress = 0;
-    let progressInterval = null;
-    let fileSize = 0;
-
-    // Función para actualizar el progreso de manera suave y controlada
-    function updateProgress(percent, message, subMessage = "") {
-      // Asegurar que el porcentaje esté entre 0 y 100
-      const clampedPercent = Math.max(0, Math.min(100, percent));
-      
-      // Evitar que el progreso vaya hacia atrás (excepto cuando se reinicia)
-      if (clampedPercent < lastDisplayedProgress && clampedPercent > 0) {
+      if (!dropZone || !fileInput || !categoriaSelect) {
+        initialized = false;
         return;
       }
-      
-      lastDisplayedProgress = clampedPercent;
-      
-      // Actualizar barra de progreso con transición suave
-      progressBar.style.width = clampedPercent + "%";
-      
-      // Actualizar textos
-      progressText.textContent = message || `Subiendo: ${clampedPercent}%`;
-      if (progressSubtext) {
-        progressSubtext.textContent = subMessage || `${clampedPercent}% completado`;
-      }
-      
-      console.log(`Progress updated: ${clampedPercent}% - ${message}`);
-    }
 
-    // Función para animar suavemente hacia el progreso objetivo
-    function animateToProgress(newTargetProgress, allowFullProgress = false) {
-      // Si no se permite progreso completo, limitar a 98%
-      if (!allowFullProgress && newTargetProgress > 98) {
-        targetProgress = 98;
-      } else {
-        targetProgress = newTargetProgress;
+      // Populate categories
+      categoriaSelect.innerHTML = '<option value="">-- Selecciona una categoría --</option>';
+      for (const cat in categorias) {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.innerText = cat;
+        categoriaSelect.appendChild(opt);
       }
-      
-      // Si no hay animación en curso, iniciarla
-      if (!progressInterval) {
-        progressInterval = setInterval(() => {
-          if (currentProgress < targetProgress) {
-            // Incremento gradual - más rápido al principio, más lento al acercarse
-            const difference = targetProgress - currentProgress;
-            const increment = Math.max(0.2, difference * 0.1); // Mínimo 0.2%, máximo 10% de la diferencia
-            
-            currentProgress = Math.min(currentProgress + increment, targetProgress);
-            
-            const displayPercent = Math.round(currentProgress);
-            const loadedMB = ((currentProgress / 100) * fileSize / (1024 * 1024)).toFixed(2);
-            const totalMB = (fileSize / (1024 * 1024)).toFixed(2);
-            
-            updateProgress(
-              displayPercent,
-              `Subiendo archivo: ${displayPercent}%`,
-              `${loadedMB} MB de ${totalMB} MB transferidos`
-            );
-          } else {
-            // Detener animación cuando se alcance el objetivo
-            clearInterval(progressInterval);
-            progressInterval = null;
-          }
-        }, 100); // Actualizar cada 100ms para suavidad
-      }
-    }
-    
-    // Función para detener la animación de progreso
-    function stopProgressAnimation() {
-      if (progressInterval) {
-        clearInterval(progressInterval);
-        progressInterval = null;
-      }
-    }
 
-    // Función para mostrar el modal
-    function showProgressModal() {
-      lastDisplayedProgress = 0; // Reiniciar el seguimiento de progreso
-      targetProgress = 0;
-      currentProgress = 0;
-      stopProgressAnimation(); // Asegurar que no hay animaciones previas
-      progressModal.classList.remove("hidden");
-      updateProgress(0, "Preparando subida...", "Iniciando proceso de carga");
-      // Forzar reflow
-      progressModal.offsetHeight;
-    }
+      // Drag and drop functionality
+      const preventDefaults = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      };
 
-    // Función para ocultar el modal
-    function hideProgressModal() {
-      stopProgressAnimation();
-      progressModal.classList.add("hidden");
-      lastDisplayedProgress = 0; // Reiniciar el seguimiento de progreso
-      targetProgress = 0;
-      currentProgress = 0;
-      updateProgress(0, "Preparando subida...", "Iniciando proceso de carga");
-    }
-
-    // Función de test que simula progreso real con límite en 98%
-    window.testModal = function () {
-      console.log("Testing modal with real upload progress simulation (max 98% during upload)...");
-      
-      // Simular un archivo para la prueba
-      fileSize = 10 * 1024 * 1024; // 10 MB
-      
-      showProgressModal();
-      
-      // Simular progreso real de carga gradual que se limita automáticamente a 98%
-      const progressSteps = [
-        { progress: 5, delay: 500 },
-        { progress: 15, delay: 1500 },
-        { progress: 28, delay: 3000 },
-        { progress: 42, delay: 4500 },
-        { progress: 58, delay: 6000 },
-        { progress: 71, delay: 7500 },
-        { progress: 84, delay: 9000 },
-        { progress: 93, delay: 10500 },
-        { progress: 99, delay: 12000 }, // Intentar 99% pero se limitará a 98%
-        { progress: 100, delay: 13000 } // Intentar 100% pero se limitará a 98%
-      ];
-      
-      progressSteps.forEach(step => {
-        setTimeout(() => {
-          animateToProgress(step.progress); // Sin allowFullProgress, se limita a 98%
-          console.log(`Simulating real progress: ${step.progress}% (will be limited to max 98%)`);
-        }, step.delay);
+      ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
       });
-      
-      // Simular finalización después de que termine la "carga"
-      setTimeout(() => {
-        console.log("Upload completed, starting final phases...");
-        console.log("Progress should be stuck at 98% until final step");
-        stopProgressAnimation();
-        
-        // Asegurar que está en 98%
-        updateProgress(98, "Finalizando transferencia...", "Archivo subido completamente");
-        
-        // Fases finales
-        setTimeout(() => {
-          updateProgress(99, "Procesando archivo...", "Validando y guardando en servidor");
-        }, 800);
-        
-        setTimeout(() => {
-          updateProgress(99.5, "Sincronizando con Dropbox...", "Almacenando en la nube");
-        }, 1600);
-        
-        // SOLO AQUÍ permitimos llegar al 100%
-        setTimeout(() => {
-          console.log("Now allowing progress to reach 100%");
-          animateToProgress(100, true); // Permitir progreso completo
-          updateProgress(100, "¡Archivo subido exitosamente!", "Proceso completado");
-        }, 2400);
-        
-        setTimeout(() => {
-          hideProgressModal();
-        }, 4000);
-        
-      }, 14000);
+
+      const highlight = () => {
+        dropZone.classList.add("border-primary");
+        dropZone.classList.add("bg-blue-50");
+      };
+
+      const unhighlight = () => {
+        dropZone.classList.remove("border-primary");
+        dropZone.classList.remove("bg-blue-50");
+      };
+
+      ["dragenter", "dragover"].forEach((eventName) => {
+        dropZone.addEventListener(eventName, highlight, false);
+      });
+
+      ["dragleave", "drop"].forEach((eventName) => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+      });
+
+      const handleDrop = (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        updateFileName(fileInput);
+      };
+
+      dropZone.addEventListener("drop", handleDrop, false);
     };
 
-    if (form && progressModal) {
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initSubirArchivoForm, { once: true });
+    } else {
+      initSubirArchivoForm();
+    }
+  })();
+</script>
+<script>
+  (function () {
+    let initialized = false;
 
-        const fileInput = document.getElementById("archivo");
-        if (!fileInput.files.length) {
-          alert("Selecciona un archivo");
+    const initProgressModal = () => {
+      if (initialized) return;
+
+      const form = document.getElementById("formSubidaNormal");
+      const progressModal = document.getElementById("progressModal");
+      const progressBar = document.getElementById("progressBar");
+      const progressText = document.getElementById("progressText");
+      const progressSubtext = document.getElementById("progressSubtext");
+
+      if (!form || !progressModal || !progressBar || !progressText) {
+        return;
+      }
+
+      initialized = true;
+
+      // Variables para controlar el progreso real
+      let lastDisplayedProgress = 0;
+      let targetProgress = 0;
+      let currentProgress = 0;
+      let progressInterval = null;
+      let fileSize = 0;
+
+      // Función para actualizar el progreso de manera suave y controlada
+      function updateProgress(percent, message, subMessage = "") {
+        // Asegurar que el porcentaje esté entre 0 y 100
+        const clampedPercent = Math.max(0, Math.min(100, percent));
+        
+        // Evitar que el progreso vaya hacia atrás (excepto cuando se reinicia)
+        if (clampedPercent < lastDisplayedProgress && clampedPercent > 0) {
           return;
         }
-
-        const file = fileInput.files[0];
-        fileSize = file.size; // Guardar el tamaño del archivo
-        const fileSizeDisplay = (fileSize / (1024 * 1024)).toFixed(2);
         
-        // Mostrar modal de progreso
-        showProgressModal();
+        lastDisplayedProgress = clampedPercent;
+        
+        // Actualizar barra de progreso con transición suave
+        progressBar.style.width = clampedPercent + "%";
+        
+        // Actualizar textos
+        progressText.textContent = message || `Subiendo: ${clampedPercent}%`;
+        if (progressSubtext) {
+          progressSubtext.textContent = subMessage || `${clampedPercent}% completado`;
+        }
+        
+        console.log(`Progress updated: ${clampedPercent}% - ${message}`);
+      }
 
-        const formData = new FormData(form);
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", form.action, true);
-        xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-
-        // Monitorear el progreso real de la carga y actualizar la barra
-        xhr.upload.onprogress = function (event) {
-          if (event.lengthComputable) {
-            const realProgress = (event.loaded / event.total) * 100;
-            console.log(`Real upload progress: ${realProgress.toFixed(1)}%`);
-            
-            // Animar suavemente hacia el progreso real
-            animateToProgress(realProgress);
-          }
-        };
-
-        // Cuando la subida se completa
-        xhr.onload = function () {
-          if (xhr.status === 200) {
-            console.log("Upload completed, current displayed progress:", lastDisplayedProgress);
-            
-            // Detener la animación de progreso
-            stopProgressAnimation();
-            
-            // Asegurar que llegamos al 98% antes de proceder
-            if (lastDisplayedProgress < 98) {
-              animateToProgress(98, false); // Forzar a 98% sin permitir más
+      // Función para animar suavemente hacia el progreso objetivo
+      function animateToProgress(newTargetProgress, allowFullProgress = false) {
+        // Si no se permite progreso completo, limitar a 98%
+        if (!allowFullProgress && newTargetProgress > 98) {
+          targetProgress = 98;
+        } else {
+          targetProgress = newTargetProgress;
+        }
+        
+        // Si no hay animación en curso, iniciarla
+        if (!progressInterval) {
+          progressInterval = setInterval(() => {
+            if (currentProgress < targetProgress) {
+              // Incremento gradual - más rápido al principio, más lento al acercarse
+              const difference = targetProgress - currentProgress;
+              const increment = Math.max(0.2, difference * 0.1); // Mínimo 0.2%, máximo 10% de la diferencia
               
-              // Esperar a que llegue al 98% antes de continuar
-              setTimeout(() => {
+              currentProgress = Math.min(currentProgress + increment, targetProgress);
+              
+              const displayPercent = Math.round(currentProgress);
+              const loadedMB = ((currentProgress / 100) * fileSize / (1024 * 1024)).toFixed(2);
+              const totalMB = (fileSize / (1024 * 1024)).toFixed(2);
+              
+              updateProgress(
+                displayPercent,
+                `Subiendo archivo: ${displayPercent}%`,
+                `${loadedMB} MB de ${totalMB} MB transferidos`
+              );
+            } else {
+              // Detener animación cuando se alcance el objetivo
+              clearInterval(progressInterval);
+              progressInterval = null;
+            }
+          }, 100); // Actualizar cada 100ms para suavidad
+        }
+      }
+      
+      // Función para detener la animación de progreso
+      function stopProgressAnimation() {
+        if (progressInterval) {
+          clearInterval(progressInterval);
+          progressInterval = null;
+        }
+      }
+
+      // Función para mostrar el modal
+      function showProgressModal() {
+        lastDisplayedProgress = 0; // Reiniciar el seguimiento de progreso
+        targetProgress = 0;
+        currentProgress = 0;
+        stopProgressAnimation(); // Asegurar que no hay animaciones previas
+        progressModal.classList.remove("hidden");
+        updateProgress(0, "Preparando subida...", "Iniciando proceso de carga");
+        // Forzar reflow
+        progressModal.offsetHeight;
+      }
+
+      // Función para ocultar el modal
+      function hideProgressModal() {
+        stopProgressAnimation();
+        progressModal.classList.add("hidden");
+        lastDisplayedProgress = 0; // Reiniciar el seguimiento de progreso
+        targetProgress = 0;
+        currentProgress = 0;
+        updateProgress(0, "Preparando subida...", "Iniciando proceso de carga");
+      }
+
+      // Función de test que simula progreso real con límite en 98%
+      window.testModal = function () {
+        console.log("Testing modal with real upload progress simulation (max 98% during upload)...");
+        
+        // Simular un archivo para la prueba
+        fileSize = 10 * 1024 * 1024; // 10 MB
+        
+        showProgressModal();
+        
+        // Simular progreso real de carga gradual que se limita automáticamente a 98%
+        const progressSteps = [
+          { progress: 5, delay: 500 },
+          { progress: 15, delay: 1500 },
+          { progress: 28, delay: 3000 },
+          { progress: 42, delay: 4500 },
+          { progress: 58, delay: 6000 },
+          { progress: 71, delay: 7500 },
+          { progress: 84, delay: 9000 },
+          { progress: 93, delay: 10500 },
+          { progress: 99, delay: 12000 }, // Intentar 99% pero se limitará a 98%
+          { progress: 100, delay: 13000 } // Intentar 100% pero se limitará a 98%
+        ];
+        
+        progressSteps.forEach(step => {
+          setTimeout(() => {
+            animateToProgress(step.progress); // Sin allowFullProgress, se limita a 98%
+            console.log(`Simulating real progress: ${step.progress}% (will be limited to max 98%)`);
+          }, step.delay);
+        });
+        
+        // Simular finalización después de que termine la "carga"
+        setTimeout(() => {
+          console.log("Upload completed, starting final phases...");
+          console.log("Progress should be stuck at 98% until final step");
+          stopProgressAnimation();
+          
+          // Asegurar que está en 98%
+          updateProgress(98, "Finalizando transferencia...", "Archivo subido completamente");
+          
+          // Fases finales
+          setTimeout(() => {
+            updateProgress(99, "Procesando archivo...", "Validando y guardando en servidor");
+          }, 800);
+          
+          setTimeout(() => {
+            updateProgress(99.5, "Sincronizando con Dropbox...", "Almacenando en la nube");
+          }, 1600);
+          
+          // SOLO AQUÍ permitimos llegar al 100%
+          setTimeout(() => {
+            console.log("Now allowing progress to reach 100%");
+            animateToProgress(100, true); // Permitir progreso completo
+            updateProgress(100, "¡Archivo subido exitosamente!", "Proceso completado");
+          }, 2400);
+          
+          setTimeout(() => {
+            hideProgressModal();
+          }, 4000);
+          
+        }, 14000);
+      };
+
+      if (form && progressModal) {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+
+          const fileInput = document.getElementById("archivo");
+          if (!fileInput.files.length) {
+            alert("Selecciona un archivo");
+            return;
+          }
+
+          const file = fileInput.files[0];
+          fileSize = file.size; // Guardar el tamaño del archivo
+          
+          // Mostrar modal de progreso
+          showProgressModal();
+
+          const formData = new FormData(form);
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", form.action, true);
+          xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+
+          // Monitorear el progreso real de la carga y actualizar la barra
+          xhr.upload.onprogress = function (event) {
+            if (event.lengthComputable) {
+              const realProgress = (event.loaded / event.total) * 100;
+              console.log(`Real upload progress: ${realProgress.toFixed(1)}%`);
+              
+              // Animar suavemente hacia el progreso real
+              animateToProgress(realProgress);
+            }
+          };
+
+          // Cuando la subida se completa
+          xhr.onload = function () {
+            if (xhr.status === 200) {
+              console.log("Upload completed, current displayed progress:", lastDisplayedProgress);
+              
+              // Detener la animación de progreso
+              stopProgressAnimation();
+              
+              // Asegurar que llegamos al 98% antes de proceder
+              if (lastDisplayedProgress < 98) {
+                animateToProgress(98, false); // Forzar a 98% sin permitir más
+                
+                // Esperar a que llegue al 98% antes de continuar
+                setTimeout(() => {
+                  updateProgress(98, "Finalizando transferencia...", "Archivo subido completamente");
+                  proceedWithFinalSteps();
+                }, 500);
+              } else {
                 updateProgress(98, "Finalizando transferencia...", "Archivo subido completamente");
                 proceedWithFinalSteps();
-              }, 500);
-            } else {
-              updateProgress(98, "Finalizando transferencia...", "Archivo subido completamente");
-              proceedWithFinalSteps();
-            }
-            
-            function proceedWithFinalSteps() {
-              // Procesamiento del archivo en el servidor
-              setTimeout(() => {
-                updateProgress(99, "Procesando archivo...", "Validando y guardando en servidor");
-              }, 800);
-              
-              // Sincronización con Dropbox
-              setTimeout(() => {
-                updateProgress(99.5, "Sincronizando con Dropbox...", "Almacenando en la nube");
-              }, 1600);
-              
-              // Finalización exitosa - AQUÍ permitimos llegar al 100%
-              setTimeout(() => {
-                animateToProgress(100, true); // Permitir progreso completo
-                updateProgress(100, "¡Archivo subido exitosamente!", "Proceso completado");
-              }, 2400);
-
-              // Redireccionar después de mostrar el éxito completo
-              let redirectUrl = "{{ url_for('listar_dropbox.carpetas_dropbox') }}";
-              try {
-                const response = JSON.parse(xhr.responseText);
-                if (response.redirectUrl) redirectUrl = response.redirectUrl;
-              } catch (err) {
-                console.log("Using default redirect URL");
               }
+              
+              function proceedWithFinalSteps() {
+                // Procesamiento del archivo en el servidor
+                setTimeout(() => {
+                  updateProgress(99, "Procesando archivo...", "Validando y guardando en servidor");
+                }, 800);
+                
+                // Sincronización con Dropbox
+                setTimeout(() => {
+                  updateProgress(99.5, "Sincronizando con Dropbox...", "Almacenando en la nube");
+                }, 1600);
+                
+                // Finalización exitosa - AQUÍ permitimos llegar al 100%
+                setTimeout(() => {
+                  animateToProgress(100, true); // Permitir progreso completo
+                  updateProgress(100, "¡Archivo subido exitosamente!", "Proceso completado");
+                }, 2400);
 
-              setTimeout(() => {
-                window.location.href = redirectUrl;
-              }, 4000);
+                // Redireccionar después de mostrar el éxito completo
+                let redirectUrl = "{{ url_for('listar_dropbox.carpetas_dropbox') }}";
+                try {
+                  const response = JSON.parse(xhr.responseText);
+                  if (response.redirectUrl) redirectUrl = response.redirectUrl;
+                } catch (err) {
+                  console.log("Using default redirect URL");
+                }
+
+                setTimeout(() => {
+                  window.location.href = redirectUrl;
+                }, 4000);
+              }
+              
+            } else {
+              stopProgressAnimation();
+              hideProgressModal();
+              alert("Error al subir el archivo. Por favor, inténtelo de nuevo.");
             }
-            
-          } else {
+          };
+
+          // Manejo de errores
+          xhr.onerror = function () {
             stopProgressAnimation();
             hideProgressModal();
-            alert("Error al subir el archivo. Por favor, inténtelo de nuevo.");
-          }
-        };
+            alert("Error de conexión. Verifique su conexión a internet e inténtelo de nuevo.");
+          };
 
-        // Manejo de errores
-        xhr.onerror = function () {
-          stopProgressAnimation();
-          hideProgressModal();
-          alert("Error de conexión. Verifique su conexión a internet e inténtelo de nuevo.");
-        };
+          xhr.ontimeout = function () {
+            stopProgressAnimation();
+            hideProgressModal();
+            alert("El tiempo de espera se agotó. El archivo puede ser muy grande o la conexión muy lenta.");
+          };
 
-        xhr.ontimeout = function () {
-          stopProgressAnimation();
-          hideProgressModal();
-          alert("El tiempo de espera se agotó. El archivo puede ser muy grande o la conexión muy lenta.");
-        };
+          // Configurar timeout más generoso (60 segundos por MB, mínimo 2 minutos)
+          xhr.timeout = Math.max(120000, file.size / (1024 * 1024) * 60000);
 
-        // Configurar timeout más generoso (60 segundos por MB, mínimo 2 minutos)
-        xhr.timeout = Math.max(120000, file.size / (1024 * 1024) * 60000);
+          xhr.send(formData);
+        });
+      }
+    };
 
-        xhr.send(formData);
-      });
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initProgressModal, { once: true });
+    } else {
+      initProgressModal();
     }
-  });
+  })();
 </script>
 
 {% endblock %}
