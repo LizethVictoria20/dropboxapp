@@ -91,8 +91,18 @@ def actualizar_estado_archivo():
     
     # Crear notificación para el cliente si el estado cambió
     if estado_anterior != nuevo_estado and archivo.usuario_id:
-        from app.models import Notification
+        from app.models import Notification, Comentario
         from datetime import datetime
+        
+        # Obtener comentarios asociados al archivo (si existen)
+        comentario_texto = None
+        try:
+            comentarios = Comentario.query.filter_by(dropbox_path=dropbox_path).order_by(Comentario.id.desc()).all()
+            if comentarios:
+                # Tomar el comentario más reciente
+                comentario_texto = comentarios[0].contenido
+        except Exception as e:
+            current_app.logger.warning(f"No se pudieron obtener comentarios para el archivo: {e}")
         
         # Mensajes según el nuevo estado
         mensajes_estado = {
@@ -117,6 +127,27 @@ def actualizar_estado_archivo():
         db.session.commit()
         
         current_app.logger.info(f'Notificación creada para usuario {archivo.usuario_id}: {titulo}')
+        
+        # Si el documento fue rechazado, enviar notificaciones externas (email, SMS, WhatsApp)
+        if nuevo_estado == 'rechazado':
+            try:
+                usuario = User.query.get(archivo.usuario_id)
+                if usuario:
+                    from app.utils.external_notifications import enviar_notificacion_documento_rechazado
+                    resultados = enviar_notificacion_documento_rechazado(
+                        usuario=usuario,
+                        archivo=archivo,
+                        comentario=comentario_texto
+                    )
+                    current_app.logger.info(
+                        f"Notificaciones externas enviadas para archivo rechazado: "
+                        f"Email={resultados['email']}, SMS={resultados['sms']}, WhatsApp={resultados['whatsapp']}"
+                    )
+            except Exception as e:
+                current_app.logger.error(f"Error al enviar notificaciones externas: {e}")
+                import traceback
+                traceback.print_exc()
+                # No interrumpir el flujo si fallan las notificaciones externas
     
     return jsonify({'success': True})
 

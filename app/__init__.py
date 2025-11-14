@@ -45,6 +45,20 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     
+    # Inicializar Flask-Mail si está disponible
+    try:
+        from flask_mail import Mail
+        # Verificar que la configuración de email esté presente
+        if app.config.get('MAIL_SERVER') and app.config.get('MAIL_USERNAME') and app.config.get('MAIL_PASSWORD'):
+            mail = Mail(app)
+            app.extensions['mail'] = mail
+            logger.info("✅ Flask-Mail inicializado correctamente")
+        else:
+            logger.warning("⚠️ Flask-Mail disponible pero configuración incompleta. Configura MAIL_SERVER, MAIL_USERNAME y MAIL_PASSWORD en .env")
+    except ImportError:
+        # Flask-Mail no está instalado, continuar sin él
+        logger.warning("⚠️ Flask-Mail no está instalado. Instala con: pip install Flask-Mail")
+    
     # Configurar login manager
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
@@ -149,5 +163,25 @@ def create_app(config_name=None):
             return json.loads(value)
         except (json.JSONDecodeError, TypeError):
             return []
+    
+    @app.context_processor
+    def inject_header_notifications():
+        """Inyecta las últimas 5 notificaciones del usuario autenticado para el header."""
+        try:
+            from flask_login import current_user as cu
+            from app.models import Notification
+            if cu.is_authenticated:
+                ultimas = Notification.query \
+                    .filter_by(user_id=cu.id) \
+                    .order_by(Notification.fecha_creacion.desc()) \
+                    .limit(5).all()
+                unread_count = Notification.query.filter_by(user_id=cu.id, leida=False).count()
+            else:
+                ultimas = []
+                unread_count = 0
+        except Exception:
+            ultimas = []
+            unread_count = 0
+        return {'header_notifications': ultimas, 'header_unread_count': unread_count}
     
     return app
