@@ -1,7 +1,332 @@
 {% extends "base.html" %} {% block title %}Carpetas de Dropbox{% endblock %} {%
 block content %}
-<div class="min-h-screen bg-gray-50 py-8">
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+<!-- Script crítico: Definir funciones globales inmediatamente -->
+<script>
+  // Definir funciones placeholder en window para que estén disponibles inmediatamente
+  // Estas serán sobrescritas por las funciones reales cuando se carguen
+  (function() {
+    'use strict';
+    
+    // Crear un sistema de cola para llamadas que ocurran antes de que las funciones reales estén listas
+    const functionQueue = {
+      openPreviewModal: [],
+      descargarArchivo: [],
+      openMoveModal: [],
+      openRenameModal: [],
+      confirmarEliminarArchivo: [],
+      openCommentsModal: [],
+      closeCommentsModal: []
+    };
+    
+    // Funciones placeholder que intentan ejecutar inmediatamente o ponen en cola
+    const createPlaceholder = (fnName) => {
+      return function(...args) {
+        // Primero intentar ejecutar inmediatamente si la función real ya está disponible
+        if (typeof window[`_real_${fnName}`] === 'function') {
+          console.log(`✅ ${fnName} ejecutando inmediatamente`);
+          try {
+            window[`_real_${fnName}`](...args);
+            return;
+          } catch (e) {
+            console.error(`Error ejecutando ${fnName}:`, e);
+            return;
+          }
+        }
+        
+        // Si no está disponible, agregar a cola y reintentar
+        console.log(`${fnName} llamado, agregando a cola...`);
+        functionQueue[fnName].push(args);
+        
+        // Intentar ejecutar después de múltiples delays
+        const tryExecute = (delay) => {
+          setTimeout(() => {
+            if (typeof window[`_real_${fnName}`] === 'function') {
+              console.log(`✅ Ejecutando ${fnName} de la cola con:`, args);
+              try {
+                window[`_real_${fnName}`](...args);
+                // Remover de la cola si se ejecutó exitosamente
+                const index = functionQueue[fnName].indexOf(args);
+                if (index > -1) {
+                  functionQueue[fnName].splice(index, 1);
+                }
+              } catch (e) {
+                console.error(`Error ejecutando ${fnName} de la cola:`, e);
+              }
+            } else if (delay < 2000) {
+              // Reintentar con delay progresivo hasta 2 segundos
+              tryExecute(delay * 1.5);
+            }
+          }, delay);
+        };
+        
+        // Intentar inmediatamente, luego con delays progresivos
+        tryExecute(50);
+        tryExecute(200);
+        tryExecute(500);
+        tryExecute(1000);
+      };
+    };
+    
+    window.openPreviewModal = createPlaceholder('openPreviewModal');
+    window.descargarArchivo = createPlaceholder('descargarArchivo');
+    window.openMoveModal = createPlaceholder('openMoveModal');
+    window.openRenameModal = createPlaceholder('openRenameModal');
+    window.confirmarEliminarArchivo = createPlaceholder('confirmarEliminarArchivo');
+    window.openCommentsModal = createPlaceholder('openCommentsModal');
+    window.closeCommentsModal = createPlaceholder('closeCommentsModal');
+    
+    // Función para registrar la función real
+    window._registerRealFunction = function(fnName, fn) {
+      window[`_real_${fnName}`] = fn;
+      window[fnName] = fn;
+      
+      // Ejecutar cualquier llamada en cola
+      if (functionQueue[fnName] && functionQueue[fnName].length > 0) {
+        console.log(`Ejecutando ${functionQueue[fnName].length} llamadas en cola para ${fnName}`);
+        functionQueue[fnName].forEach(args => {
+          try {
+            fn(...args);
+          } catch (e) {
+            console.error(`Error ejecutando ${fnName} de la cola:`, e);
+          }
+        });
+        functionQueue[fnName] = [];
+      }
+    };
+    
+    console.log('✅ Sistema de funciones cola (DEPRECATED - ya no se usa)');
+  })();
+  
+  // Definir variables globales de datos INMEDIATAMENTE para que estén disponibles
+  window.ESTRUCTURAS_USUARIOS = {{ estructuras_usuarios_json|safe }};
+  window.CURRENT_USER_EMAIL = {{ current_user.email|tojson|safe }};
+  window.CURRENT_USER_ID = {{ current_user.id|tojson|safe }};
+  window.USUARIOS_EMAILS = {{ usuarios_emails_json|safe }};
+  window.CURRENT_USER_ROLE = {{ current_user.rol|tojson|safe }};
+  window.CURRENT_USER_CAN_MODIFY = {{ (current_user.rol == 'admin' or current_user.rol == 'cliente' or (current_user.rol == 'lector' and current_user.puede_modificar_archivos()))|tojson|safe }};
+  
+  console.log('✅ Variables globales de datos inicializadas:', {
+    estructurasDisponibles: Object.keys(window.ESTRUCTURAS_USUARIOS || {}).length,
+    userId: window.CURRENT_USER_ID,
+    userEmail: window.CURRENT_USER_EMAIL,
+    userRole: window.CURRENT_USER_ROLE
+  });
+  
+  // DEFINIR FUNCIONES STUB SIMPLES E INMEDIATAMENTE para que los onclick funcionen
+  // Estas funciones esperarán a que la función real esté disponible
+  
+  window.openPreviewModal = function(fileId, extension, filename) {
+    console.log('📞 openPreviewModal llamado:', fileId);
+    // Intentar ejecutar la función real si existe
+    if (window._real_openPreviewModal && typeof window._real_openPreviewModal === 'function') {
+      return window._real_openPreviewModal(fileId, extension, filename);
+    }
+    // Si no existe, intentar encontrarla en base.html
+    const checkAndExecute = () => {
+      if (window._real_openPreviewModal && typeof window._real_openPreviewModal === 'function') {
+        window._real_openPreviewModal(fileId, extension, filename);
+        return true;
+      }
+      return false;
+    };
+    // Reintentar cada 100ms durante 5 segundos
+    let attempts = 0;
+    const interval = setInterval(() => {
+      if (checkAndExecute() || attempts++ > 50) {
+        clearInterval(interval);
+      }
+    }, 100);
+  };
+  
+  window.descargarArchivo = function(fileId, filePath, filename) {
+    console.log('📞 descargarArchivo llamado:', filePath);
+    if (window._real_descargarArchivo && typeof window._real_descargarArchivo === 'function') {
+      return window._real_descargarArchivo(fileId, filePath, filename);
+    }
+    let attempts = 0;
+    const interval = setInterval(() => {
+      if (window._real_descargarArchivo && typeof window._real_descargarArchivo === 'function') {
+        window._real_descargarArchivo(fileId, filePath, filename);
+        clearInterval(interval);
+      } else if (attempts++ > 50) {
+        console.error('❌ descargarArchivo nunca se registró');
+        clearInterval(interval);
+      }
+    }, 100);
+  };
+  
+  window.openMoveModal = function(archivo, carpetaActual, usuarioId) {
+    console.log('📞 openMoveModal llamado');
+    if (window._real_openMoveModal && typeof window._real_openMoveModal === 'function') {
+      return window._real_openMoveModal(archivo, carpetaActual, usuarioId);
+    }
+    let attempts = 0;
+    const interval = setInterval(() => {
+      if (window._real_openMoveModal && typeof window._real_openMoveModal === 'function') {
+        window._real_openMoveModal(archivo, carpetaActual, usuarioId);
+        clearInterval(interval);
+      } else if (attempts++ > 50) {
+        clearInterval(interval);
+      }
+    }, 100);
+  };
+  
+  window.openRenameModal = function(archivo, carpetaActual, usuarioId, tipo) {
+    console.log('📞 openRenameModal llamado');
+    if (window._real_openRenameModal && typeof window._real_openRenameModal === 'function') {
+      return window._real_openRenameModal(archivo, carpetaActual, usuarioId, tipo);
+    }
+    let attempts = 0;
+    const interval = setInterval(() => {
+      if (window._real_openRenameModal && typeof window._real_openRenameModal === 'function') {
+        window._real_openRenameModal(archivo, carpetaActual, usuarioId, tipo);
+        clearInterval(interval);
+      } else if (attempts++ > 50) {
+        clearInterval(interval);
+      }
+    }, 100);
+  };
+  
+  window.confirmarEliminarArchivo = function(archivo, carpeta, usuarioId) {
+    console.log('📞 confirmarEliminarArchivo llamado');
+    if (window._real_confirmarEliminarArchivo && typeof window._real_confirmarEliminarArchivo === 'function') {
+      return window._real_confirmarEliminarArchivo(archivo, carpeta, usuarioId);
+    }
+    let attempts = 0;
+    const interval = setInterval(() => {
+      if (window._real_confirmarEliminarArchivo && typeof window._real_confirmarEliminarArchivo === 'function') {
+        window._real_confirmarEliminarArchivo(archivo, carpeta, usuarioId);
+        clearInterval(interval);
+      } else if (attempts++ > 50) {
+        clearInterval(interval);
+      }
+    }, 100);
+  };
+  
+  window.openCommentsModal = function(path, tipo) {
+    console.log('📞 openCommentsModal llamado');
+    if (window._real_openCommentsModal && typeof window._real_openCommentsModal === 'function') {
+      return window._real_openCommentsModal(path, tipo);
+    }
+    let attempts = 0;
+    const interval = setInterval(() => {
+      if (window._real_openCommentsModal && typeof window._real_openCommentsModal === 'function') {
+        window._real_openCommentsModal(path, tipo);
+        clearInterval(interval);
+      } else if (attempts++ > 50) {
+        clearInterval(interval);
+      }
+    }, 100);
+  };
+  
+  window.closeCommentsModal = function() {
+    console.log('📞 closeCommentsModal llamado');
+    if (window._real_closeCommentsModal && typeof window._real_closeCommentsModal === 'function') {
+      return window._real_closeCommentsModal();
+    }
+    let attempts = 0;
+    const interval = setInterval(() => {
+      if (window._real_closeCommentsModal && typeof window._real_closeCommentsModal === 'function') {
+        window._real_closeCommentsModal();
+        clearInterval(interval);
+      } else if (attempts++ > 50) {
+        clearInterval(interval);
+      }
+    }, 100);
+  };
+  
+  console.log('✅ Funciones stub definidas e inmediatamente disponibles');
+  
+  // Forzar que el contenido sea visible inmediatamente
+  // Esto previene problemas de timing con Tailwind CSS desde CDN
+  (function() {
+    // Variable de control para prevenir múltiples ejecuciones
+    window._contentInitialized = false;
+    
+    const ensureContentVisible = () => {
+      if (window._contentInitialized) {
+        console.log('⏭️ Contenido ya inicializado, saltando...');
+        return;
+      }
+      
+      console.log('🔄 Asegurando que el contenido sea visible...');
+      
+      // Asegurar que el contenedor principal esté visible
+      const mainContainers = document.querySelectorAll('.space-y-8, .bg-white, .min-h-screen');
+      mainContainers.forEach(container => {
+        if (container && container.style.display === 'none') {
+          container.style.display = '';
+        }
+        // NO remover la clase 'hidden' aquí para no interferir con modales
+      });
+      
+      // Asegurar que los botones sean funcionales
+      const buttons = document.querySelectorAll('button[onclick], a[onclick], span[onclick]');
+      console.log(`📊 Encontrados ${buttons.length} elementos con onclick`);
+      
+      // Verificar que las funciones globales estén disponibles
+      const funcionesRequeridas = [
+        'openPreviewModal',
+        'descargarArchivo',
+        'openMoveModal',
+        'openRenameModal',
+        'confirmarEliminarArchivo',
+        'openCommentsModal',
+        'closeCommentsModal'
+      ];
+      
+      let todasDisponibles = true;
+      const funcionesFaltantes = [];
+      funcionesRequeridas.forEach(fn => {
+        if (typeof window[fn] !== 'function') {
+          console.warn(`⚠️ Función ${fn} aún no está disponible`);
+          funcionesFaltantes.push(fn);
+          todasDisponibles = false;
+        } else {
+          console.log(`✅ Función ${fn} está disponible`);
+        }
+      });
+      
+      if (todasDisponibles) {
+        console.log('✅ Todas las funciones necesarias están disponibles');
+        window._contentInitialized = true;
+      } else {
+        console.log(`⏳ Funciones faltantes: ${funcionesFaltantes.join(', ')}. Reintentando en 100ms...`);
+        setTimeout(ensureContentVisible, 100);
+      }
+      
+      console.log('✅ Contenido verificado y visible');
+    };
+    
+    // Ejecutar inmediatamente si el DOM ya está listo
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', ensureContentVisible);
+      // También intentar inmediatamente por si el script se carga tarde
+      setTimeout(ensureContentVisible, 50);
+    } else {
+      ensureContentVisible();
+    }
+    
+    // También ejecutar cuando la página esté completamente cargada
+    window.addEventListener('load', ensureContentVisible);
+    
+    // Ejecutar periódicamente durante los primeros segundos para asegurar
+    let checkCount = 0;
+    const checkInterval = setInterval(() => {
+      if (window._contentInitialized || checkCount >= 20) {
+        clearInterval(checkInterval);
+        console.log('🎉 Verificación periódica finalizada');
+      } else {
+        ensureContentVisible();
+        checkCount++;
+      }
+    }, 200);
+  })();
+</script>
+
+<div class="min-h-screen bg-gray-50 py-8" style="display: block !important;">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
     {# Header Section #}
     <div class="mb-8">
       <div class="flex items-center justify-between">
@@ -155,7 +480,7 @@ block content %}
     <div class="mb-8"></div>
 
     {# User Folders Section #}
-    <div class="space-y-8">
+    <div class="space-y-8" style="display: block !important; visibility: visible !important;">
       {% for usuario_id, estructura in estructuras_usuarios.items() %} {# Solo
       mostrar usuarios principales (con email) y no beneficiarios #} {% if
       usuarios[usuario_id].email %}
@@ -241,6 +566,8 @@ block content %}
           {% endif %}
         {% endmacro %}
 
+        {# Mostrar archivos del usuario actual si no hay paginación global #}
+        {% if archivos_paginados is not defined %}
         <div class="space-y-3">
           <div class="mb-4">
             <h4 class="text-sm font-semibold text-gray-700">Archivos</h4>
@@ -253,7 +580,6 @@ block content %}
 
           <div>
             <ul class="mt-2 space-y-2">
-              {# Si backend entrega estructura plana con "files" -> iterar sobre ella #}
               {% if estructura.files is defined and estructura.files %}
                 {% for file_path in estructura.files %}
                   {% set fname = file_path.split('/')[-1] %}
@@ -285,7 +611,6 @@ block content %}
                   </li>
                 {% endfor %}
               {% else %}
-                {# Si backend sigue entregando árbol, usar macro recursiva para listar todos los archivos #}
                 {% if estructura and (estructura._archivos or estructura._subcarpetas) %}
                   {{ render_files_only(estructura, '') }}
                 {% else %}
@@ -301,6 +626,109 @@ block content %}
             </div>
           {% endif %}
         </div>
+        {% endif %}
+
+        {# Sección de archivos paginados (todos los usuarios) - dentro del p-6 #}
+        {% if archivos_paginados is defined and archivos_paginados %}
+        <div class="mt-8" style="display: block !important; visibility: visible !important;">
+          <div class="mb-4 border-t border-gray-200 pt-4">
+            <h4 class="text-lg font-semibold text-gray-700">Todos los archivos</h4>
+            <p class="text-xs text-gray-500 mt-1">
+              Mostrando {{ archivos_paginados|length }} de {{ total_archivos }} archivo(s)
+            </p>
+          </div>
+          <ul class="space-y-2">
+            {% for file_path in archivos_paginados %}
+              {% set usuario_id = archivos_por_usuario.get(file_path, '') %}
+              {% set fname = file_path.split('/')[-1] %}
+              {% set file_dir = file_path.rsplit('/',1)[0] if '/' in file_path else '' %}
+              <li class="flex items-center justify-between p-3 bg-white border rounded-md">
+                <div class="flex items-center space-x-3 min-w-0">
+                  <div class="w-8 h-8 bg-blue-50 rounded-md flex items-center justify-center">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                  </div>
+                  <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium truncate" title="{{ fname }}"
+                          onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')">
+                      {{ fname }}
+                    </span>
+                    <span id="status-badge-{{ file_path.replace('/', '-').replace('\\', '-') }}" data-file-path="{{ file_path }}" class="text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
+                  </div>
+                  <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ file_dir }}">{{ file_dir | default('') }}</div>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')" class="px-2 py-1 text-xs bg-gray-100 rounded">Ver</button>
+                  <button onclick="descargarArchivo('', '{{ file_path }}', '{{ fname }}')" class="px-2 py-1 text-xs bg-gray-100 rounded">Descargar</button>
+                  {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+                    <button onclick="openMoveModal('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}')" class="px-2 py-1 text-xs bg-amber-100 rounded">Mover</button>
+                    <button onclick="openRenameModal('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}', 'archivo')" class="px-2 py-1 text-xs bg-indigo-100 rounded">Renombrar</button>
+                  {% endif %}
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+
+          {# Controles de paginación #}
+          {% if total_pages > 1 %}
+          <div class="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+            <div class="flex items-center text-sm text-gray-700">
+              <span>
+                Página {{ page }} de {{ total_pages }} ({{ total_archivos }} archivos en total)
+              </span>
+            </div>
+            <div class="flex items-center space-x-2">
+              {% if page > 1 %}
+                <a href="?page={{ page - 1 }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                  Anterior
+                </a>
+              {% else %}
+                <span class="px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed">
+                  Anterior
+                </span>
+              {% endif %}
+              
+              {# Mostrar números de página #}
+              {% set start_page = [1, page - 2]|max %}
+              {% set end_page = [total_pages, page + 2]|min %}
+              
+              {% if start_page > 1 %}
+                <a href="?page=1" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">1</a>
+                {% if start_page > 2 %}
+                  <span class="px-2 text-gray-500">...</span>
+                {% endif %}
+              {% endif %}
+              
+              {% for p in range(start_page, end_page + 1) %}
+                {% if p == page %}
+                  <span class="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md">{{ p }}</span>
+                {% else %}
+                  <a href="?page={{ p }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">{{ p }}</a>
+                {% endif %}
+              {% endfor %}
+              
+              {% if end_page < total_pages %}
+                {% if end_page < total_pages - 1 %}
+                  <span class="px-2 text-gray-500">...</span>
+                {% endif %}
+                <a href="?page={{ total_pages }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">{{ total_pages }}</a>
+              {% endif %}
+              
+              {% if page < total_pages %}
+                <a href="?page={{ page + 1 }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                  Siguiente
+                </a>
+              {% else %}
+                <span class="px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed">
+                  Siguiente
+                </span>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
       </div>
     </div>
       </div>
@@ -339,18 +767,32 @@ block content %}
       if (!res.ok) throw new Error('Error de red');
       return res.json();
     }
-    function openCommentsModal(path, tipo){
+    window.openCommentsModal = function openCommentsModal(path, tipo){
       const modal = document.getElementById('commentsModal');
       document.getElementById('commentsPath').value = path;
       document.getElementById('commentsTipo').value = tipo || 'archivo';
       modal.classList.remove('hidden');
       loadComments();
     }
-    function closeCommentsModal(){
+    const closeCommentsModalImpl = function(){
       document.getElementById('commentsModal').classList.add('hidden');
       document.getElementById('commentsList').innerHTML = '';
       document.getElementById('newCommentText').value = '';
     }
+    
+    // Reemplazar stubs con funciones reales para comentarios
+    const openCommentsModalImpl = function openCommentsModal(path, tipo){
+      const modal = document.getElementById('commentsModal');
+      document.getElementById('commentsPath').value = path;
+      document.getElementById('commentsTipo').value = tipo || 'archivo';
+      modal.classList.remove('hidden');
+      loadComments();
+    }
+    window._real_openCommentsModal = openCommentsModalImpl;
+    window.openCommentsModal = openCommentsModalImpl;
+    window._real_closeCommentsModal = closeCommentsModalImpl;
+    window.closeCommentsModal = closeCommentsModalImpl;
+    console.log('✅ Funciones de comentarios reemplazadas con implementación real');
     async function loadComments(){
       const path = document.getElementById('commentsPath').value;
       const list = document.getElementById('commentsList');
@@ -1098,30 +1540,14 @@ block content %}
 </div>
 
 <script>
-  // Variables globales desde el backend
-  window.ESTRUCTURAS_USUARIOS = {{ estructuras_usuarios_json|safe }};
-  window.CURRENT_USER_EMAIL = {{ current_user.email|tojson|safe }};
-  window.CURRENT_USER_ID = {{ current_user.id|tojson|safe }};
-  window.USUARIOS_EMAILS = {{ usuarios_emails_json|safe }};
-  window.CURRENT_USER_ROLE = {{ current_user.rol|tojson|safe }};
-  window.CURRENT_USER_CAN_MODIFY = {{ (current_user.rol == 'admin' or current_user.rol == 'cliente' or (current_user.rol == 'lector' and current_user.puede_modificar_archivos()))|tojson|safe }};
-
-  // También mantener las variables locales para compatibilidad
+  // Las variables globales ya fueron inicializadas arriba
+  // Mantener referencias locales para compatibilidad
   const ESTRUCTURAS_USUARIOS = window.ESTRUCTURAS_USUARIOS;
   const CURRENT_USER_EMAIL = window.CURRENT_USER_EMAIL;
   const CURRENT_USER_ID = window.CURRENT_USER_ID;
   const USUARIOS_EMAILS = window.USUARIOS_EMAILS;
   const CURRENT_USER_ROLE = window.CURRENT_USER_ROLE;
   const CURRENT_USER_CAN_MODIFY = window.CURRENT_USER_CAN_MODIFY;
-
-  // Debug: Verificar que las variables se cargaron correctamente
-  console.log("🔍 DEBUG - Variables cargadas:");
-  console.log("- ESTRUCTURAS_USUARIOS:", ESTRUCTURAS_USUARIOS);
-  console.log("- CURRENT_USER_EMAIL:", CURRENT_USER_EMAIL);
-  console.log("- CURRENT_USER_ID:", CURRENT_USER_ID);
-  console.log("- USUARIOS_EMAILS:", USUARIOS_EMAILS);
-  console.log("- Tipo de ESTRUCTURAS_USUARIOS:", typeof ESTRUCTURAS_USUARIOS);
-  console.log("- Tipo de CURRENT_USER_ID:", typeof CURRENT_USER_ID);
 
   // Definir toggleFolderMenu inmediatamente para que esté disponible
   window.toggleFolderMenu = function (menuId, event) {
@@ -2670,7 +3096,7 @@ block content %}
   });
 
   // Función para confirmar eliminación de archivo
-  function confirmarEliminarArchivo(archivo, carpeta, usuarioId) {
+  const confirmarEliminarArchivoImpl = function(archivo, carpeta, usuarioId) {
     console.log("🔧 confirmarEliminarArchivo llamado con:", {
       archivo,
       carpeta,
@@ -2725,12 +3151,21 @@ block content %}
       console.log("🔧 Modal de eliminación cerrado");
     }
   }
+  
+  // Reemplazar stub con función real para confirmarEliminarArchivo
+  try {
+    window._real_confirmarEliminarArchivo = confirmarEliminarArchivoImpl;
+    window.confirmarEliminarArchivo = confirmarEliminarArchivoImpl;
+    console.log('✅ confirmarEliminarArchivo reemplazada con implementación real');
+  } catch (e) {
+    console.error('❌ Error registrando confirmarEliminarArchivo:', e);
+  }
 
   // ========================
   // FUNCIONES DE VISUALIZACIÓN DE ARCHIVOS
   // ========================
 
-  function openPreviewModal(fileId, extension, filename = "") {
+  const openPreviewModalImpl = function(fileId, extension, filename = "") {
     const modal = document.getElementById("viewerModal");
     const content = document.getElementById("viewerContent");
     const fileNameSpan = document.getElementById("viewerFileName");
@@ -2858,6 +3293,15 @@ block content %}
     const modal = document.getElementById("viewerModal");
     modal.classList.add("hidden");
   }
+  
+  // Reemplazar stub con función real para openPreviewModal
+  try {
+    window._real_openPreviewModal = openPreviewModalImpl;
+    window.openPreviewModal = openPreviewModalImpl;
+    console.log('✅ openPreviewModal reemplazada con implementación real');
+  } catch (e) {
+    console.error('❌ Error registrando openPreviewModal:', e);
+  }
 
   // Crea un overlay de carga reutilizable
   function createLoadingOverlay(message) {
@@ -2884,7 +3328,7 @@ block content %}
   }
 
   // Función para descargar archivos
-  function descargarArchivo(fileId, filePath, filename) {
+  const descargarArchivoImpl = function(fileId, filePath, filename) {
     console.log("Descargando archivo:", filePath, "Nombre:", filename);
 
     const loadingOverlay = createLoadingOverlay("Descargando archivo...");
@@ -2938,6 +3382,15 @@ block content %}
           alert(`No se pudo descargar el archivo: ${error.message}`);
         }
       });
+  }
+  
+  // Reemplazar stub con función real para descargarArchivo
+  try {
+    window._real_descargarArchivo = descargarArchivoImpl;
+    window.descargarArchivo = descargarArchivoImpl;
+    console.log('✅ descargarArchivo reemplazada con implementación real');
+  } catch (e) {
+    console.error('❌ Error registrando descargarArchivo:', e);
   }
 
   // Inicialización final para asegurar que todo esté disponible
@@ -3166,31 +3619,102 @@ block content %}
   console.log('- openCreateFolderModal:', typeof window.openCreateFolderModal);
   console.log('- openRenameModal:', typeof window.openRenameModal);
   console.log('- openMoveModal:', typeof window.openMoveModal);
-  // Inicializar badges de estado al cargar/recargar la página
-  function initStatusBadgesDropboxes() {
+  // Inicializar badges de estado de archivos INMEDIATAMENTE y de forma persistente
+  window.initStatusBadgesDropboxes = function() {
     const badges = Array.from(document.querySelectorAll('span[id^="status-badge-"][data-file-path]'));
-    if (!badges.length) return;
-    badges.forEach(badge => {
+    console.log(`📊 Intentando inicializar badges, encontrados: ${badges.length}`);
+    
+    if (!badges.length) {
+      console.log('⚠️ No se encontraron badges de estado en el DOM');
+      return;
+    }
+    
+    badges.forEach((badge, index) => {
       const filePath = badge.dataset.filePath;
-      if (!filePath) return;
+      if (!filePath) {
+        console.log(`⚠️ Badge #${index} sin filePath`);
+        return;
+      }
+      
+      console.log(`📍 Cargando estado para badge #${index}:`, filePath);
+      
+      // Cargar estado del archivo con manejo robusto de errores
       fetch(`/api/archivo/estado?path=${encodeURIComponent(filePath)}`)
-        .then(r => r.json())
+        .then(r => {
+          if (!r.ok) {
+            console.warn(`⚠️ Respuesta no OK para ${filePath}:`, r.status);
+            throw new Error('Error en respuesta');
+          }
+          return r.json();
+        })
         .then(d => {
           const estado = (d && d.estado) ? d.estado : null;
-          if (estado === 'validado' || estado === 'rechazado' || estado === 'en_revision') {
-            badge.classList.remove('hidden');
-            badge.textContent = estado === 'validado' ? 'Validado' : (estado === 'rechazado' ? 'Rechazado' : 'Pendiente para revisión');
-            badge.className = `ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${estado === 'validado' ? 'bg-green-100 text-green-700' : estado === 'rechazado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`;
+          console.log(`✅ Estado obtenido para ${filePath}:`, estado);
+          
+          // Mostrar el badge siempre
+          badge.classList.remove('hidden');
+          badge.style.display = 'inline-block';
+          badge.style.visibility = 'visible';
+          
+          if (estado === 'validado') {
+            badge.textContent = 'Validado';
+            badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700';
+          } else if (estado === 'rechazado') {
+            badge.textContent = 'Rechazado';
+            badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700';
+          } else if (estado === 'en_revision') {
+            badge.textContent = 'Pendiente para revisión';
+            badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700';
           } else {
-            badge.classList.remove('hidden');
+            // Archivo nuevo sin estado
             badge.textContent = 'Nuevo';
             badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
           }
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.error(`❌ Error cargando estado para ${filePath}:`, err);
+          // Mostrar como "Nuevo" por defecto si hay error
+          badge.classList.remove('hidden');
+          badge.style.display = 'inline-block';
+          badge.style.visibility = 'visible';
+          badge.textContent = 'Nuevo';
+          badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
+        });
     });
+  };
+  
+  // Ejecutar inmediatamente si está disponible, sino esperar
+  console.log('📍 Iniciando carga de estados de archivos...');
+  if (document.readyState === 'loading') {
+    // DOM aún cargando
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('📍 DOMContentLoaded: Cargando estados...');
+      setTimeout(window.initStatusBadgesDropboxes, 50);
+    });
+  } else {
+    // DOM ya está listo
+    console.log('📍 DOM ya listo: Cargando estados inmediatamente...');
+    window.initStatusBadgesDropboxes();
   }
-  document.addEventListener('DOMContentLoaded', initStatusBadgesDropboxes);
+  
+  // Ejecutar cuando la página esté completamente cargada
+  window.addEventListener('load', function() {
+    console.log('📍 Página completamente cargada: Reintentando carga de estados...');
+    setTimeout(window.initStatusBadgesDropboxes, 100);
+  });
+  
+  // Ejecutar periódicamente durante los primeros 10 segundos para asegurar
+  let statusCheckCount = 0;
+  const statusCheckInterval = setInterval(function() {
+    statusCheckCount++;
+    if (statusCheckCount >= 20) {
+      console.log('✅ Verificación periódica de estados finalizada');
+      clearInterval(statusCheckInterval);
+    } else {
+      console.log(`📍 Verificación periódica #${statusCheckCount}...`);
+      window.initStatusBadgesDropboxes();
+    }
+  }, 500);
 </script>
 
 {% endblock %}

@@ -272,29 +272,30 @@
 
       body {
         font-family: "Montserrat", sans-serif;
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
+        margin: 0 !important;
+        padding: 0 !important;
       }
 
+      /* Estilos críticos para evitar FOUC y problemas de layout */
       #page-container {
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 100vh !important;
       }
 
       main {
-        flex: 1 0 auto;
+        flex: 1 0 auto !important;
       }
 
       footer {
-        flex-shrink: 0;
+        flex-shrink: 0 !important;
+        margin-top: auto !important;
       }
     </style>
     {% block styles %}{% endblock %}
   </head>
-  <body class="bg-surface" data-notif-enabled="{{ 1 if current_user.is_authenticated and (user_role == 'admin' or user_role == 'superadmin' or user_role == 'lector' or user_role == 'cliente') else 0 }}">
-    <div id="page-container">
+  <body class="bg-surface" data-notif-enabled="{{ 1 if current_user.is_authenticated and (user_role == 'admin' or user_role == 'superadmin' or user_role == 'lector' or user_role == 'cliente') else 0 }}" style="margin: 0; padding: 0;">
+    <div id="page-container" class="flex flex-col min-h-screen" style="display: flex; flex-direction: column; min-height: 100vh;">
       <!-- Header - Solo mostrar cuando el usuario esté autenticado -->
       {% if current_user.is_authenticated %}
       <header class="bg-white shadow-md">
@@ -801,7 +802,7 @@
       {% endif %}
 
       <!-- Contenido principal - NUEVO -->
-      <main class="flex-grow py-8">
+      <main class="flex-grow py-8" style="flex-grow: 1;">
         <div id="app-content" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {% block content %}
           <!-- El contenido de las páginas específicas irá aquí -->
@@ -828,6 +829,40 @@
 
     <!-- Scripts -->
     <script>
+      // Script inline crítico para asegurar layout correcto antes de DOMContentLoaded
+      (function() {
+        // Forzar layout correcto inmediatamente
+        const ensureLayout = () => {
+          const pageContainer = document.getElementById('page-container');
+          if (pageContainer) {
+            pageContainer.style.display = 'flex';
+            pageContainer.style.flexDirection = 'column';
+            pageContainer.style.minHeight = '100vh';
+          }
+          
+          const main = document.querySelector('main');
+          if (main) {
+            main.style.flex = '1 0 auto';
+          }
+          
+          const footer = document.querySelector('footer');
+          if (footer) {
+            footer.style.flexShrink = '0';
+            footer.style.marginTop = 'auto';
+          }
+        };
+        
+        // Ejecutar inmediatamente
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', ensureLayout);
+        } else {
+          ensureLayout();
+        }
+        
+        // Ejecutar también cuando todos los recursos carguen
+        window.addEventListener('load', ensureLayout);
+      })();
+
       document.addEventListener("DOMContentLoaded", function () {
         const mobileMenuButton = document.getElementById("mobileMenuButton");
         const mobileMenu = document.getElementById("mobileMenu");

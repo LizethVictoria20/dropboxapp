@@ -606,6 +606,10 @@ def carpetas_dropbox():
     # Verificar que el usuario esté autenticado y tenga rol
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
         return redirect(url_for("auth.login"))
+    
+    # Obtener parámetro de página (default: 1)
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Archivos por página
 
     try:
         estructuras_usuarios = {}
@@ -710,6 +714,25 @@ def carpetas_dropbox():
             # Guardar la estructura plana (clave = id de usuario)
             estructuras_usuarios[user.id] = estructura_plana
 
+        # Combinar todos los archivos de todos los usuarios para paginación
+        todos_los_archivos = []
+        archivos_por_usuario = {}  # Para mantener referencia de qué archivo pertenece a qué usuario
+        
+        for user_id, estructura_plana in estructuras_usuarios.items():
+            archivos_usuario = estructura_plana.get("files", [])
+            for archivo_path in archivos_usuario:
+                todos_los_archivos.append(archivo_path)
+                archivos_por_usuario[archivo_path] = user_id
+
+        # Aplicar paginación
+        total_archivos = len(todos_los_archivos)
+        total_pages = (total_archivos + per_page - 1) // per_page  # Ceiling division
+        page = max(1, min(page, total_pages))  # Asegurar que page esté en rango válido
+        
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        archivos_paginados = todos_los_archivos[start_idx:end_idx]
+
         # Preparar mapping de emails para la plantilla/JS
         usuarios_emails = {}
         for user in usuarios:
@@ -734,6 +757,12 @@ def carpetas_dropbox():
             estructuras_usuarios_json=estructuras_usuarios_json,
             usuarios_emails_json=usuarios_emails_json,
             folders_por_ruta=folders_por_ruta,
+            archivos_paginados=archivos_paginados,
+            archivos_por_usuario=archivos_por_usuario,
+            page=page,
+            per_page=per_page,
+            total_archivos=total_archivos,
+            total_pages=total_pages,
         )
 
     except Exception as e:
@@ -1225,22 +1254,34 @@ def subir_archivo():
             flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
             return redirect(url_for("auth.login"))
 
-
-        # Ya no necesitamos pasar titulares ni beneficiarios, siempre será el usuario actual
+        if current_user.rol == "cliente":
+            # Cliente solo ve sus propias carpetas
+            titulares = [current_user]  # Solo el usuario actual
+            beneficiarios = Beneficiario.query.filter_by(titular_id=current_user.id).all()
+        elif current_user.rol in ["admin", "superadmin"]:
+            # Admin ve todos los usuarios titulares (no beneficiarios)
+            titulares = User.query.filter_by(es_beneficiario=False).all()
+            beneficiarios = Beneficiario.query.all()
+        else:
+            # Otros roles (lector, etc.) - ajustar según necesidades
+            titulares = User.query.filter_by(es_beneficiario=False).all()
+            beneficiarios = Beneficiario.query.all()
+        
+        print("Usuarios en DB:", [u.email for u in titulares])
+        print("Beneficiarios en DB:", [b.email for b in beneficiarios])
         return render_template(
-            "subir_archivo.html"
+            "subir_archivo.html",
+            categorias=CATEGORIAS.keys(),
+            categorias_json=json.dumps(CATEGORIAS),
+            titulares=titulares,
+            beneficiarios=beneficiarios
         )
 
     print("POST: Procesando subida de archivo")
     
     # Obtener datos del formulario
-    # Usuario siempre será el titular actual (current_user)
     usuario_id = request.form.get("usuario_id")
-    if not usuario_id:
-        # Si no viene usuario_id, usar el usuario actual
-        usuario_id = f"user-{current_user.id}"
-    
-    categoria = request.form.get("categoria") or ""  # Categoría ahora es opcional
+    categoria = request.form.get("categoria")
     subcategoria = (request.form.get("subcategoria") or "").strip()
     archivos = request.files.getlist("archivo")  # Obtener lista de archivos
     
@@ -1254,10 +1295,10 @@ def subir_archivo():
         print(f"  Archivo {idx}: {archivo.filename} ({archivo.content_length if hasattr(archivo, 'content_length') else 'N/A'} bytes)")
     print("=" * 60)
 
-    # Validar campos obligatorios (solo archivo es requerido ahora)
-    if not archivos or len(archivos) == 0:
-        print("ERROR: No se recibieron archivos")
-        flash("Debes seleccionar al menos un archivo para subir", "error")
+    # Validar campos obligatorios
+    if not (usuario_id and categoria and archivos and len(archivos) > 0):
+        print("ERROR: Faltan campos obligatorios")
+        flash("Completa todos los campos obligatorios", "error")
         return redirect(url_for("listar_dropbox.subir_archivo"))
 
     # Validar y obtener usuario/beneficiario
@@ -1295,20 +1336,18 @@ def subir_archivo():
         return redirect(url_for("auth.login"))
         
     # Validación de seguridad: cliente solo puede subir a sus propias carpetas
-    # Ahora siempre será el usuario actual, pero verificamos por seguridad
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
         flash("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.", "error")
         return redirect(url_for("auth.login"))
     
-    # Asegurar que el usuario_id corresponde al usuario actual
-    if usuario_id.startswith("user-"):
-        real_id = int(usuario_id[5:])
-        if real_id != current_user.id:
-            flash("No tienes permisos para subir archivos a esta carpeta.", "error")
-            return redirect(url_for("listar_dropbox.subir_archivo"))
-    elif usuario_id.startswith("beneficiario-"):
-        # Si es beneficiario, verificar que pertenezca al usuario actual (solo para clientes)
-        if current_user.rol == "cliente":
+    if current_user.rol == "cliente":
+        if usuario_id.startswith("user-"):
+            # Si es un titular, debe ser el usuario actual
+            if int(usuario_id[5:]) != current_user.id:
+                flash("No tienes permisos para subir archivos a esta carpeta.", "error")
+                return redirect(url_for("listar_dropbox.subir_archivo"))
+        elif usuario_id.startswith("beneficiario-"):
+            # Si es un beneficiario, debe pertenecer al usuario actual
             beneficiario_id = int(usuario_id[13:])
             beneficiario = Beneficiario.query.get(beneficiario_id)
             if not beneficiario or beneficiario.titular_id != current_user.id:
@@ -1387,34 +1426,29 @@ def subir_archivo():
             db.session.commit()
             print("Ruta raíz guardada en DB:", carpeta_usuario)
 
-        # Si hay categoría, crear carpeta de categoría; si no, usar carpeta raíz del usuario
-        if categoria and categoria.strip():
-            categoria_saneada = sanitize_dropbox_segment(categoria)
-            ruta_categoria = f"{carpeta_usuario}/{categoria_saneada}"
-            try:
-                dbx.files_create_folder_v2(with_base_folder(ruta_categoria))
-                print("Carpeta categoría creada:", ruta_categoria)
-                
-                # Guardar carpeta categoría en la base de datos
-                carpeta_cat = Folder(  # type: ignore[call-arg]
-                    name=categoria_saneada,
-                    user_id=getattr(usuario, "id", None),
-                    dropbox_path=ruta_categoria,
-                    es_publica=True
-                )
-                db.session.add(carpeta_cat)
-                db.session.commit()  # Commit inmediato para asegurar que se guarde
-                print("Carpeta categoría guardada en BD:", ruta_categoria)
-                
-            except dropbox.exceptions.ApiError as e:
-                if "conflict" not in str(e):
-                    print("ERROR al crear carpeta categoría:", e)
-                    raise e
-                print("La carpeta categoría ya existía:", ruta_categoria)
-        else:
-            # Si no hay categoría, usar la carpeta raíz del usuario
-            ruta_categoria = carpeta_usuario
-            print("No se especificó categoría, usando carpeta raíz:", ruta_categoria)
+        # Crear carpeta de categoría únicamente
+        categoria_saneada = sanitize_dropbox_segment(categoria)
+        ruta_categoria = f"{carpeta_usuario}/{categoria_saneada}"
+        try:
+            dbx.files_create_folder_v2(with_base_folder(ruta_categoria))
+            print("Carpeta categoría creada:", ruta_categoria)
+            
+            # Guardar carpeta categoría en la base de datos
+            carpeta_cat = Folder(  # type: ignore[call-arg]
+                name=categoria_saneada,
+                user_id=getattr(usuario, "id", None),
+                dropbox_path=ruta_categoria,
+                es_publica=True
+            )
+            db.session.add(carpeta_cat)
+            db.session.commit()  # Commit inmediato para asegurar que se guarde
+            print("Carpeta categoría guardada en BD:", ruta_categoria)
+            
+        except dropbox.exceptions.ApiError as e:
+            if "conflict" not in str(e):
+                print("ERROR al crear carpeta categoría:", e)
+                raise e
+            print("La carpeta categoría ya existía:", ruta_categoria)
             
         # Subcategoría eliminada del flujo
         
