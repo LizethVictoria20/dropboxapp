@@ -7,6 +7,7 @@ from typing import Optional, Dict, List
 from flask import current_app
 from app.models import User, Archivo
 import traceback
+from typing import Any
 
 # Intentar importar dependencias opcionales
 try:
@@ -14,12 +15,48 @@ try:
     FLASK_MAIL_AVAILABLE = True
 except ImportError:
     FLASK_MAIL_AVAILABLE = False
+    Mail = None  # type: ignore[assignment]
+    Message = None  # type: ignore[assignment]
 
 try:
     from twilio.rest import Client as TwilioClient
     TWILIO_AVAILABLE = True
 except ImportError:
     TWILIO_AVAILABLE = False
+    TwilioClient = None  # type: ignore[assignment]
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    """Parse common boolean env values."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    raw = str(raw).strip().lower()
+    if raw in {"1", "true", "yes", "y", "on"}:
+        return True
+    if raw in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
+
+
+def _mail_config_summary(
+    mail_server: Optional[str],
+    mail_port: int,
+    mail_use_tls: bool,
+    mail_use_ssl: bool,
+    mail_username: Optional[str],
+    mail_sender: Optional[str],
+    suppress_send: bool,
+) -> str:
+    username_hint = (mail_username or "")
+    if username_hint and "@" in username_hint:
+        user_display = username_hint.split("@", 1)[0] + "@…"
+    else:
+        user_display = bool(username_hint)
+    return (
+        f"MAIL_SERVER={bool(mail_server)} PORT={mail_port} TLS={mail_use_tls} SSL={mail_use_ssl} "
+        f"USERNAME={user_display} DEFAULT_SENDER={bool(mail_sender)} SUPPRESS_SEND={suppress_send}"
+    )
 
 
 def enviar_notificacion_documento_validado(
@@ -46,7 +83,7 @@ def enviar_notificacion_documento_validado(
     
     try:
         nombre_usuario = usuario.nombre_completo or usuario.email.split('@')[0]
-        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        app_url = os.environ.get('APP_URL') or 'http://localhost:5000'
         url_archivo = f"{app_url}/carpetas_dropbox"
         
         # Enviar email de aprobación
@@ -102,7 +139,7 @@ def enviar_notificacion_documento_rechazado(
         mensaje_base += " Por favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión."
         
         # URL de la aplicación (ajustar según tu dominio)
-        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        app_url = os.environ.get('APP_URL') or 'http://localhost:5000'
         # Usar la ruta directamente en lugar de url_for para evitar problemas de contexto
         url_archivo = f"{app_url}/carpetas_dropbox"
         
@@ -167,37 +204,55 @@ def enviar_email_validado(
     Returns:
         True si se envió exitosamente, False en caso contrario
     """
-    if not FLASK_MAIL_AVAILABLE:
+    if (not FLASK_MAIL_AVAILABLE) or Mail is None or Message is None:
         current_app.logger.warning("Flask-Mail no está disponible. Instala con: pip install flask-mail")
         return False
     
     try:
         mail_server = os.environ.get('MAIL_SERVER') or current_app.config.get('MAIL_SERVER')
         mail_port = int(os.environ.get('MAIL_PORT') or current_app.config.get('MAIL_PORT', 587))
-        mail_use_tls = (os.environ.get('MAIL_USE_TLS', 'true') or 
-                       str(current_app.config.get('MAIL_USE_TLS', True))).lower() == 'true'
+        mail_use_tls = _env_bool('MAIL_USE_TLS', bool(current_app.config.get('MAIL_USE_TLS', True)))
+        mail_use_ssl = _env_bool('MAIL_USE_SSL', bool(current_app.config.get('MAIL_USE_SSL', False)))
         mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
-        mail_password = os.environ.get('MAIL_PASSWORD') or current_app.config.get('MAIL_PASSWORD')
+        mail_password = (os.environ.get('MAIL_PASSWORD') or current_app.config.get('MAIL_PASSWORD') or '')
+        mail_password = str(mail_password).replace(' ', '')
         mail_sender = (os.environ.get('MAIL_DEFAULT_SENDER') or 
                       current_app.config.get('MAIL_DEFAULT_SENDER') or 
                       mail_username)
+
+        suppress_send = _env_bool('MAIL_SUPPRESS_SEND', bool(current_app.config.get('MAIL_SUPPRESS_SEND', False)))
         
         if not all([mail_server, mail_username, mail_password]):
+            missing = []
+            if not mail_server:
+                missing.append('MAIL_SERVER')
+            if not mail_username:
+                missing.append('MAIL_USERNAME')
+            if not mail_password:
+                missing.append('MAIL_PASSWORD')
             current_app.logger.warning(
-                "Configuración de email incompleta. Configura MAIL_SERVER, MAIL_USERNAME y MAIL_PASSWORD."
+                "Configuración de email incompleta. Faltan: %s. (%s)"
+                % (', '.join(missing), _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send))
             )
             return False
+
+        # Aplicar config (útil si Flask-Mail se inicializó antes de que existieran env vars)
+        current_app.config.update({
+            'MAIL_SERVER': mail_server,
+            'MAIL_PORT': mail_port,
+            'MAIL_USE_TLS': mail_use_tls,
+            'MAIL_USE_SSL': mail_use_ssl,
+            'MAIL_USERNAME': mail_username,
+            'MAIL_PASSWORD': mail_password,
+            'MAIL_DEFAULT_SENDER': mail_sender,
+            'MAIL_SUPPRESS_SEND': suppress_send,
+        })
         
         if not hasattr(current_app, 'extensions') or 'mail' not in current_app.extensions:
-            temp_config = {
-                'MAIL_SERVER': mail_server,
-                'MAIL_PORT': mail_port,
-                'MAIL_USE_TLS': mail_use_tls,
-                'MAIL_USERNAME': mail_username,
-                'MAIL_PASSWORD': mail_password,
-                'MAIL_DEFAULT_SENDER': mail_sender
-            }
-            current_app.config.update(temp_config)
+            current_app.logger.warning(
+                "Flask-Mail no estaba inicializado en app.extensions; inicializando on-demand. (%s)"
+                % _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send)
+            )
             mail = Mail(current_app)
         else:
             mail = current_app.extensions['mail']
@@ -262,8 +317,16 @@ Hola {nombre_usuario},
         msg = Message(
             subject=asunto,
             recipients=[destinatario],
+            sender=mail_sender,
             html=cuerpo_html,
             body=cuerpo_texto
+        )
+
+        current_app.logger.info(
+            "Enviando email de aprobación a %s (%s)" % (
+                destinatario,
+                _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send),
+            )
         )
         
         mail.send(msg)
@@ -290,7 +353,7 @@ def enviar_email_rechazo(
     Returns:
         True si se envió exitosamente, False en caso contrario
     """
-    if not FLASK_MAIL_AVAILABLE:
+    if (not FLASK_MAIL_AVAILABLE) or Mail is None or Message is None:
         current_app.logger.warning("Flask-Mail no está disponible. Instala con: pip install flask-mail")
         return False
     
@@ -298,33 +361,50 @@ def enviar_email_rechazo(
         # Obtener configuración de email desde variables de entorno o config
         mail_server = os.environ.get('MAIL_SERVER') or current_app.config.get('MAIL_SERVER')
         mail_port = int(os.environ.get('MAIL_PORT') or current_app.config.get('MAIL_PORT', 587))
-        mail_use_tls = (os.environ.get('MAIL_USE_TLS', 'true') or 
-                       str(current_app.config.get('MAIL_USE_TLS', True))).lower() == 'true'
+        mail_use_tls = _env_bool('MAIL_USE_TLS', bool(current_app.config.get('MAIL_USE_TLS', True)))
+        mail_use_ssl = _env_bool('MAIL_USE_SSL', bool(current_app.config.get('MAIL_USE_SSL', False)))
         mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
-        mail_password = os.environ.get('MAIL_PASSWORD') or current_app.config.get('MAIL_PASSWORD')
+        mail_password = (os.environ.get('MAIL_PASSWORD') or current_app.config.get('MAIL_PASSWORD') or '')
+        mail_password = str(mail_password).replace(' ', '')
         mail_sender = (os.environ.get('MAIL_DEFAULT_SENDER') or 
                       current_app.config.get('MAIL_DEFAULT_SENDER') or 
                       mail_username)
+
+        suppress_send = _env_bool('MAIL_SUPPRESS_SEND', bool(current_app.config.get('MAIL_SUPPRESS_SEND', False)))
         
         # Verificar configuración mínima
         if not all([mail_server, mail_username, mail_password]):
+            missing = []
+            if not mail_server:
+                missing.append('MAIL_SERVER')
+            if not mail_username:
+                missing.append('MAIL_USERNAME')
+            if not mail_password:
+                missing.append('MAIL_PASSWORD')
             current_app.logger.warning(
-                "Configuración de email incompleta. Configura MAIL_SERVER, MAIL_USERNAME y MAIL_PASSWORD."
+                "Configuración de email incompleta. Faltan: %s. (%s)"
+                % (', '.join(missing), _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send))
             )
             return False
+
+        # Aplicar config (útil si Flask-Mail se inicializó antes de que existieran env vars)
+        current_app.config.update({
+            'MAIL_SERVER': mail_server,
+            'MAIL_PORT': mail_port,
+            'MAIL_USE_TLS': mail_use_tls,
+            'MAIL_USE_SSL': mail_use_ssl,
+            'MAIL_USERNAME': mail_username,
+            'MAIL_PASSWORD': mail_password,
+            'MAIL_DEFAULT_SENDER': mail_sender,
+            'MAIL_SUPPRESS_SEND': suppress_send,
+        })
         
         # Configurar Flask-Mail si no está configurado
         if not hasattr(current_app, 'extensions') or 'mail' not in current_app.extensions:
-            # Actualizar configuración temporalmente
-            temp_config = {
-                'MAIL_SERVER': mail_server,
-                'MAIL_PORT': mail_port,
-                'MAIL_USE_TLS': mail_use_tls,
-                'MAIL_USERNAME': mail_username,
-                'MAIL_PASSWORD': mail_password,
-                'MAIL_DEFAULT_SENDER': mail_sender
-            }
-            current_app.config.update(temp_config)
+            current_app.logger.warning(
+                "Flask-Mail no estaba inicializado en app.extensions; inicializando on-demand. (%s)"
+                % _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send)
+            )
             mail = Mail(current_app)
         else:
             mail = current_app.extensions['mail']
@@ -390,8 +470,16 @@ Te informamos que tu documento "{nombre_archivo}" ha sido rechazado.
         msg = Message(
             subject=asunto,
             recipients=[destinatario],
+            sender=mail_sender,
             html=cuerpo_html,
             body=cuerpo_texto
+        )
+
+        current_app.logger.info(
+            "Enviando email de rechazo a %s (%s)" % (
+                destinatario,
+                _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send),
+            )
         )
         
         mail.send(msg)
@@ -416,7 +504,7 @@ def enviar_sms_rechazo(
     Returns:
         True si se envió exitosamente, False en caso contrario
     """
-    if not TWILIO_AVAILABLE:
+    if (not TWILIO_AVAILABLE) or TwilioClient is None:
         current_app.logger.warning("Twilio no está disponible. Instala con: pip install twilio")
         return False
     
@@ -477,7 +565,7 @@ def enviar_whatsapp_rechazo(
     Returns:
         True si se envió exitosamente, False en caso contrario
     """
-    if not TWILIO_AVAILABLE:
+    if (not TWILIO_AVAILABLE) or TwilioClient is None:
         current_app.logger.warning("Twilio no está disponible. Instala con: pip install twilio")
         return False
     

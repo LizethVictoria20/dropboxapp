@@ -90,6 +90,17 @@ def actualizar_estado_archivo():
     estado_anterior = archivo.estado
     archivo.estado = nuevo_estado
     db.session.commit()
+
+    current_app.logger.info(
+        "Estado de archivo actualizado: path=%s usuario_id=%s %s->%s motivo_len=%s"
+        % (
+            dropbox_path,
+            getattr(archivo, 'usuario_id', None),
+            estado_anterior,
+            nuevo_estado,
+            len(motivo_rechazo) if motivo_rechazo else 0,
+        )
+    )
     
     # Crear notificación para el cliente si el estado cambió
     if estado_anterior != nuevo_estado and archivo.usuario_id:
@@ -151,6 +162,10 @@ def actualizar_estado_archivo():
                 usuario = User.query.get(archivo.usuario_id)
                 if usuario:
                     from app.utils.external_notifications import enviar_notificacion_documento_rechazado
+                    current_app.logger.info(
+                        "Intentando notificación externa (rechazo): usuario=%s archivo=%s"
+                        % (usuario.email, archivo.nombre)
+                    )
                     resultados = enviar_notificacion_documento_rechazado(
                         usuario=usuario,
                         archivo=archivo,
@@ -171,6 +186,10 @@ def actualizar_estado_archivo():
                 usuario = User.query.get(archivo.usuario_id)
                 if usuario:
                     from app.utils.external_notifications import enviar_notificacion_documento_validado
+                    current_app.logger.info(
+                        "Intentando notificación externa (validado): usuario=%s archivo=%s"
+                        % (usuario.email, archivo.nombre)
+                    )
                     resultados = enviar_notificacion_documento_validado(
                         usuario=usuario,
                         archivo=archivo,
