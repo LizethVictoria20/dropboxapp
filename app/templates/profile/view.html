@@ -16,7 +16,7 @@
         <button
           type="button"
           class="mt-4 md:mt-0 inline-flex items-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out"
-          onclick="openModal()"
+          onclick="openModal('modalOverlay')"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -587,7 +587,7 @@
 </div>
 
 <!-- Modal de edición de perfil -->
-<div id="modalOverlay" class="hidden fixed inset-0 z-50 items-center justify-center bg-gray-500 bg-opacity-75 transition-opacity" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="modalOverlay" class="hidden flex fixed inset-0 z-50 items-center justify-center bg-gray-500 bg-opacity-75 transition-opacity" aria-labelledby="modal-title" role="dialog" aria-modal="true">
   <div class="w-full max-w-3xl px-4">
     <div id="modalContent" class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all modal-enter">
       <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -597,7 +597,7 @@
           </svg>
           Editar Perfil
         </h3>
-        <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" onclick="closeModal()">
+        <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" onclick="closeModal('modalOverlay')">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -758,7 +758,7 @@
           </div>
 
           <div class="px-6 py-4 bg-white border-t border-gray-100 flex flex-col-reverse sm:flex-row sm:justify-end space-y-reverse space-y-3 sm:space-y-0 sm:space-x-3">
-            <button type="button" class="sm:order-1 inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-text bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" onclick="closeModal()">
+            <button type="button" class="sm:order-1 inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-text bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" onclick="closeModal('modalOverlay')">
               Cancelar
             </button>
             <button type="submit" class="sm:order-2 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
@@ -1058,30 +1058,35 @@
     }
 
     // Hacer las funciones disponibles globalmente
-    window.openModal = function() {
-      if (!modalOverlay || !modalContent) {
+    window.openProfileEditModal = function() {
+      const overlay = document.getElementById("modalOverlay");
+      const content = document.getElementById("modalContent");
+      if (!overlay || !content) {
         console.error('Modal elements not found');
         return;
       }
-      modalOverlay.classList.remove("hidden");
-      modalOverlay.classList.add("flex");
-      modalContent.classList.remove("modal-leave");
-      modalContent.classList.add("modal-enter");
+      overlay.classList.remove("hidden");
+      overlay.classList.add("flex");
+      content.classList.remove("modal-leave");
+      content.classList.add("modal-enter");
       showTab("personal-tab");
       hideMessage();
     };
 
-    window.closeModal = function() {
-      if (!modalOverlay || !modalContent) {
+    window.closeProfileEditModal = function() {
+      const overlay = document.getElementById("modalOverlay");
+      const content = document.getElementById("modalContent");
+      const form = document.getElementById("profileForm");
+      if (!overlay || !content) {
         console.error('Modal elements not found');
         return;
       }
-      modalContent.classList.remove("modal-enter");
-      modalContent.classList.add("modal-leave");
-      modalContent.addEventListener("animationend", function () {
-        modalOverlay.classList.add("hidden");
-        modalOverlay.classList.remove("flex");
-        if (profileForm) profileForm.reset();
+      content.classList.remove("modal-enter");
+      content.classList.add("modal-leave");
+      content.addEventListener("animationend", function () {
+        overlay.classList.add("hidden");
+        overlay.classList.remove("flex");
+        if (form) form.reset();
         hideMessage();
       }, { once: true });
     };
@@ -1146,7 +1151,7 @@
           }, 3000);
         } else {
           setTimeout(() => {
-            closeModal();
+            closeModal('modalOverlay');
             window.location.reload();
           }, 2000);
         }
@@ -1173,6 +1178,7 @@
     }
   });
   }
+  });
 
   // Funciones adicionales del modal
   window.openActivityLogModal = function() {

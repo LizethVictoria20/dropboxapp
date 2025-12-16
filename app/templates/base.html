@@ -11,9 +11,9 @@
     ></script>
     <script>
       // Store global para menús de usuario - debe estar antes de Alpine.js
-      document.addEventListener('alpine:init', () => {
-        Alpine.store('userMenu', {
-          openMenuId: null
+      document.addEventListener("alpine:init", () => {
+        Alpine.store("userMenu", {
+          openMenuId: null,
         });
       });
     </script>
@@ -66,24 +66,67 @@
       };
     </script>
     <!-- Modal Confirmar Visibilidad -->
-    <div id="visibilityConfirmModal" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center">
+    <div
+      id="visibilityConfirmModal"
+      class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center"
+    >
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
         <div class="px-5 py-4 border-b flex items-center justify-between">
-          <h3 id="visibilityModalTitle" class="text-lg font-semibold text-gray-900">Cambiar visibilidad</h3>
-          <button onclick="closeVisibilityModal()" class="text-gray-400 hover:text-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          <h3
+            id="visibilityModalTitle"
+            class="text-lg font-semibold text-gray-900"
+          >
+            Cambiar visibilidad
+          </h3>
+          <button
+            onclick="closeVisibilityModal()"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
           </button>
         </div>
         <div class="px-5 py-4">
           <p class="text-sm text-gray-600">Selecciona la visibilidad para:</p>
-          <p id="visibilityPath" class="mt-2 text-sm font-mono text-gray-900 break-all"></p>
+          <p
+            id="visibilityPath"
+            class="mt-2 text-sm font-mono text-gray-900 break-all"
+          ></p>
           <input type="hidden" id="visibilityTipo" />
           <input type="hidden" id="visibilityRuta" />
         </div>
         <div class="px-5 py-4 border-t flex items-center justify-end gap-3">
-          <button onclick="closeVisibilityModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Cancelar</button>
-          <button id="visibilityPrivateBtn" onclick="submitVisibilityChange(false)" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Privada</button>
-          <button id="visibilityPublicBtn" onclick="submitVisibilityChange(true)" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Pública</button>
+          <button
+            onclick="closeVisibilityModal()"
+            class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+          >
+            Cancelar
+          </button>
+          <button
+            id="visibilityPrivateBtn"
+            onclick="submitVisibilityChange(false)"
+            class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Privada
+          </button>
+          <button
+            id="visibilityPublicBtn"
+            onclick="submitVisibilityChange(true)"
+            class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          >
+            Pública
+          </button>
         </div>
       </div>
     </div>
@@ -154,73 +197,90 @@
       };
 
       // Alternar visibilidad de archivo o carpeta
-      window.toggleVisibility = async function(tipo, rutaCompleta) {
+      window.toggleVisibility = async function (tipo, rutaCompleta) {
         // Compatibilidad hacia atrás: abrir el modal con la ruta recibida
         window.openVisibilityModal(tipo, rutaCompleta);
-      }
+      };
 
       // Modal de confirmación de visibilidad
-      window.openVisibilityModal = function(tipo, rutaCompleta) {
-        const modal = document.getElementById('visibilityConfirmModal');
-        const title = document.getElementById('visibilityModalTitle');
-        const pathSpan = document.getElementById('visibilityPath');
-        const tipoInput = document.getElementById('visibilityTipo');
-        const rutaInput = document.getElementById('visibilityRuta');
-        const publicBtn = document.getElementById('visibilityPublicBtn');
-        const privateBtn = document.getElementById('visibilityPrivateBtn');
+      window.openVisibilityModal = function (tipo, rutaCompleta) {
+        const modal = document.getElementById("visibilityConfirmModal");
+        const title = document.getElementById("visibilityModalTitle");
+        const pathSpan = document.getElementById("visibilityPath");
+        const tipoInput = document.getElementById("visibilityTipo");
+        const rutaInput = document.getElementById("visibilityRuta");
+        const publicBtn = document.getElementById("visibilityPublicBtn");
+        const privateBtn = document.getElementById("visibilityPrivateBtn");
 
-        if (!modal || !title || !pathSpan || !tipoInput || !rutaInput || !publicBtn || !privateBtn) {
-          console.error('Modal de visibilidad no encontrado o incompleto');
+        if (
+          !modal ||
+          !title ||
+          !pathSpan ||
+          !tipoInput ||
+          !rutaInput ||
+          !publicBtn ||
+          !privateBtn
+        ) {
+          console.error("Modal de visibilidad no encontrado o incompleto");
           return;
         }
 
         // Normalizar ruta para mostrar
-        const normalizada = (rutaCompleta || '').replace(/\/+/, '/').replace(/\/$/, '');
-        title.textContent = tipo === 'carpeta' ? 'Cambiar visibilidad de la carpeta' : 'Cambiar visibilidad del archivo';
+        const normalizada = (rutaCompleta || "")
+          .replace(/\/+/, "/")
+          .replace(/\/$/, "");
+        title.textContent =
+          tipo === "carpeta"
+            ? "Cambiar visibilidad de la carpeta"
+            : "Cambiar visibilidad del archivo";
         pathSpan.textContent = normalizada;
         tipoInput.value = tipo;
         rutaInput.value = normalizada;
 
         // Mostrar modal
-        modal.classList.remove('hidden');
-      }
+        modal.classList.remove("hidden");
+      };
 
-      window.closeVisibilityModal = function() {
-        const modal = document.getElementById('visibilityConfirmModal');
-        if (modal) modal.classList.add('hidden');
-      }
+      window.closeVisibilityModal = function () {
+        const modal = document.getElementById("visibilityConfirmModal");
+        if (modal) modal.classList.add("hidden");
+      };
 
-      window.submitVisibilityChange = async function(esPublica) {
-        const tipo = document.getElementById('visibilityTipo')?.value;
-        const ruta = document.getElementById('visibilityRuta')?.value;
+      window.submitVisibilityChange = async function (esPublica) {
+        const tipo = document.getElementById("visibilityTipo")?.value;
+        const ruta = document.getElementById("visibilityRuta")?.value;
         if (!tipo || !ruta) return;
         try {
-          const res = await fetch('/api/toggle_visibilidad', {
-            method: 'POST',
+          const res = await fetch("/api/toggle_visibilidad", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest'
+              "Content-Type": "application/json",
+              "X-Requested-With": "XMLHttpRequest",
             },
-            credentials: 'same-origin',
-            body: JSON.stringify({ tipo, ruta, es_publica: !!esPublica })
+            credentials: "same-origin",
+            body: JSON.stringify({ tipo, ruta, es_publica: !!esPublica }),
           });
           const data = await res.json();
           if (!res.ok || !data.success) {
-            alert('Error cambiando visibilidad: ' + (data.error || res.statusText));
+            alert(
+              "Error cambiando visibilidad: " + (data.error || res.statusText)
+            );
             return;
           }
 
           // Actualizar badge si es carpeta
-          if (tipo === 'carpeta') {
-            const rutaId = ruta.startsWith('/') ? ruta.slice(1) : ruta;
-            const badge = document.getElementById('badge-' + rutaId);
+          if (tipo === "carpeta") {
+            const rutaId = ruta.startsWith("/") ? ruta.slice(1) : ruta;
+            const badge = document.getElementById("badge-" + rutaId);
             if (badge) {
               if (data.es_publica) {
-                badge.className = 'ml-2 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800';
-                badge.textContent = 'Pública';
+                badge.className =
+                  "ml-2 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800";
+                badge.textContent = "Pública";
               } else {
-                badge.className = 'ml-2 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800';
-                badge.textContent = 'Privada';
+                badge.className =
+                  "ml-2 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800";
+                badge.textContent = "Privada";
               }
             }
           }
@@ -229,10 +289,10 @@
           // Recargar la página para reflejar todos los cambios
           window.location.reload();
         } catch (e) {
-          console.error('submitVisibilityChange error', e);
-          alert('Error inesperado al cambiar visibilidad');
+          console.error("submitVisibilityChange error", e);
+          alert("Error inesperado al cambiar visibilidad");
         }
-      }
+      };
 
       window.handleFolderClick = function (folderId, event) {
         // Detener la propagación del evento para evitar conflictos
@@ -294,8 +354,16 @@
     </style>
     {% block styles %}{% endblock %}
   </head>
-  <body class="bg-surface" data-notif-enabled="{{ 1 if current_user.is_authenticated and (user_role == 'admin' or user_role == 'superadmin' or user_role == 'lector' or user_role == 'cliente') else 0 }}" style="margin: 0; padding: 0;">
-    <div id="page-container" class="flex flex-col min-h-screen" style="display: flex; flex-direction: column; min-height: 100vh;">
+  <body
+    class="bg-surface"
+    data-notif-enabled="{{ 1 if current_user.is_authenticated and (user_role == 'admin' or user_role == 'superadmin' or user_role == 'lector' or user_role == 'cliente') else 0 }}"
+    style="margin: 0; padding: 0"
+  >
+    <div
+      id="page-container"
+      class="flex flex-col min-h-screen"
+      style="display: flex; flex-direction: column; min-height: 100vh"
+    >
       <!-- Header - Solo mostrar cuando el usuario esté autenticado -->
       {% if current_user.is_authenticated %}
       <header class="bg-white shadow-md">
@@ -415,7 +483,9 @@
 
             <div class="flex items-center space-x-6">
               <!-- Notificaciones (para admin, superadmin, lector y cliente) -->
-              {% if current_user.is_authenticated and (user_role == 'admin' or user_role == 'superadmin' or user_role == 'lector' or user_role == 'cliente') %}
+              {% if current_user.is_authenticated and (user_role == 'admin' or
+              user_role == 'superadmin' or user_role == 'lector' or user_role ==
+              'cliente') %}
               <div class="relative group">
                 <button
                   id="notificationButton"
@@ -425,7 +495,7 @@
                   <span
                     id="notificationBadge"
                     class="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-white text-xs font-bold rounded-full {{ 'hidden' if (header_unread_count or 0) == 0 else '' }}"
-                    style="background-color:#0176a8;"
+                    style="background-color: #0176a8"
                   >
                     {{ header_unread_count or 0 }}
                   </span>
@@ -438,33 +508,53 @@
                 >
                   <div class="p-3 border-b border-gray-100">
                     <div class="flex items-center justify-between gap-3">
-                      <h3 class="text-sm font-medium text-gray-900">Notificaciones</h3>
+                      <h3 class="text-sm font-medium text-gray-900">
+                        Notificaciones
+                      </h3>
                     </div>
                   </div>
                   <div id="notificationList" class="max-h-96 overflow-y-auto">
-                    {% if header_notifications and header_notifications|length > 0 %}
-                      {% for notif in header_notifications %}
-                      <div class="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer notification-item" data-id="{{ notif.id }}" data-unread="{{ 'true' if not notif.leida else 'false' }}">
-                        <div class="flex items-start">
-                          <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-900 truncate">{{ notif.titulo }}</p>
-                            <p class="text-sm text-gray-500 mt-1">{{ notif.mensaje }}</p>
-                            <p class="text-xs text-gray-400 mt-2">{{ notif.fecha_creacion|format_colombia_time|datetime }}</p>
-                          </div>
+                    {% if header_notifications and header_notifications|length >
+                    0 %} {% for notif in header_notifications %}
+                    <div
+                      class="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer notification-item"
+                      data-id="{{ notif.id }}"
+                      data-unread="{{ 'true' if not notif.leida else 'false' }}"
+                    >
+                      <div class="flex items-start">
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-medium text-gray-900 truncate">
+                            {{ notif.titulo }}
+                          </p>
+                          <p class="text-sm text-gray-500 mt-1">
+                            {{ notif.mensaje }}
+                          </p>
+                          <p class="text-xs text-gray-400 mt-2">
+                            {{
+                            notif.fecha_creacion|format_colombia_time|datetime
+                            }}
+                          </p>
                         </div>
                       </div>
-                      {% endfor %}
-                    {% else %}
-                      <div class="p-8 text-center">
-                        <i class="fas fa-bell-slash text-gray-300 text-3xl mb-2"></i>
-                        <p class="text-sm text-gray-500">No hay notificaciones</p>
-                      </div>
+                    </div>
+                    {% endfor %} {% else %}
+                    <div class="p-8 text-center">
+                      <i
+                        class="fas fa-bell-slash text-gray-300 text-3xl mb-2"
+                      ></i>
+                      <p class="text-sm text-gray-500">No hay notificaciones</p>
+                    </div>
                     {% endif %}
                   </div>
                   <div class="p-3 border-t border-gray-100">
                     <div class="flex items-center justify-end text-xs gap-2">
                       <span aria-hidden="true" class="text-gray-300">·</span>
-                      <a href="{{ url_for('main.ver_notificaciones') }}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-medium" style="background-color:#E6F3F9;color:#0176a8;">Ver todas</a>
+                      <a
+                        href="{{ url_for('main.ver_notificaciones') }}"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-medium"
+                        style="background-color: #e6f3f9; color: #0176a8"
+                        >Ver todas</a
+                      >
                     </div>
                   </div>
                 </div>
@@ -519,7 +609,8 @@
                     <!-- Opción de Cerrar Sesión -->
                     <div class="py-1">
                       <a
-                        href="{{ url_for('auth.logout') }}" data-no-spa="true"
+                        href="{{ url_for('auth.logout') }}"
+                        data-no-spa="true"
                         class="flex items-center space-x-2 px-4 py-2 text-sm text-primary hover:bg-surface transition-colors"
                       >
                         <i class="fas fa-sign-out-alt text-primary w-5"></i>
@@ -684,7 +775,8 @@
 
                     <div class="border-t border-gray-100 my-4"></div>
                     <a
-                      href="{{ url_for('auth.logout') }}" data-no-spa="true"
+                      href="{{ url_for('auth.logout') }}"
+                      data-no-spa="true"
                       class="text-red-500 hover:bg-red-50 block px-3 py-3 rounded-lg font-medium transition-colors"
                     >
                       <i class="fas fa-sign-out-alt mr-3 w-5 text-center"></i>
@@ -720,10 +812,13 @@
             <!-- Botones de Acción -->
             <div class="flex items-center space-x-6">
               <div class="relative group">
-                <a 
-                  href="{{ url_for('auth.login') }}" 
-                  class="flex items-center space-x-3 hover:bg-surface rounded-xl px-3 py-2 transition-colors">
-                  <div class="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <a
+                  href="{{ url_for('auth.login') }}"
+                  class="flex items-center space-x-3 hover:bg-surface rounded-xl px-3 py-2 transition-colors"
+                >
+                  <div
+                    class="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary"
+                  >
                     <i class="fas fa-sign-in-alt"></i>
                   </div>
                   <div class="flex flex-col text-right">
@@ -754,7 +849,9 @@
           class="md:hidden fixed inset-0 z-50 bg-black/20 backdrop-blur-sm hidden"
         >
           <div class="fixed right-0 top-0 h-full w-80 bg-white shadow-xl">
-            <div class="flex items-center justify-between p-6 border-b border-gray-100">
+            <div
+              class="flex items-center justify-between p-6 border-b border-gray-100"
+            >
               <h3 class="text-lg font-semibold text-gray-900">Menú</h3>
               <button
                 id="closeMobileMenuGuest"
@@ -763,7 +860,7 @@
                 <i class="fas fa-times text-xl"></i>
               </button>
             </div>
-            
+
             <div class="px-4 py-6 space-y-3 overflow-y-auto">
               <a
                 href="{{ url_for('tutoriales.index') }}"
@@ -772,9 +869,9 @@
                 <i class="fas fa-graduation-cap mr-3 w-5 text-center"></i>
                 Tutoriales
               </a>
-              
+
               <div class="border-t border-gray-100 my-4"></div>
-              
+
               {% if not current_user.is_authenticated %}
               <a
                 href="{{ url_for('auth.register') }}"
@@ -783,7 +880,7 @@
                 <i class="fas fa-user-plus mr-3 w-5 text-center"></i>
                 Registrarse
               </a>
-              
+
               <a
                 href="{{ url_for('auth.login') }}"
                 class="text-primary bg-primary/10 block px-3 py-3 rounded-lg font-medium transition-colors"
@@ -804,7 +901,7 @@
       {% endif %}
 
       <!-- Contenido principal - NUEVO -->
-      <main class="flex-grow py-8" style="flex-grow: 1;">
+      <main class="flex-grow py-8" style="flex-grow: 1">
         <div id="app-content" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {% block content %}
           <!-- El contenido de las páginas específicas irá aquí -->
@@ -832,37 +929,37 @@
     <!-- Scripts -->
     <script>
       // Script inline crítico para asegurar layout correcto antes de DOMContentLoaded
-      (function() {
+      (function () {
         // Forzar layout correcto inmediatamente
         const ensureLayout = () => {
-          const pageContainer = document.getElementById('page-container');
+          const pageContainer = document.getElementById("page-container");
           if (pageContainer) {
-            pageContainer.style.display = 'flex';
-            pageContainer.style.flexDirection = 'column';
-            pageContainer.style.minHeight = '100vh';
+            pageContainer.style.display = "flex";
+            pageContainer.style.flexDirection = "column";
+            pageContainer.style.minHeight = "100vh";
           }
-          
-          const main = document.querySelector('main');
+
+          const main = document.querySelector("main");
           if (main) {
-            main.style.flex = '1 0 auto';
+            main.style.flex = "1 0 auto";
           }
-          
-          const footer = document.querySelector('footer');
+
+          const footer = document.querySelector("footer");
           if (footer) {
-            footer.style.flexShrink = '0';
-            footer.style.marginTop = 'auto';
+            footer.style.flexShrink = "0";
+            footer.style.marginTop = "auto";
           }
         };
-        
+
         // Ejecutar inmediatamente
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', ensureLayout);
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", ensureLayout);
         } else {
           ensureLayout();
         }
-        
+
         // Ejecutar también cuando todos los recursos carguen
-        window.addEventListener('load', ensureLayout);
+        window.addEventListener("load", ensureLayout);
       })();
 
       document.addEventListener("DOMContentLoaded", function () {
@@ -916,9 +1013,13 @@
         }
 
         // Menú móvil para usuarios no autenticados
-        const mobileMenuButtonGuest = document.getElementById("mobileMenuButtonGuest");
+        const mobileMenuButtonGuest = document.getElementById(
+          "mobileMenuButtonGuest"
+        );
         const mobileMenuGuest = document.getElementById("mobileMenuGuest");
-        const closeMobileMenuGuestButton = document.getElementById("closeMobileMenuGuest");
+        const closeMobileMenuGuestButton = document.getElementById(
+          "closeMobileMenuGuest"
+        );
 
         // Función para abrir el menú de invitados
         function openMobileMenuGuest() {
@@ -941,11 +1042,14 @@
           mobileMenuButtonGuest.addEventListener("click", openMobileMenuGuest);
         }
         if (closeMobileMenuGuestButton) {
-          closeMobileMenuGuestButton.addEventListener("click", closeMobileMenuGuestHandler);
+          closeMobileMenuGuestButton.addEventListener(
+            "click",
+            closeMobileMenuGuestHandler
+          );
         }
         if (mobileMenuGuest) {
           // Cerrar al hacer click en el overlay
-          mobileMenuGuest.addEventListener("click", function(e) {
+          mobileMenuGuest.addEventListener("click", function (e) {
             if (e.target === mobileMenuGuest) {
               closeMobileMenuGuestHandler();
             }
@@ -957,63 +1061,95 @@
     <!-- Navegación SPA ligera (intercepta enlaces internos y actualiza solo el contenido) -->
     <script>
       (function () {
-        const CONTENT_SELECTOR = '#app-content';
+        const CONTENT_SELECTOR = "#app-content";
 
         function normalizePath(path) {
           try {
-            return path.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
-          } catch (e) { return path; }
+            return path.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
+          } catch (e) {
+            return path;
+          }
         }
 
         function updateActiveNav() {
           const currentPath = normalizePath(window.location.pathname);
-          const allAnchors = Array.from(document.querySelectorAll('nav a[href], #mobileMenu a[href], #mobileMenuGuest a[href]'))
-            .filter(a => a.getAttribute('href') && !a.getAttribute('href').startsWith('#'));
+          const allAnchors = Array.from(
+            document.querySelectorAll(
+              "nav a[href], #mobileMenu a[href], #mobileMenuGuest a[href]"
+            )
+          ).filter(
+            (a) =>
+              a.getAttribute("href") && !a.getAttribute("href").startsWith("#")
+          );
 
           // Limpiar clases activas y asegurar baseline de borde en desktop
-          allAnchors.forEach(a => {
-            a.classList.remove('text-primary', 'border-primary', 'bg-primary/10');
-            const isDesktopNav = !!a.closest('nav');
+          allAnchors.forEach((a) => {
+            a.classList.remove(
+              "text-primary",
+              "border-primary",
+              "bg-primary/10"
+            );
+            const isDesktopNav = !!a.closest("nav");
             if (isDesktopNav) {
               // Mantener siempre el grosor del borde inferior; solo alternar color
-              a.classList.add('border-b-2');
-              a.classList.remove('border-primary');
-              if (!a.classList.contains('border-transparent')) {
-                a.classList.add('border-transparent');
+              a.classList.add("border-b-2");
+              a.classList.remove("border-primary");
+              if (!a.classList.contains("border-transparent")) {
+                a.classList.add("border-transparent");
               }
             }
           });
 
           // 1) Intentar match EXACTO primero
-          let best = allAnchors.find(a => {
-            try {
-              return normalizePath(new URL(a.href, location.origin).pathname) === currentPath;
-            } catch (e) { return false; }
-          }) || null;
+          let best =
+            allAnchors.find((a) => {
+              try {
+                return (
+                  normalizePath(new URL(a.href, location.origin).pathname) ===
+                  currentPath
+                );
+              } catch (e) {
+                return false;
+              }
+            }) || null;
 
           // 2) Si no hay exacto, elegir el enlace cuyo href sea PREFIJO del currentPath (sección contenedora)
           if (!best) {
             let bestLen = -1;
-            allAnchors.forEach(a => {
+            allAnchors.forEach((a) => {
               try {
-                const hrefPath = normalizePath(new URL(a.href, location.origin).pathname);
-                if (!hrefPath || hrefPath === '/') return;
-                if (currentPath.startsWith(hrefPath + '/') || currentPath === hrefPath) {
+                const hrefPath = normalizePath(
+                  new URL(a.href, location.origin).pathname
+                );
+                if (!hrefPath || hrefPath === "/") return;
+                if (
+                  currentPath.startsWith(hrefPath + "/") ||
+                  currentPath === hrefPath
+                ) {
                   const len = hrefPath.length;
-                  if (len > bestLen) { best = a; bestLen = len; }
+                  if (len > bestLen) {
+                    best = a;
+                    bestLen = len;
+                  }
                 }
-              } catch (e) { /* ignore */ }
+              } catch (e) {
+                /* ignore */
+              }
             });
           }
 
           // Aplicar clases activas según contexto
           if (best) {
-            const inMobile = !!best.closest('#mobileMenu, #mobileMenuGuest');
+            const inMobile = !!best.closest("#mobileMenu, #mobileMenuGuest");
             if (inMobile) {
-              best.classList.add('text-primary', 'bg-primary/10');
+              best.classList.add("text-primary", "bg-primary/10");
             } else {
-              best.classList.add('text-primary', 'border-b-2', 'border-primary');
-              best.classList.remove('border-transparent');
+              best.classList.add(
+                "text-primary",
+                "border-b-2",
+                "border-primary"
+              );
+              best.classList.remove("border-transparent");
             }
           }
         }
@@ -1029,30 +1165,48 @@
 
         function shouldIntercept(anchor) {
           // No interceptar si tiene atributos especiales o abre en nueva pestaña
-          if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) return false;
-          if (anchor.getAttribute('rel') === 'external' || anchor.dataset.noSpa === 'true') return false;
-          const href = anchor.getAttribute('href');
-          if (!href || href.startsWith('#')) return false;
+          if (
+            !anchor ||
+            anchor.target === "_blank" ||
+            anchor.hasAttribute("download")
+          )
+            return false;
+          if (
+            anchor.getAttribute("rel") === "external" ||
+            anchor.dataset.noSpa === "true"
+          )
+            return false;
+          const href = anchor.getAttribute("href");
+          if (!href || href.startsWith("#")) return false;
           if (!isSameOrigin(anchor.href)) return false;
           return true;
         }
 
         async function navigate(url, options = { replace: false }) {
           const content = document.querySelector(CONTENT_SELECTOR);
-          if (!content) { window.location.assign(url); return; }
+          if (!content) {
+            window.location.assign(url);
+            return;
+          }
 
-          content.setAttribute('aria-busy', 'true');
+          content.setAttribute("aria-busy", "true");
           try {
-            const resp = await fetch(url, { headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
-            if (!resp.ok || !resp.headers.get('content-type')?.includes('text/html')) {
+            const resp = await fetch(url, {
+              headers: { "X-Requested-With": "fetch" },
+              credentials: "same-origin",
+            });
+            if (
+              !resp.ok ||
+              !resp.headers.get("content-type")?.includes("text/html")
+            ) {
               window.location.assign(url);
               return;
             }
             const text = await resp.text();
             const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
+            const doc = parser.parseFromString(text, "text/html");
             const newContent = doc.querySelector(CONTENT_SELECTOR);
-            const newTitle = doc.querySelector('title');
+            const newTitle = doc.querySelector("title");
 
             if (!newContent) {
               window.location.assign(url);
@@ -1063,100 +1217,131 @@
             content.innerHTML = newContent.innerHTML;
 
             // Ejecutar scripts embebidos del nuevo contenido
-            content.querySelectorAll('script').forEach((oldScript) => {
-              const s = document.createElement('script');
+            content.querySelectorAll("script").forEach((oldScript) => {
+              const s = document.createElement("script");
               // Copiar atributos relevantes
-              [...oldScript.attributes].forEach(attr => s.setAttribute(attr.name, attr.value));
-              s.textContent = oldScript.textContent || '';
+              [...oldScript.attributes].forEach((attr) =>
+                s.setAttribute(attr.name, attr.value)
+              );
+              s.textContent = oldScript.textContent || "";
               oldScript.replaceWith(s);
             });
 
             // Notificar a la página que hubo navegación SPA
             try {
-              const navEvent = new CustomEvent('spa:navigation', { detail: { url } });
+              const navEvent = new CustomEvent("spa:navigation", {
+                detail: { url },
+              });
               window.dispatchEvent(navEvent);
-              
+
               // Si la URL contiene carpetas_dropbox o usuario_carpetas, puede ser después de subir archivo
-              if (url.includes('carpetas_dropbox') || url.includes('usuario_carpetas')) {
+              if (
+                url.includes("carpetas_dropbox") ||
+                url.includes("usuario_carpetas")
+              ) {
                 setTimeout(() => {
                   try {
-                    const notifEvent = new CustomEvent('file:uploaded', { 
-                      detail: { timestamp: Date.now(), source: 'navigation' } 
+                    const notifEvent = new CustomEvent("file:uploaded", {
+                      detail: { timestamp: Date.now(), source: "navigation" },
                     });
                     window.dispatchEvent(notifEvent);
-                    console.log('🔔 Evento file:uploaded disparado después de navegación');
+                    console.log(
+                      "🔔 Evento file:uploaded disparado después de navegación"
+                    );
                   } catch (e) {
-                    console.error('Error disparando evento de notificación:', e);
+                    console.error(
+                      "Error disparando evento de notificación:",
+                      e
+                    );
                   }
                 }, 2000); // Esperar 2 segundos para que el servidor procese
               }
-            } catch (e) { /* noop */ }
+            } catch (e) {
+              /* noop */
+            }
 
             // Inicializaciones específicas por ruta (ej. dashboard admin)
             try {
               const pathNow = new URL(url, window.location.origin).pathname;
               if (/^\/dashboard\/admin(\/?|$)/.test(pathNow)) {
-                if (typeof window.initializeDashboard === 'function') {
+                if (typeof window.initializeDashboard === "function") {
                   window.initializeDashboard();
                 }
               }
-            } catch (e) { /* noop */ }
+            } catch (e) {
+              /* noop */
+            }
 
             // Actualizar título
             if (newTitle) document.title = newTitle.textContent;
 
             // Actualizar historial
             if (options.replace) {
-              window.history.replaceState({}, '', url);
+              window.history.replaceState({}, "", url);
             } else {
-              window.history.pushState({}, '', url);
+              window.history.pushState({}, "", url);
             }
 
             // Cerrar menús móviles si están abiertos
-            const mobileMenu = document.getElementById('mobileMenu');
-            const mobileMenuGuest = document.getElementById('mobileMenuGuest');
-            if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
-              mobileMenu.classList.add('hidden');
-              document.body.style.overflow = '';
+            const mobileMenu = document.getElementById("mobileMenu");
+            const mobileMenuGuest = document.getElementById("mobileMenuGuest");
+            if (mobileMenu && !mobileMenu.classList.contains("hidden")) {
+              mobileMenu.classList.add("hidden");
+              document.body.style.overflow = "";
             }
-            if (mobileMenuGuest && !mobileMenuGuest.classList.contains('hidden')) {
-              mobileMenuGuest.classList.add('hidden');
-              document.body.style.overflow = '';
+            if (
+              mobileMenuGuest &&
+              !mobileMenuGuest.classList.contains("hidden")
+            ) {
+              mobileMenuGuest.classList.add("hidden");
+              document.body.style.overflow = "";
             }
 
             // Desplazar al inicio
-            window.scrollTo({ top: 0, behavior: 'instant' });
+            window.scrollTo({ top: 0, behavior: "instant" });
             // Actualizar estado activo de navegación
             updateActiveNav();
           } catch (e) {
             window.location.assign(url);
           } finally {
-            content.removeAttribute('aria-busy');
+            content.removeAttribute("aria-busy");
           }
         }
 
         // Interceptar clics en enlaces
-        document.addEventListener('click', (event) => {
-          // Ignorar con teclas modificadoras (nueva pestaña, etc.)
-          if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-          let anchor = event.target;
-          while (anchor && anchor.tagName !== 'A') anchor = anchor.parentElement;
-          if (!anchor) return;
+        document.addEventListener(
+          "click",
+          (event) => {
+            // Ignorar con teclas modificadoras (nueva pestaña, etc.)
+            if (
+              event.defaultPrevented ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey
+            )
+              return;
+            let anchor = event.target;
+            while (anchor && anchor.tagName !== "A")
+              anchor = anchor.parentElement;
+            if (!anchor) return;
 
-          if (!shouldIntercept(anchor)) return;
+            if (!shouldIntercept(anchor)) return;
 
-          event.preventDefault();
-          navigate(anchor.href);
-        }, true);
+            event.preventDefault();
+            navigate(anchor.href);
+          },
+          true
+        );
 
         // Manejar navegación del navegador (atrás/adelante)
-        window.addEventListener('popstate', () => {
+        window.addEventListener("popstate", () => {
           navigate(window.location.href, { replace: true });
         });
 
         // Inicializar estado activo al cargar
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', updateActiveNav);
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", updateActiveNav);
         } else {
           updateActiveNav();
         }
@@ -1173,6 +1358,37 @@
       window.closeModal = function (modalId) {
         document.getElementById(modalId).classList.add("hidden");
       };
+
+      // Tabs dentro del modal de perfil (/profile)
+      // Nota: /profile puede cargarse vía navegación AJAX, por lo que el <script> de la vista
+      // puede no ejecutarse. Este handler por delegación asegura que las pestañas funcionen.
+      document.addEventListener("click", (event) => {
+        const tabButton = event.target.closest(".tab-button");
+        if (!tabButton) return;
+
+        const overlay = tabButton.closest("#modalOverlay");
+        if (!overlay) return;
+
+        const tabId = tabButton.getAttribute("data-tab");
+        if (!tabId) return;
+
+        overlay.querySelectorAll(".tab-pane").forEach((pane) => {
+          pane.classList.add("hidden");
+        });
+
+        overlay.querySelectorAll(".tab-button").forEach((btn) => {
+          btn.classList.remove("active", "border-primary", "text-primary");
+          btn.classList.add("border-transparent", "text-gray-500");
+        });
+
+        tabButton.classList.add("active", "border-primary", "text-primary");
+        tabButton.classList.remove("border-transparent", "text-gray-500");
+
+        const pane = document.getElementById(tabId);
+        if (pane && overlay.contains(pane)) {
+          pane.classList.remove("hidden");
+        }
+      });
 
       window.openRenameModal = function (
         archivo,
@@ -1458,7 +1674,10 @@
 
       // Función simple de renderizado como fallback
       function renderizarArbolSimple(estructura, usuarioEmail) {
-        console.log("🔧 renderizarArbolSimple llamado con:", { estructura, usuarioEmail });
+        console.log("🔧 renderizarArbolSimple llamado con:", {
+          estructura,
+          usuarioEmail,
+        });
 
         if (!estructura || !estructura._subcarpetas) {
           return '<div class="text-center py-4 text-gray-500">No hay carpetas disponibles.</div>';
@@ -1473,7 +1692,8 @@
         for (const [carpeta, data] of Object.entries(estructura._subcarpetas)) {
           // Construir el path completo
           const fullPath = `/${usuarioEmail}/${carpeta}`;
-          const hasSub = data._subcarpetas && Object.keys(data._subcarpetas).length > 0;
+          const hasSub =
+            data._subcarpetas && Object.keys(data._subcarpetas).length > 0;
 
           html += `
             <div class="border border-gray-200 rounded-lg overflow-hidden">
@@ -1486,12 +1706,12 @@
                   </div>
                   <span class="text-indigo-700 font-medium cursor-pointer hover:underline" onclick="selectDestino('${fullPath}')">${carpeta}</span>
                 </div>
-                ${hasSub ? '<span class="text-gray-400 text-xs">+</span>' : ''}
+                ${hasSub ? '<span class="text-gray-400 text-xs">+</span>' : ""}
               </div>
             </div>
           `;
         }
-        html += '</div>';
+        html += "</div>";
 
         console.log("✅ HTML generado por renderizarArbolSimple");
         return html;
@@ -2423,12 +2643,17 @@
                 console.log("✅ renderDestinoTreeExpandible está disponible");
 
                 try {
-                  const html = window.renderDestinoTreeExpandible(estructuraUsuario, "");
+                  const html = window.renderDestinoTreeExpandible(
+                    estructuraUsuario,
+                    ""
+                  );
                   console.log("🔍 HTML generado:", html);
 
                   if (html && html.trim().length > 0) {
                     destinoTree.innerHTML = html;
-                    console.log("✅ HTML insertado en destinoTree exitosamente");
+                    console.log(
+                      "✅ HTML insertado en destinoTree exitosamente"
+                    );
                   } else {
                     throw new Error("HTML vacío generado");
                   }
@@ -2490,10 +2715,15 @@
                 `;
                 }
               } else {
-                console.error("❌ Ninguna función de renderizado está disponible");
+                console.error(
+                  "❌ Ninguna función de renderizado está disponible"
+                );
                 // Crear una función simple de renderizado como fallback
                 try {
-                  const html = renderizarArbolSimple(estructuraUsuario, usuarioEmail);
+                  const html = renderizarArbolSimple(
+                    estructuraUsuario,
+                    usuarioEmail
+                  );
                   destinoTree.innerHTML = html;
                   console.log("✅ Árbol renderizado con función simple");
                 } catch (error) {
@@ -2592,283 +2822,333 @@
       }, 100);
 
       // Sistema de Notificaciones
-      const NOTIF_ENABLED = (document.body && document.body.dataset && document.body.dataset.notifEnabled) === '1';
+      const NOTIF_ENABLED =
+        (document.body &&
+          document.body.dataset &&
+          document.body.dataset.notifEnabled) === "1";
       if (NOTIF_ENABLED) {
-      const notificationButton = document.getElementById('notificationButton');
-      const notificationBadge = document.getElementById('notificationBadge');
-      const notificationList = document.getElementById('notificationList');
-      
-      const notificationDropdown = document.getElementById('notificationDropdown');
-      const markAllReadButton = document.getElementById('markAllReadButton');
-      let unreadCount = 0;
-      
-      console.log('🔧 Elementos de notificaciones inicializados:', {
-        notificationButton: !!notificationButton,
-        notificationBadge: !!notificationBadge,
-        notificationList: !!notificationList,
-        notificationDropdown: !!notificationDropdown,
-        markAllReadButton: !!markAllReadButton
-      });
+        const notificationButton =
+          document.getElementById("notificationButton");
+        const notificationBadge = document.getElementById("notificationBadge");
+        const notificationList = document.getElementById("notificationList");
 
-      // Cargar notificaciones al iniciar
-      function loadNotifications() {
-        const timestamp = Date.now();
-        const fetchOptions = {
-          headers: { 
-            'X-Requested-With': 'XMLHttpRequest',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          },
-          cache: 'no-store',
-          credentials: 'same-origin'
-        };
-        
-        // Cargar conteo no leídas
-        fetch(`/api/notificaciones/count?t=${timestamp}`, fetchOptions)
-          .then(r => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.json();
-          })
-          .then(d => { 
-            if (d.success) {
-              updateNotificationBadge(d.count || 0);
-            }
-          })
-          .catch(e => {
-            console.error('Error count notificaciones:', e);
-          });
+        const notificationDropdown = document.getElementById(
+          "notificationDropdown"
+        );
+        const markAllReadButton = document.getElementById("markAllReadButton");
+        let unreadCount = 0;
 
-        // Cargar últimas 5 (leídas y no leídas)
-        fetch(`/api/notificaciones/ultimas?limit=5&t=${timestamp}`, fetchOptions)
-          .then(response => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.json();
-          })
-          .then(data => {
-            if (data.success) {
-              updateNotificationList(data.notificaciones || []);
-            }
-          })
-          .catch(error => {
-            console.error('Error al cargar notificaciones:', error);
-          });
-      }
+        console.log("🔧 Elementos de notificaciones inicializados:", {
+          notificationButton: !!notificationButton,
+          notificationBadge: !!notificationBadge,
+          notificationList: !!notificationList,
+          notificationDropdown: !!notificationDropdown,
+          markAllReadButton: !!markAllReadButton,
+        });
 
-      // Actualizar badge de notificaciones
-      function updateNotificationBadge(count) {
-        unreadCount = count || 0;
-        if (count > 0) {
-          notificationBadge.textContent = count;
-          notificationBadge.style.display = 'flex';
-          notificationBadge.style.opacity = '1';
-          notificationBadge.style.visibility = 'visible';
-        } else {
-          notificationBadge.style.display = 'none';
-          notificationBadge.style.opacity = '0';
-          notificationBadge.style.visibility = 'hidden';
-          notificationBadge.textContent = '0';
+        // Cargar notificaciones al iniciar
+        function loadNotifications() {
+          const timestamp = Date.now();
+          const fetchOptions = {
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+            cache: "no-store",
+            credentials: "same-origin",
+          };
+
+          // Cargar conteo no leídas
+          fetch(`/api/notificaciones/count?t=${timestamp}`, fetchOptions)
+            .then((r) => {
+              if (!r.ok) throw new Error(`HTTP ${r.status}`);
+              return r.json();
+            })
+            .then((d) => {
+              if (d.success) {
+                updateNotificationBadge(d.count || 0);
+              }
+            })
+            .catch((e) => {
+              console.error("Error count notificaciones:", e);
+            });
+
+          // Cargar últimas 5 (leídas y no leídas)
+          fetch(
+            `/api/notificaciones/ultimas?limit=5&t=${timestamp}`,
+            fetchOptions
+          )
+            .then((response) => {
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              return response.json();
+            })
+            .then((data) => {
+              if (data.success) {
+                updateNotificationList(data.notificaciones || []);
+              }
+            })
+            .catch((error) => {
+              console.error("Error al cargar notificaciones:", error);
+            });
         }
-      }
 
-      // Actualizar lista de notificaciones
-      function updateNotificationList(notifications) {
-        if (notifications.length === 0) {
-          notificationList.innerHTML = `
+        // Actualizar badge de notificaciones
+        function updateNotificationBadge(count) {
+          unreadCount = count || 0;
+          if (count > 0) {
+            notificationBadge.textContent = count;
+            notificationBadge.style.display = "flex";
+            notificationBadge.style.opacity = "1";
+            notificationBadge.style.visibility = "visible";
+          } else {
+            notificationBadge.style.display = "none";
+            notificationBadge.style.opacity = "0";
+            notificationBadge.style.visibility = "hidden";
+            notificationBadge.textContent = "0";
+          }
+        }
+
+        // Actualizar lista de notificaciones
+        function updateNotificationList(notifications) {
+          if (notifications.length === 0) {
+            notificationList.innerHTML = `
             <div class="p-8 text-center">
               <i class="fas fa-bell-slash text-gray-300 text-3xl mb-2"></i>
               <p class="text-sm text-gray-500">No hay notificaciones</p>
             </div>
           `;
-        } else {
-          notificationList.innerHTML = notifications.map(notif => `
-            <div class="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer notification-item" data-id="${notif.id}" data-unread="${!notif.leida}">
+          } else {
+            notificationList.innerHTML = notifications
+              .map(
+                (notif) => `
+            <div class="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer notification-item" data-id="${
+              notif.id
+            }" data-unread="${!notif.leida}">
               <div class="flex items-start">
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 truncate">${notif.titulo}</p>
+                  <p class="text-sm font-medium text-gray-900 truncate">${
+                    notif.titulo
+                  }</p>
                   <p class="text-sm text-gray-500 mt-1">${notif.mensaje}</p>
-                  <p class="text-xs text-gray-400 mt-2">${notif.fecha_creacion}</p>
+                  <p class="text-xs text-gray-400 mt-2">${
+                    notif.fecha_creacion
+                  }</p>
                 </div>
               </div>
             </div>
-          `).join('');
+          `
+              )
+              .join("");
+          }
+
+          // Agregar evento click a cada notificación
+          document.querySelectorAll(".notification-item").forEach((item) => {
+            item.addEventListener("click", function () {
+              const notifId = this.getAttribute("data-id");
+              const wasUnread = this.getAttribute("data-unread") === "true";
+              markAsRead(notifId, this, wasUnread);
+            });
+          });
         }
 
-        // Agregar evento click a cada notificación
-        document.querySelectorAll('.notification-item').forEach(item => {
-          item.addEventListener('click', function() {
-            const notifId = this.getAttribute('data-id');
-            const wasUnread = (this.getAttribute('data-unread') === 'true');
-            markAsRead(notifId, this, wasUnread);
-          });
-        });
-      }
-
-      // Marcar notificación como leída
-      function markAsRead(notifId, itemEl, wasUnread) {
-        fetch(`/api/notificaciones/${notifId}/marcar_leida`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              // Actualizar UI inmediata
-              if (wasUnread) {
-                unreadCount = Math.max(0, (unreadCount || 0) - 1);
-                updateNotificationBadge(unreadCount);
-              }
-              if (itemEl) {
-                itemEl.setAttribute('data-unread', 'false');
-                const dotEl = itemEl.querySelector('.w-2.h-2');
-                if (dotEl) {
-                  dotEl.removeAttribute('style');
-                }
-              }
-              // Refrescar lista para mantener consistencia
-              loadNotifications();
-            }
-          })
-          .catch(error => {
-            console.error('Error al marcar notificación como leída:', error);
-          });
-      }
-
-      // Marcar todas como leídas
-      if (markAllReadButton) {
-        console.log('✅ Botón markAllReadButton encontrado, registrando evento...');
-        markAllReadButton.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('🔔 Click en marcar todas como leídas detectado');
-          
-          // Hacer la llamada API
-          fetch('/api/notificaciones/marcar_todas_leidas', {
-            method: 'POST',
+        // Marcar notificación como leída
+        function markAsRead(notifId, itemEl, wasUnread) {
+          fetch(`/api/notificaciones/${notifId}/marcar_leida`, {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-            }
+              "Content-Type": "application/json",
+            },
           })
-            .then(response => response.json())
-            .then(data => {
-              console.log('✅ Respuesta marcar todas:', data);
-              if (data && data.success) {
-                console.log('✅ Notificaciones marcadas como leídas exitosamente');
-                
-                // Ocultar badge inmediatamente
-                if (notificationBadge) {
-                  notificationBadge.style.display = 'none';
-                  notificationBadge.style.opacity = '0';
-                  notificationBadge.style.visibility = 'hidden';
-                  notificationBadge.textContent = '0';
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                // Actualizar UI inmediata
+                if (wasUnread) {
+                  unreadCount = Math.max(0, (unreadCount || 0) - 1);
+                  updateNotificationBadge(unreadCount);
                 }
-                
-                // Recargar la página para reflejar los cambios
-                location.reload();
+                if (itemEl) {
+                  itemEl.setAttribute("data-unread", "false");
+                  const dotEl = itemEl.querySelector(".w-2.h-2");
+                  if (dotEl) {
+                    dotEl.removeAttribute("style");
+                  }
+                }
+                // Refrescar lista para mantener consistencia
+                loadNotifications();
               }
             })
-            .catch(error => {
-              console.error('❌ Error al marcar todas como leídas:', error);
+            .catch((error) => {
+              console.error("Error al marcar notificación como leída:", error);
             });
-        });
-      } else {
-        console.warn('⚠️ Botón markAllReadButton NO encontrado, usando fallback delegado');
-        // Fallback delegado: garantiza funcionalidad aunque el botón se mueva en el DOM
-        document.addEventListener('click', function(ev) {
-          const btn = ev.target && ev.target.closest && ev.target.closest('#markAllReadButton');
-          if (!btn) return;
-          ev.preventDefault();
-          ev.stopPropagation();
-          console.log('🔔 Click en marcar todas como leídas detectado (delegado)');
-
-          fetch('/api/notificaciones/marcar_todas_leidas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          })
-            .then(response => response.json())
-            .then(data => { 
-              if (data && data.success) {
-                console.log('✅ Notificaciones marcadas como leídas (delegado)');
-                
-                // Ocultar badge inmediatamente
-                if (notificationBadge) {
-                  notificationBadge.style.display = 'none';
-                  notificationBadge.style.opacity = '0';
-                  notificationBadge.style.visibility = 'hidden';
-                  notificationBadge.textContent = '0';
-                }
-                
-                // Recargar la página
-                location.reload();
-              }
-            })
-            .catch(error => {
-              console.error('❌ Error al marcar todas como leídas (delegado):', error);
-            });
-        });
-      }
-      
-      const scheduleNotificationRefresh = () => {
-        try { loadNotifications(); } catch {}
-      };
-
-      window.addEventListener('focus', scheduleNotificationRefresh);
-      window.addEventListener('spa:navigation', scheduleNotificationRefresh);
-      // Escuchar evento personalizado cuando se sube un archivo
-      window.addEventListener('file:uploaded', (event) => {
-        console.log('🔔 Evento file:uploaded recibido, actualizando notificaciones...');
-        // Esperar un momento para que el servidor procese la notificación
-        setTimeout(() => {
-          try { 
-            loadNotifications(); 
-            console.log('✅ Notificaciones actualizadas después de subir archivo');
-          } catch (e) {
-            console.error('Error actualizando notificaciones después de subir archivo:', e);
-          }
-        }, 1000);
-      });
-      if (notificationButton) {
-        notificationButton.addEventListener('click', () => {
-          try { loadNotifications(); } catch {}
-        });
-      }
-      // Polling más frecuente para detectar notificaciones nuevas (15 segundos)
-      const NOTIFICATION_POLL_INTERVAL_MS = 15000;
-      let notificationPollInterval = null;
-      
-      const startNotificationPolling = () => {
-        if (notificationPollInterval) {
-          clearInterval(notificationPollInterval);
         }
-        notificationPollInterval = setInterval(() => {
-          try { 
-            loadNotifications(); 
-          } catch (e) {
-            console.error('Error en polling de notificaciones:', e);
-          }
-        }, NOTIFICATION_POLL_INTERVAL_MS);
-      };
-      
-      // Detener polling cuando la página no está visible (ahorra recursos)
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
+
+        // Marcar todas como leídas
+        if (markAllReadButton) {
+          console.log(
+            "✅ Botón markAllReadButton encontrado, registrando evento..."
+          );
+          markAllReadButton.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("🔔 Click en marcar todas como leídas detectado");
+
+            // Hacer la llamada API
+            fetch("/api/notificaciones/marcar_todas_leidas", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                console.log("✅ Respuesta marcar todas:", data);
+                if (data && data.success) {
+                  console.log(
+                    "✅ Notificaciones marcadas como leídas exitosamente"
+                  );
+
+                  // Ocultar badge inmediatamente
+                  if (notificationBadge) {
+                    notificationBadge.style.display = "none";
+                    notificationBadge.style.opacity = "0";
+                    notificationBadge.style.visibility = "hidden";
+                    notificationBadge.textContent = "0";
+                  }
+
+                  // Recargar la página para reflejar los cambios
+                  location.reload();
+                }
+              })
+              .catch((error) => {
+                console.error("❌ Error al marcar todas como leídas:", error);
+              });
+          });
+        } else {
+          console.warn(
+            "⚠️ Botón markAllReadButton NO encontrado, usando fallback delegado"
+          );
+          // Fallback delegado: garantiza funcionalidad aunque el botón se mueva en el DOM
+          document.addEventListener("click", function (ev) {
+            const btn =
+              ev.target &&
+              ev.target.closest &&
+              ev.target.closest("#markAllReadButton");
+            if (!btn) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            console.log(
+              "🔔 Click en marcar todas como leídas detectado (delegado)"
+            );
+
+            fetch("/api/notificaciones/marcar_todas_leidas", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (data && data.success) {
+                  console.log(
+                    "✅ Notificaciones marcadas como leídas (delegado)"
+                  );
+
+                  // Ocultar badge inmediatamente
+                  if (notificationBadge) {
+                    notificationBadge.style.display = "none";
+                    notificationBadge.style.opacity = "0";
+                    notificationBadge.style.visibility = "hidden";
+                    notificationBadge.textContent = "0";
+                  }
+
+                  // Recargar la página
+                  location.reload();
+                }
+              })
+              .catch((error) => {
+                console.error(
+                  "❌ Error al marcar todas como leídas (delegado):",
+                  error
+                );
+              });
+          });
+        }
+
+        const scheduleNotificationRefresh = () => {
+          try {
+            loadNotifications();
+          } catch {}
+        };
+
+        window.addEventListener("focus", scheduleNotificationRefresh);
+        window.addEventListener("spa:navigation", scheduleNotificationRefresh);
+        // Escuchar evento personalizado cuando se sube un archivo
+        window.addEventListener("file:uploaded", (event) => {
+          console.log(
+            "🔔 Evento file:uploaded recibido, actualizando notificaciones..."
+          );
+          // Esperar un momento para que el servidor procese la notificación
+          setTimeout(() => {
+            try {
+              loadNotifications();
+              console.log(
+                "✅ Notificaciones actualizadas después de subir archivo"
+              );
+            } catch (e) {
+              console.error(
+                "Error actualizando notificaciones después de subir archivo:",
+                e
+              );
+            }
+          }, 1000);
+        });
+        if (notificationButton) {
+          notificationButton.addEventListener("click", () => {
+            try {
+              loadNotifications();
+            } catch {}
+          });
+        }
+        // Polling más frecuente para detectar notificaciones nuevas (15 segundos)
+        const NOTIFICATION_POLL_INTERVAL_MS = 15000;
+        let notificationPollInterval = null;
+
+        const startNotificationPolling = () => {
           if (notificationPollInterval) {
             clearInterval(notificationPollInterval);
-            notificationPollInterval = null;
           }
-        } else {
-          // Cuando la página vuelve a ser visible, recargar inmediatamente y reiniciar polling
-          try { loadNotifications(); } catch {}
-          startNotificationPolling();
-        }
-      });
-      
-      // Iniciar polling
-      startNotificationPolling();
-      
-      // Inicializar conteo e indicadores al cargar la página
-      try { loadNotifications(); } catch {}
+          notificationPollInterval = setInterval(() => {
+            try {
+              loadNotifications();
+            } catch (e) {
+              console.error("Error en polling de notificaciones:", e);
+            }
+          }, NOTIFICATION_POLL_INTERVAL_MS);
+        };
+
+        // Detener polling cuando la página no está visible (ahorra recursos)
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) {
+            if (notificationPollInterval) {
+              clearInterval(notificationPollInterval);
+              notificationPollInterval = null;
+            }
+          } else {
+            // Cuando la página vuelve a ser visible, recargar inmediatamente y reiniciar polling
+            try {
+              loadNotifications();
+            } catch {}
+            startNotificationPolling();
+          }
+        });
+
+        // Iniciar polling
+        startNotificationPolling();
+
+        // Inicializar conteo e indicadores al cargar la página
+        try {
+          loadNotifications();
+        } catch {}
       }
     </script>
     {% block scripts %}{% endblock %}
