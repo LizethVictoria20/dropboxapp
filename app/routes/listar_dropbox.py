@@ -53,6 +53,8 @@ def actualizar_estado_archivo():
     data = request.get_json(silent=True) or {}
     dropbox_path = data.get('path')
     nuevo_estado = data.get('estado')
+    motivo_rechazo = data.get('motivo', '').strip()  # Nuevo campo para el motivo del rechazo
+    
     if not dropbox_path or not nuevo_estado:
         return jsonify({'success': False, 'error': 'path y estado son requeridos'}), 400
     if nuevo_estado not in ['en_revision', 'validado', 'rechazado']:
@@ -94,15 +96,30 @@ def actualizar_estado_archivo():
         from app.models import Notification, Comentario
         from datetime import datetime
         
-        # Obtener comentarios asociados al archivo (si existen)
-        comentario_texto = None
-        try:
-            comentarios = Comentario.query.filter_by(dropbox_path=dropbox_path).order_by(Comentario.id.desc()).all()
-            if comentarios:
-                # Tomar el comentario más reciente
-                comentario_texto = comentarios[0].contenido
-        except Exception as e:
-            current_app.logger.warning(f"No se pudieron obtener comentarios para el archivo: {e}")
+        # Usar el motivo proporcionado por el admin, o buscar comentarios existentes
+        comentario_texto = motivo_rechazo if motivo_rechazo else None
+        if not comentario_texto:
+            try:
+                comentarios = Comentario.query.filter_by(dropbox_path=dropbox_path).order_by(Comentario.id.desc()).all()
+                if comentarios:
+                    comentario_texto = comentarios[0].contenido
+            except Exception as e:
+                current_app.logger.warning(f"No se pudieron obtener comentarios para el archivo: {e}")
+        
+        # Si hay motivo de rechazo, guardarlo como comentario en la BD
+        if motivo_rechazo and nuevo_estado == 'rechazado':
+            try:
+                nuevo_comentario = Comentario(
+                    dropbox_path=dropbox_path,
+                    contenido=motivo_rechazo,
+                    usuario_id=current_user.id,
+                    tipo='archivo'
+                )
+                db.session.add(nuevo_comentario)
+                db.session.commit()
+                current_app.logger.info(f"Comentario de rechazo guardado para {dropbox_path}")
+            except Exception as e:
+                current_app.logger.warning(f"No se pudo guardar el comentario de rechazo: {e}")
         
         # Mensajes según el nuevo estado
         mensajes_estado = {
@@ -128,7 +145,7 @@ def actualizar_estado_archivo():
         
         current_app.logger.info(f'Notificación creada para usuario {archivo.usuario_id}: {titulo}')
         
-        # Si el documento fue rechazado, enviar notificaciones externas (email, SMS, WhatsApp)
+        # Si el documento fue rechazado o validado, enviar notificaciones externas
         if nuevo_estado == 'rechazado':
             try:
                 usuario = User.query.get(archivo.usuario_id)
@@ -147,7 +164,26 @@ def actualizar_estado_archivo():
                 current_app.logger.error(f"Error al enviar notificaciones externas: {e}")
                 import traceback
                 traceback.print_exc()
-                # No interrumpir el flujo si fallan las notificaciones externas
+        
+        # Si el documento fue validado/aprobado, enviar email de confirmación
+        elif nuevo_estado == 'validado':
+            try:
+                usuario = User.query.get(archivo.usuario_id)
+                if usuario:
+                    from app.utils.external_notifications import enviar_notificacion_documento_validado
+                    resultados = enviar_notificacion_documento_validado(
+                        usuario=usuario,
+                        archivo=archivo,
+                        comentario=comentario_texto
+                    )
+                    current_app.logger.info(
+                        f"Email de validación enviado para archivo aprobado: Email={resultados['email']}"
+                    )
+            except Exception as e:
+                current_app.logger.error(f"Error al enviar email de validación: {e}")
+                import traceback
+                traceback.print_exc()
+                # No interrumpir el flujo si falla la notificación
     
     return jsonify({'success': True})
 

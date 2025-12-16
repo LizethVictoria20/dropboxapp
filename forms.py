@@ -2,7 +2,7 @@ from typing import Optional
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import DateField, FileField, StringField, PasswordField, SubmitField, TextAreaField, ValidationError, SelectField, BooleanField
-from wtforms.validators import DataRequired, Length, Optional, EqualTo, Email
+from wtforms.validators import DataRequired, Length, Optional, EqualTo, Email, Regexp
 from app.models import User
 
 class BaseForm(FlaskForm):
@@ -84,13 +84,73 @@ class NewFolderForm(BaseForm):
     description = TextAreaField('Descripción (opcional)')
     
 class ClienteRegistrationForm(BaseForm):
-    name = StringField('Nombres', validators=[DataRequired(), Length(max=120)])
-    lastname = StringField('Apellidos', validators=[DataRequired(), Length(max=120)])
+    name = StringField(
+        'Nombres',
+        validators=[
+            DataRequired(),
+            Length(max=120),
+            Regexp(
+                r"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s'\-]+$",
+                message="Los nombres solo pueden contener letras y espacios."
+            ),
+        ],
+    )
+    lastname = StringField(
+        'Apellidos',
+        validators=[
+            DataRequired(),
+            Length(max=120),
+            Regexp(
+                r"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s'\-]+$",
+                message="Los apellidos solo pueden contener letras y espacios."
+            ),
+        ],
+    )
     email = StringField('Correo electrónico', validators=[DataRequired(), Email()])
-    telephone = StringField('Teléfono', validators=[DataRequired(), Length(max=20)])
-    zip_code = StringField('Código Postal', validators=[DataRequired(), Length(max=20)])
-    city = StringField('Ciudad', validators=[DataRequired(), Length(max=64)])
-    state = StringField('Estado', validators=[DataRequired(), Length(max=64)])
+    telephone = StringField(
+        'Teléfono',
+        validators=[
+            DataRequired(),
+            Length(max=20),
+            Regexp(
+                r"^[0-9+\-\s()]+$",
+                message="El teléfono solo puede contener números y los símbolos + - ( ) y espacios."
+            ),
+        ],
+    )
+    zip_code = StringField(
+        'Código Postal',
+        validators=[
+            DataRequired(),
+            Length(max=20),
+            Regexp(
+                r"^[0-9A-Za-z\s\-]+$",
+                message="El código postal solo puede contener letras, números, espacios y guiones."
+            ),
+        ],
+    )
+    city = StringField(
+        'Ciudad',
+        validators=[
+            DataRequired(),
+            Length(max=64),
+            Regexp(
+                r"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s'\-]+$",
+                message="La ciudad solo puede contener letras y espacios."
+            ),
+        ],
+    )
+    state = StringField(
+        'Estado',
+        validators=[
+            DataRequired(),
+            Length(max=64),
+            Regexp(
+                r"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s'\-]+$",
+                message="El estado solo puede contener letras y espacios."
+            ),
+        ],
+    )
     address = StringField('Dirección', validators=[DataRequired(), Length(max=255)])
     document_type = SelectField('Tipo de documento', validators=[DataRequired()], choices=[
         ('', 'Selecciona un tipo de documento'),
@@ -100,7 +160,17 @@ class ClienteRegistrationForm(BaseForm):
         ('dni', 'DNI'),
         ('otro', 'Otro')
     ])
-    document_number = StringField('Número de documento', validators=[DataRequired(), Length(max=50)])
+    document_number = StringField(
+        'Número de documento',
+        validators=[
+            DataRequired(),
+            Length(max=50),
+            Regexp(
+                r"^[0-9A-Za-z\-]+$",
+                message="El número de documento solo puede contener letras, números y guiones."
+            ),
+        ],
+    )
     nationality = SelectField('Nacionalidad', validators=[DataRequired()], choices=[])
     country = SelectField('País', validators=[DataRequired()], choices=[])
     date_of_birth = DateField('Fecha de nacimiento', validators=[DataRequired()])

@@ -2,7 +2,9 @@ Flask
 Flask-SQLAlchemy
 Flask-Migrate
 Flask-WTF
+Flask-Mail
 psycopg2-binary
 dropbox
 python-dotenv
 gunicorn
+twilio

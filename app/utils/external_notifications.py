@@ -1,4 +1,4 @@
- """
+"""
 Módulo para enviar notificaciones externas (Email, SMS, WhatsApp)
 cuando se rechaza un documento o cambia su estado.
 """
@@ -20,6 +20,55 @@ try:
     TWILIO_AVAILABLE = True
 except ImportError:
     TWILIO_AVAILABLE = False
+
+
+def enviar_notificacion_documento_validado(
+    usuario: User,
+    archivo: Archivo,
+    comentario: Optional[str] = None
+) -> Dict[str, bool]:
+    """
+    Envía notificaciones externas (email) cuando un documento es validado/aprobado.
+    
+    Args:
+        usuario: Usuario propietario del archivo
+        archivo: Archivo que fue validado
+        comentario: Comentario opcional
+    
+    Returns:
+        Dict con el estado de cada tipo de notificación enviada
+    """
+    resultados = {
+        'email': False,
+        'sms': False,
+        'whatsapp': False
+    }
+    
+    try:
+        nombre_usuario = usuario.nombre_completo or usuario.email.split('@')[0]
+        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        url_archivo = f"{app_url}/carpetas_dropbox"
+        
+        # Enviar email de aprobación
+        if usuario.email:
+            resultados['email'] = enviar_email_validado(
+                destinatario=usuario.email,
+                nombre_usuario=nombre_usuario,
+                nombre_archivo=archivo.nombre,
+                comentario=comentario,
+                url_archivo=url_archivo
+            )
+        
+        if resultados['email']:
+            current_app.logger.info(
+                f"✅ Email de validación enviado para archivo '{archivo.nombre}' a {usuario.email}"
+            )
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al enviar notificación de validación: {e}")
+        traceback.print_exc()
+    
+    return resultados
 
 
 def enviar_notificacion_documento_rechazado(
@@ -103,6 +152,128 @@ def enviar_notificacion_documento_rechazado(
         traceback.print_exc()
     
     return resultados
+
+
+def enviar_email_validado(
+    destinatario: str,
+    nombre_usuario: str,
+    nombre_archivo: str,
+    comentario: Optional[str] = None,
+    url_archivo: Optional[str] = None
+) -> bool:
+    """
+    Envía un email notificando la aprobación/validación de un documento.
+    
+    Returns:
+        True si se envió exitosamente, False en caso contrario
+    """
+    if not FLASK_MAIL_AVAILABLE:
+        current_app.logger.warning("Flask-Mail no está disponible. Instala con: pip install flask-mail")
+        return False
+    
+    try:
+        mail_server = os.environ.get('MAIL_SERVER') or current_app.config.get('MAIL_SERVER')
+        mail_port = int(os.environ.get('MAIL_PORT') or current_app.config.get('MAIL_PORT', 587))
+        mail_use_tls = (os.environ.get('MAIL_USE_TLS', 'true') or 
+                       str(current_app.config.get('MAIL_USE_TLS', True))).lower() == 'true'
+        mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
+        mail_password = os.environ.get('MAIL_PASSWORD') or current_app.config.get('MAIL_PASSWORD')
+        mail_sender = (os.environ.get('MAIL_DEFAULT_SENDER') or 
+                      current_app.config.get('MAIL_DEFAULT_SENDER') or 
+                      mail_username)
+        
+        if not all([mail_server, mail_username, mail_password]):
+            current_app.logger.warning(
+                "Configuración de email incompleta. Configura MAIL_SERVER, MAIL_USERNAME y MAIL_PASSWORD."
+            )
+            return False
+        
+        if not hasattr(current_app, 'extensions') or 'mail' not in current_app.extensions:
+            temp_config = {
+                'MAIL_SERVER': mail_server,
+                'MAIL_PORT': mail_port,
+                'MAIL_USE_TLS': mail_use_tls,
+                'MAIL_USERNAME': mail_username,
+                'MAIL_PASSWORD': mail_password,
+                'MAIL_DEFAULT_SENDER': mail_sender
+            }
+            current_app.config.update(temp_config)
+            mail = Mail(current_app)
+        else:
+            mail = current_app.extensions['mail']
+        
+        asunto = f"✅ Documento Aprobado: {nombre_archivo}"
+        
+        cuerpo_html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #4caf50;">✅ Documento Aprobado</h2>
+                <p>Hola {nombre_usuario},</p>
+                <p>¡Buenas noticias! Tu documento <strong>{nombre_archivo}</strong> ha sido <strong style="color: #4caf50;">aprobado</strong>.</p>
+        """
+        
+        if comentario:
+            cuerpo_html += f"""
+                <div style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0;"><strong>Comentario:</strong></p>
+                    <p style="margin: 5px 0 0 0;">{comentario}</p>
+                </div>
+            """
+        
+        cuerpo_html += """
+                <p>Tu documentación está en orden. Gracias por tu colaboración.</p>
+        """
+        
+        if url_archivo:
+            cuerpo_html += f"""
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{url_archivo}" 
+                       style="background-color: #4caf50; color: white; padding: 12px 24px; 
+                              text-decoration: none; border-radius: 4px; display: inline-block;">
+                        Ver Documentos
+                    </a>
+                </div>
+            """
+        
+        cuerpo_html += """
+                <p style="margin-top: 30px; font-size: 12px; color: #666;">
+                    Este es un mensaje automático. Por favor, no respondas a este correo.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        cuerpo_texto = f"""
+Hola {nombre_usuario},
+
+¡Buenas noticias! Tu documento "{nombre_archivo}" ha sido APROBADO.
+        """
+        
+        if comentario:
+            cuerpo_texto += f"\nComentario: {comentario}\n"
+        
+        cuerpo_texto += "\nTu documentación está en orden. Gracias por tu colaboración.\n"
+        
+        if url_archivo:
+            cuerpo_texto += f"\nAccede aquí: {url_archivo}\n"
+        
+        msg = Message(
+            subject=asunto,
+            recipients=[destinatario],
+            html=cuerpo_html,
+            body=cuerpo_texto
+        )
+        
+        mail.send(msg)
+        current_app.logger.info(f"✅ Email de aprobación enviado exitosamente a {destinatario}")
+        return True
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al enviar email de aprobación: {e}")
+        traceback.print_exc()
+        return False
 
 
 def enviar_email_rechazo(
