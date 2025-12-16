@@ -548,7 +548,19 @@ def profile():
 def profile_update():
     """Actualizar perfil del usuario"""
     try:
-        data = request.get_json()
+        is_ajax = (
+            request.is_json
+            or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            or request.accept_mimetypes.best == 'application/json'
+        )
+
+        # Aceptar JSON (fetch) y también form posts (fallback), evitando 415 Unsupported Media Type
+        data = request.get_json(silent=True)
+        if data is None:
+            data = request.form.to_dict(flat=True) if request.form else {}
+
+        if not isinstance(data, dict):
+            data = {}
         
         # Validación temprana de cambio de contraseña (antes de cualquier actualización)
         intento_cambio_password = any([
@@ -620,11 +632,21 @@ def profile_update():
         # Registrar actividad
         current_user.registrar_actividad('profile_update', 'Actualización del perfil')
         
-        return jsonify({'message': message}), 200
+        if is_ajax:
+            return jsonify({'message': message}), 200
+        flash(message, 'success')
+        return redirect(url_for('main.profile'))
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Error al actualizar perfil: {str(e)}'}), 500
+        if (
+            request.is_json
+            or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            or request.accept_mimetypes.best == 'application/json'
+        ):
+            return jsonify({'error': f'Error al actualizar perfil: {str(e)}'}), 500
+        flash(f'Error al actualizar perfil: {str(e)}', 'error')
+        return redirect(url_for('main.profile'))
 
 @bp.route('/profile/editar_beneficiario', methods=['POST'])
 @login_required
