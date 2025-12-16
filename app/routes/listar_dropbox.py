@@ -112,7 +112,7 @@ def actualizar_estado_archivo():
                 nuevo_comentario = Comentario(
                     dropbox_path=dropbox_path,
                     contenido=motivo_rechazo,
-                    usuario_id=current_user.id,
+                    user_id=current_user.id,
                     tipo='archivo'
                 )
                 db.session.add(nuevo_comentario)
