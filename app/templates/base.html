@@ -1390,6 +1390,35 @@
         }
       });
 
+      window.openActivityLogModal = function () {
+        const modal = document.getElementById("activityLogModal");
+        if (!modal) return;
+        modal.classList.remove("hidden");
+        document.body.style.overflow = "hidden";
+      };
+
+      window.closeActivityLogModal = function () {
+        const modal = document.getElementById("activityLogModal");
+        if (!modal) return;
+        modal.classList.add("hidden");
+        document.body.style.overflow = "";
+      };
+
+      document.addEventListener("click", (event) => {
+        const btn = event.target.closest("#openActivityLogModal");
+        if (!btn) return;
+        window.openActivityLogModal();
+      });
+
+      document.addEventListener("click", (event) => {
+        const modal = document.getElementById("activityLogModal");
+        if (!modal || modal.classList.contains("hidden")) return;
+        const backdrop = modal.querySelector(":scope > div.fixed.inset-0");
+        if (backdrop && event.target === backdrop) {
+          window.closeActivityLogModal();
+        }
+      });
+
       window.openRenameModal = function (
         archivo,
         carpetaActual,
