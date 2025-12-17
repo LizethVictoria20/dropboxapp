@@ -45,19 +45,23 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     
-    # Inicializar Flask-Mail si está disponible
-    try:
-        from flask_mail import Mail
-        # Verificar que la configuración de email esté presente
-        if app.config.get('MAIL_SERVER') and app.config.get('MAIL_USERNAME') and app.config.get('MAIL_PASSWORD'):
-            mail = Mail(app)
-            app.extensions['mail'] = mail
-            logger.info("✅ Flask-Mail inicializado correctamente")
-        else:
-            logger.warning("⚠️ Flask-Mail disponible pero configuración incompleta. Configura MAIL_SERVER, MAIL_USERNAME y MAIL_PASSWORD en .env")
-    except ImportError:
-        # Flask-Mail no está instalado, continuar sin él
-        logger.warning("⚠️ Flask-Mail no está instalado. Instala con: pip install Flask-Mail")
+    email_backend = (os.environ.get('EMAIL_BACKEND') or 'smtp').strip().lower()
+    logger.info(f"📧 Email backend: {email_backend}")
+
+    # Inicializar Flask-Mail si está disponible (solo necesario para backend SMTP)
+    if email_backend != 'sendgrid':
+        try:
+            from flask_mail import Mail
+            # Verificar que la configuración de email esté presente
+            if app.config.get('MAIL_SERVER') and app.config.get('MAIL_USERNAME') and app.config.get('MAIL_PASSWORD'):
+                mail = Mail(app)
+                app.extensions['mail'] = mail
+                logger.info("✅ Flask-Mail inicializado correctamente")
+            else:
+                logger.warning("⚠️ Flask-Mail disponible pero configuración incompleta. Configura MAIL_SERVER, MAIL_USERNAME y MAIL_PASSWORD en .env")
+        except ImportError:
+            # Flask-Mail no está instalado, continuar sin él
+            logger.warning("⚠️ Flask-Mail no está instalado. Instala con: pip install Flask-Mail")
     
     # Configurar login manager
     login_manager.login_view = 'auth.login'

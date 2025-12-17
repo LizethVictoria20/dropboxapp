@@ -11,6 +11,9 @@ from typing import Any
 import socket
 import threading
 from contextlib import contextmanager
+import json as _json
+import urllib.request
+import urllib.error
 
 # Intentar importar dependencias opcionales
 try:
@@ -58,6 +61,75 @@ def _should_force_ipv4() -> bool:
     return _env_bool('MAIL_FORCE_IPV4', False)
 
 
+def _sendgrid_send_email(
+    *,
+    destinatario: str,
+    subject: str,
+    body_text: str,
+    body_html: Optional[str],
+    sender: str,
+) -> bool:
+    """Send email via SendGrid Web API.
+
+    Requires SENDGRID_API_KEY. Returns True on 202 Accepted.
+    """
+    api_key = os.environ.get('SENDGRID_API_KEY')
+    if not api_key:
+        return False
+
+    payload = {
+        "personalizations": [{"to": [{"email": destinatario}]}],
+        "from": {"email": sender},
+        "subject": subject,
+        "content": [
+            {"type": "text/plain", "value": body_text or ""},
+        ],
+    }
+    if body_html:
+        payload["content"].append({"type": "text/html", "value": body_html})
+
+    data = _json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.sendgrid.com/v3/mail/send",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            status = getattr(resp, "status", None) or resp.getcode()
+            if status == 202:
+                current_app.logger.info("✅ SendGrid aceptó el email para %s", destinatario)
+                return True
+            body = resp.read(2000).decode("utf-8", errors="replace")
+            current_app.logger.warning("SendGrid respondió %s: %s", status, body)
+            return False
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read(4000).decode("utf-8", errors="replace")
+        except Exception:
+            body = str(e)
+        current_app.logger.error("❌ SendGrid HTTPError %s: %s", getattr(e, "code", "?"), body)
+        return False
+    except Exception as e:
+        current_app.logger.error("❌ Error enviando por SendGrid: %s", e)
+        return False
+
+
+def _email_backend() -> str:
+    """Return configured email backend.
+
+    Values:
+      - smtp (default)
+      - sendgrid
+    """
+    return (os.environ.get('EMAIL_BACKEND') or 'smtp').strip().lower()
+
+
 def _send_mail_with_optional_ipv4(mail: Any, msg: Any, description: str) -> None:
     """Send email, optionally forcing IPv4 based on env var.
 
@@ -84,6 +156,13 @@ def _send_mail_with_optional_ipv4(mail: Any, msg: Any, description: str) -> None
                 current_app.logger.info("Intento IPv4 finalizado para %s", description)
             return
         raise
+
+
+def _is_likely_smtp_egress_block(err: BaseException) -> bool:
+    # 101: Network unreachable, 110: Connection timed out
+    if isinstance(err, OSError) and getattr(err, 'errno', None) in {101, 110}:
+        return True
+    return False
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -267,23 +346,105 @@ def enviar_email_validado(
     Returns:
         True si se envió exitosamente, False en caso contrario
     """
-    if (not FLASK_MAIL_AVAILABLE) or Mail is None or Message is None:
-        current_app.logger.warning("Flask-Mail no está disponible. Instala con: pip install flask-mail")
-        return False
+    backend = _email_backend()
     
     try:
+        mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
+        mail_sender = (
+            os.environ.get('SENDGRID_FROM')
+            or os.environ.get('MAIL_DEFAULT_SENDER')
+            or current_app.config.get('MAIL_DEFAULT_SENDER')
+            or mail_username
+            or ''
+        ).strip()
+
+        # Contenido del email (común para SMTP y SendGrid)
+        asunto = f"✅ Documento Aprobado: {nombre_archivo}"
+
+        cuerpo_html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #4caf50;">✅ Documento Aprobado</h2>
+                <p>Hola {nombre_usuario},</p>
+                <p>¡Buenas noticias! Tu documento <strong>{nombre_archivo}</strong> ha sido <strong style="color: #4caf50;">aprobado</strong>.</p>
+        """
+
+        if comentario:
+            cuerpo_html += f"""
+                <div style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0;"><strong>Comentario:</strong></p>
+                    <p style="margin: 5px 0 0 0;">{comentario}</p>
+                </div>
+            """
+
+        cuerpo_html += """
+                <p>Tu documentación está en orden. Gracias por tu colaboración.</p>
+        """
+
+        if url_archivo:
+            cuerpo_html += f"""
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{url_archivo}"
+                       style="background-color: #4caf50; color: white; padding: 12px 24px;
+                              text-decoration: none; border-radius: 4px; display: inline-block;">
+                        Ver Documentos
+                    </a>
+                </div>
+            """
+
+        cuerpo_html += """
+                <p style="margin-top: 30px; font-size: 12px; color: #666;">
+                    Este es un mensaje automático. Por favor, no respondas a este correo.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+
+        cuerpo_texto = f"""
+Hola {nombre_usuario},
+
+¡Buenas noticias! Tu documento \"{nombre_archivo}\" ha sido APROBADO.
+        """
+
+        if comentario:
+            cuerpo_texto += f"\nComentario: {comentario}\n"
+
+        cuerpo_texto += "\nTu documentación está en orden. Gracias por tu colaboración.\n"
+
+        if url_archivo:
+            cuerpo_texto += f"\nAccede aquí: {url_archivo}\n"
+
+        # Backend SendGrid (HTTP): no requiere Flask-Mail ni SMTP
+        if backend == 'sendgrid':
+            if not mail_sender:
+                current_app.logger.warning("SendGrid requiere sender (SENDGRID_FROM o MAIL_DEFAULT_SENDER)")
+                return False
+            current_app.logger.info(
+                "Enviando email de aprobación por SendGrid a %s sender=%s" % (destinatario, mail_sender)
+            )
+            ok = _sendgrid_send_email(
+                destinatario=destinatario,
+                subject=asunto,
+                body_text=cuerpo_texto,
+                body_html=cuerpo_html,
+                sender=mail_sender,
+            )
+            return bool(ok)
+
+        # Backend SMTP (Flask-Mail)
+        if (not FLASK_MAIL_AVAILABLE) or Mail is None or Message is None:
+            current_app.logger.warning("Flask-Mail no está disponible. Instala con: pip install flask-mail")
+            return False
+
         mail_server = os.environ.get('MAIL_SERVER') or current_app.config.get('MAIL_SERVER')
         mail_port = int(os.environ.get('MAIL_PORT') or current_app.config.get('MAIL_PORT', 587))
         mail_use_tls = _env_bool('MAIL_USE_TLS', bool(current_app.config.get('MAIL_USE_TLS', True)))
         mail_use_ssl = _env_bool('MAIL_USE_SSL', bool(current_app.config.get('MAIL_USE_SSL', False)))
         mail_timeout = int(os.environ.get('MAIL_TIMEOUT') or current_app.config.get('MAIL_TIMEOUT', 10))
-        mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
         mail_password = (os.environ.get('MAIL_PASSWORD') or current_app.config.get('MAIL_PASSWORD') or '')
         mail_password = str(mail_password).replace(' ', '')
-        mail_sender = (os.environ.get('MAIL_DEFAULT_SENDER') or 
-                      current_app.config.get('MAIL_DEFAULT_SENDER') or 
-                      mail_username)
-
         suppress_send = _env_bool('MAIL_SUPPRESS_SEND', bool(current_app.config.get('MAIL_SUPPRESS_SEND', False)))
         
         if not all([mail_server, mail_username, mail_password]):
@@ -410,8 +571,30 @@ Hola {nombre_usuario},
                 _should_force_ipv4(),
             )
         )
-        
-        _send_mail_with_optional_ipv4(mail, msg, "email de aprobación")
+
+        try:
+            _send_mail_with_optional_ipv4(mail, msg, "email de aprobación")
+        except Exception as e:
+            fallback = _env_bool('EMAIL_FALLBACK_SENDGRID', False)
+            if fallback and _is_likely_smtp_egress_block(e):
+                current_app.logger.warning(
+                    "SMTP parece bloqueado/timeout. Probando fallback SendGrid (EMAIL_FALLBACK_SENDGRID=true)."
+                )
+                if not mail_sender:
+                    current_app.logger.warning("SendGrid requiere sender (SENDGRID_FROM o MAIL_DEFAULT_SENDER)")
+                    return False
+                ok = _sendgrid_send_email(
+                    destinatario=destinatario,
+                    subject=asunto,
+                    body_text=cuerpo_texto,
+                    body_html=cuerpo_html,
+                    sender=mail_sender,
+                )
+                if ok:
+                    current_app.logger.info(f"✅ Email de aprobación enviado exitosamente a {destinatario} (fallback SendGrid)")
+                    return True
+            raise
+
         current_app.logger.info(f"✅ Email de aprobación enviado exitosamente a {destinatario}")
         return True
         
@@ -434,24 +617,106 @@ def enviar_email_rechazo(
     Returns:
         True si se envió exitosamente, False en caso contrario
     """
-    if (not FLASK_MAIL_AVAILABLE) or Mail is None or Message is None:
-        current_app.logger.warning("Flask-Mail no está disponible. Instala con: pip install flask-mail")
-        return False
+    backend = _email_backend()
     
     try:
+        mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
+        mail_sender = (
+            os.environ.get('SENDGRID_FROM')
+            or os.environ.get('MAIL_DEFAULT_SENDER')
+            or current_app.config.get('MAIL_DEFAULT_SENDER')
+            or mail_username
+            or ''
+        ).strip()
+
+        # Contenido del email (común para SMTP y SendGrid)
+        asunto = f"Documento Rechazado: {nombre_archivo}"
+
+        cuerpo_html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #d32f2f;">Documento Rechazado</h2>
+                <p>Hola {nombre_usuario},</p>
+                <p>Te informamos que tu documento <strong>{nombre_archivo}</strong> ha sido rechazado.</p>
+        """
+
+        if comentario:
+            cuerpo_html += f"""
+                <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0;"><strong>Motivo del rechazo:</strong></p>
+                    <p style="margin: 5px 0 0 0;">{comentario}</p>
+                </div>
+            """
+
+        cuerpo_html += """
+                <p>Por favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión del documento.</p>
+        """
+
+        if url_archivo:
+            cuerpo_html += f"""
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{url_archivo}"
+                       style="background-color: #1976d2; color: white; padding: 12px 24px;
+                              text-decoration: none; border-radius: 4px; display: inline-block;">
+                        Ver Documentos
+                    </a>
+                </div>
+            """
+
+        cuerpo_html += """
+                <p style="margin-top: 30px; font-size: 12px; color: #666;">
+                    Este es un mensaje automático. Por favor, no respondas a este correo.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+
+        cuerpo_texto = f"""
+Hola {nombre_usuario},
+
+Te informamos que tu documento \"{nombre_archivo}\" ha sido rechazado.
+        """
+
+        if comentario:
+            cuerpo_texto += f"\nMotivo del rechazo: {comentario}\n"
+
+        cuerpo_texto += "\nPor favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión del documento.\n"
+
+        if url_archivo:
+            cuerpo_texto += f"\nAccede aquí: {url_archivo}\n"
+
+        # Backend SendGrid (HTTP): no requiere Flask-Mail ni SMTP
+        if backend == 'sendgrid':
+            if not mail_sender:
+                current_app.logger.warning("SendGrid requiere sender (SENDGRID_FROM o MAIL_DEFAULT_SENDER)")
+                return False
+            current_app.logger.info(
+                "Enviando email de rechazo por SendGrid a %s sender=%s" % (destinatario, mail_sender)
+            )
+            ok = _sendgrid_send_email(
+                destinatario=destinatario,
+                subject=asunto,
+                body_text=cuerpo_texto,
+                body_html=cuerpo_html,
+                sender=mail_sender,
+            )
+            return bool(ok)
+
+        # Backend SMTP (Flask-Mail)
+        if (not FLASK_MAIL_AVAILABLE) or Mail is None or Message is None:
+            current_app.logger.warning("Flask-Mail no está disponible. Instala con: pip install flask-mail")
+            return False
+
         # Obtener configuración de email desde variables de entorno o config
         mail_server = os.environ.get('MAIL_SERVER') or current_app.config.get('MAIL_SERVER')
         mail_port = int(os.environ.get('MAIL_PORT') or current_app.config.get('MAIL_PORT', 587))
         mail_use_tls = _env_bool('MAIL_USE_TLS', bool(current_app.config.get('MAIL_USE_TLS', True)))
         mail_use_ssl = _env_bool('MAIL_USE_SSL', bool(current_app.config.get('MAIL_USE_SSL', False)))
         mail_timeout = int(os.environ.get('MAIL_TIMEOUT') or current_app.config.get('MAIL_TIMEOUT', 10))
-        mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
         mail_password = (os.environ.get('MAIL_PASSWORD') or current_app.config.get('MAIL_PASSWORD') or '')
         mail_password = str(mail_password).replace(' ', '')
-        mail_sender = (os.environ.get('MAIL_DEFAULT_SENDER') or 
-                      current_app.config.get('MAIL_DEFAULT_SENDER') or 
-                      mail_username)
-
         suppress_send = _env_bool('MAIL_SUPPRESS_SEND', bool(current_app.config.get('MAIL_SUPPRESS_SEND', False)))
         
         # Verificar configuración mínima
@@ -580,8 +845,30 @@ Te informamos que tu documento "{nombre_archivo}" ha sido rechazado.
                 _should_force_ipv4(),
             )
         )
-        
-        _send_mail_with_optional_ipv4(mail, msg, "email de rechazo")
+
+        try:
+            _send_mail_with_optional_ipv4(mail, msg, "email de rechazo")
+        except Exception as e:
+            fallback = _env_bool('EMAIL_FALLBACK_SENDGRID', False)
+            if fallback and _is_likely_smtp_egress_block(e):
+                current_app.logger.warning(
+                    "SMTP parece bloqueado/timeout. Probando fallback SendGrid (EMAIL_FALLBACK_SENDGRID=true)."
+                )
+                if not mail_sender:
+                    current_app.logger.warning("SendGrid requiere sender (SENDGRID_FROM o MAIL_DEFAULT_SENDER)")
+                    return False
+                ok = _sendgrid_send_email(
+                    destinatario=destinatario,
+                    subject=asunto,
+                    body_text=cuerpo_texto,
+                    body_html=cuerpo_html,
+                    sender=mail_sender,
+                )
+                if ok:
+                    current_app.logger.info(f"✅ Email enviado exitosamente a {destinatario} (fallback SendGrid)")
+                    return True
+            raise
+
         current_app.logger.info(f"✅ Email enviado exitosamente a {destinatario}")
         return True
         

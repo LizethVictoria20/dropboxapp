@@ -107,15 +107,16 @@ def actualizar_estado_archivo():
         from app.models import Notification, Comentario
         from datetime import datetime
         
-        # Usar el motivo proporcionado por el admin, o buscar comentarios existentes
-        comentario_texto = motivo_rechazo if motivo_rechazo else None
-        if not comentario_texto:
-            try:
-                comentarios = Comentario.query.filter_by(dropbox_path=dropbox_path).order_by(Comentario.id.desc()).all()
-                if comentarios:
-                    comentario_texto = comentarios[0].contenido
-            except Exception as e:
-                current_app.logger.warning(f"No se pudieron obtener comentarios para el archivo: {e}")
+        comentario_texto = None
+        if nuevo_estado == 'rechazado':
+            comentario_texto = motivo_rechazo if motivo_rechazo else None
+            if not comentario_texto:
+                try:
+                    comentarios = Comentario.query.filter_by(dropbox_path=dropbox_path).order_by(Comentario.id.desc()).all()
+                    if comentarios:
+                        comentario_texto = comentarios[0].contenido
+                except Exception as e:
+                    current_app.logger.warning(f"No se pudieron obtener comentarios para el archivo: {e}")
         
         # Si hay motivo de rechazo, guardarlo como comentario en la BD
         if motivo_rechazo and nuevo_estado == 'rechazado':
@@ -193,7 +194,7 @@ def actualizar_estado_archivo():
                     resultados = enviar_notificacion_documento_validado(
                         usuario=usuario,
                         archivo=archivo,
-                        comentario=comentario_texto
+                        comentario=None
                     )
                     current_app.logger.info(
                         f"Email de validación enviado para archivo aprobado: Email={resultados['email']}"
