@@ -876,6 +876,17 @@ def carpetas_dropbox():
         end_idx = start_idx + per_page
         archivos_paginados = todos_los_archivos[start_idx:end_idx]
 
+        estado_por_path = {}
+        try:
+            canonical_list = [_canonical_archivo_path(p) for p in archivos_paginados]
+            if canonical_list:
+                rows = Archivo.query.filter(Archivo.dropbox_path.in_(canonical_list)).all()
+                estado_por_canonical = {r.dropbox_path: r.estado for r in rows}
+                for original_path, canonical_path in zip(archivos_paginados, canonical_list):
+                    estado_por_path[original_path] = estado_por_canonical.get(canonical_path)
+        except Exception as e:
+            current_app.logger.warning(f"No se pudieron precargar estados para /carpetas_dropbox: {e}")
+
         # Preparar mapping de emails para la plantilla/JS
         usuarios_emails = {}
         for user in usuarios:
@@ -906,6 +917,7 @@ def carpetas_dropbox():
             per_page=per_page,
             total_archivos=total_archivos,
             total_pages=total_pages,
+            estado_por_path=estado_por_path,
         )
 
     except Exception as e:

@@ -596,7 +596,8 @@ block content %}
                               onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')">
                           {{ fname }}
                         </span>
-                        <span id="status-badge-{{ file_path.replace('/', '-').replace('\\', '-') }}" data-file-path="{{ file_path }}" class="text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
+                        {% set _estado = (estado_por_path.get(file_path) if estado_por_path is defined else None) %}
+                        <span id="status-badge-{{ file_path.replace('/', '-').replace('\\', '-') }}" data-file-path="{{ file_path }}" class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full {{ 'bg-green-100 text-green-700' if _estado == 'validado' else ('bg-red-100 text-red-700' if _estado == 'rechazado' else ('bg-yellow-100 text-yellow-700' if _estado == 'en_revision' else 'bg-blue-100 text-blue-700')) }}">{{ 'Validado' if _estado == 'validado' else ('Rechazado' if _estado == 'rechazado' else ('Pendiente para revisión' if _estado == 'en_revision' else 'Nuevo')) }}</span>
                       </div>
                       <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ file_dir }}">{{ file_dir | default('') }}</div>
                     </div>
@@ -654,7 +655,8 @@ block content %}
                           onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')">
                       {{ fname }}
                     </span>
-                    <span id="status-badge-{{ file_path.replace('/', '-').replace('\\', '-') }}" data-file-path="{{ file_path }}" class="text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
+                    {% set _estado = (estado_por_path.get(file_path) if estado_por_path is defined else None) %}
+                    <span id="status-badge-{{ file_path.replace('/', '-').replace('\\', '-') }}" data-file-path="{{ file_path }}" class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full {{ 'bg-green-100 text-green-700' if _estado == 'validado' else ('bg-red-100 text-red-700' if _estado == 'rechazado' else ('bg-yellow-100 text-yellow-700' if _estado == 'en_revision' else 'bg-blue-100 text-blue-700')) }}">{{ 'Validado' if _estado == 'validado' else ('Rechazado' if _estado == 'rechazado' else ('Pendiente para revisión' if _estado == 'en_revision' else 'Nuevo')) }}</span>
                   </div>
                   <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ file_dir }}">{{ file_dir | default('') }}</div>
                 </div>
