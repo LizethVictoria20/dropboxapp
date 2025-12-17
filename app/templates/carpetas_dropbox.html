@@ -104,7 +104,7 @@ block content %}
   window.CURRENT_USER_ID = {{ current_user.id|tojson|safe }};
   window.USUARIOS_EMAILS = {{ usuarios_emails_json|safe }};
   window.CURRENT_USER_ROLE = {{ current_user.rol|tojson|safe }};
-  window.CURRENT_USER_CAN_MODIFY = {{ (current_user.rol == 'admin' or current_user.rol == 'cliente' or (current_user.rol == 'lector' and current_user.puede_modificar_archivos()))|tojson|safe }};
+  window.CURRENT_USER_CAN_MODIFY = {{ (current_user.rol in ['admin','superadmin','cliente'] or (current_user.rol == 'lector' and current_user.puede_modificar_archivos()))|tojson|safe }};
   
   console.log('✅ Variables globales de datos inicializadas:', {
     estructurasDisponibles: Object.keys(window.ESTRUCTURAS_USUARIOS || {}).length,
@@ -516,6 +516,16 @@ block content %}
               >
                 Usuario
               </span>
+              {% if request.args.get('user_id') and (current_user.rol in ['admin','superadmin'] or (current_user.rol == 'lector' and current_user.puede_modificar_archivos())) %}
+              <button
+                onclick="openUploadModal('', '{{ usuario_id }}')"
+                class="inline-flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                type="button"
+              >
+                <i class="fas fa-upload mr-2"></i>
+                Subir archivo
+              </button>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -677,7 +687,7 @@ block content %}
             </ul>
           </div>
 
-          {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+          {% if usuario_actual.rol in ['admin','superadmin'] or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
             <div class="mt-4 flex space-x-2">
               <button onclick="openUploadModal('', '{{ usuario_id }}')" class="px-3 py-2 text-sm bg-blue-600 text-white rounded">Subir Archivo</button>
             </div>
