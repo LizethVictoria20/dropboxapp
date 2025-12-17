@@ -2658,6 +2658,7 @@ def mover_archivo_modal():
 @login_required
 def renombrar_archivo():
     from app.models import Archivo, User, Beneficiario
+    import os
     
     # Verificar que el usuario esté autenticado antes de acceder a sus atributos
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
@@ -2675,6 +2676,23 @@ def renombrar_archivo():
     carpeta_actual = request.form.get("carpeta_actual")
     usuario_id = request.form.get("usuario_id")
     nuevo_nombre = request.form.get("nuevo_nombre")
+
+    # Si el usuario no escribe extensión, conservar la original automáticamente.
+    # Regla: solo se auto-agrega si el nuevo nombre NO tiene extensión.
+    def _get_extension(nombre_archivo: str) -> str:
+        if not nombre_archivo:
+            return ""
+        base = nombre_archivo.rsplit("/", 1)[-1]
+        _, ext = os.path.splitext(base)
+        return ext or ""
+
+    original_ext = _get_extension((archivo_nombre_actual or "").strip())
+    nuevo_nombre = (nuevo_nombre or "").strip()
+    if original_ext:
+        _, nuevo_ext = os.path.splitext(nuevo_nombre)
+        if not (nuevo_ext or ""):
+            # Evitar casos como "nombre." -> "nombre..pdf"
+            nuevo_nombre = nuevo_nombre.rstrip(".") + original_ext
 
     # Obtener el usuario para construir la ruta base
     try:
@@ -2732,6 +2750,10 @@ def renombrar_archivo():
         old_path = join_dropbox_path(carpeta_actual_completa, archivo_nombre_actual)
         new_path = join_dropbox_path(carpeta_actual_completa, nuevo_nombre)
 
+    # Canonicalizar para BD (sin base folder)
+    old_canonical = _canonical_archivo_path(old_path)
+    new_canonical = _canonical_archivo_path(new_path)
+
     # --- Log antes de buscar archivo ---
     print("DEBUG | archivo_nombre_actual:", archivo_nombre_actual)
     print("DEBUG | carpeta_actual:", carpeta_actual)
@@ -2740,6 +2762,8 @@ def renombrar_archivo():
     print("DEBUG | ruta_base:", ruta_base)
     print("DEBUG | old_path:", old_path)
     print("DEBUG | new_path:", new_path)
+    print("DEBUG | old_canonical:", old_canonical)
+    print("DEBUG | new_canonical:", new_canonical)
     all_paths = [a.dropbox_path for a in Archivo.query.all()]
     print("DEBUG | Paths en base:", all_paths)
 
@@ -2753,7 +2777,25 @@ def renombrar_archivo():
         except:
             return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
-    archivo = Archivo.query.filter_by(dropbox_path=old_path).first()
+    # Buscar por canonical primero, con fallbacks para registros legacy
+    archivo = Archivo.query.filter_by(dropbox_path=old_canonical).order_by(Archivo.id.desc()).first()
+    if not archivo:
+        try:
+            old_norm = _normalize_dropbox_path(old_path)
+            archivo = (
+                Archivo.query.filter(Archivo.dropbox_path.in_([old_norm, with_base_folder(old_canonical)]))
+                .order_by(Archivo.id.desc())
+                .first()
+            )
+        except Exception:
+            archivo = None
+
+    if archivo and archivo.dropbox_path != old_canonical:
+        try:
+            archivo.dropbox_path = old_canonical
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
     if not archivo:
         print(f"DEBUG | Archivo no encontrado en la base para path: {old_path}")
         
@@ -2767,7 +2809,12 @@ def renombrar_archivo():
     dbx = get_dbx()
     try:
         print(f"DEBUG | Renombrando en Dropbox: {old_path} -> {new_path}")
-        dbx.files_move_v2(with_base_folder(old_path), with_base_folder(new_path), allow_shared_folder=True, autorename=True)
+        result = dbx.files_move_v2(
+            with_base_folder(old_path),
+            with_base_folder(new_path),
+            allow_shared_folder=True,
+            autorename=True,
+        )
     except Exception as e:
         print(f"DEBUG | Error renombrando en Dropbox: {e}")
         
@@ -2778,15 +2825,40 @@ def renombrar_archivo():
         except:
             return redirect(url_for("listar_dropbox.carpetas_dropbox"))
 
-    archivo.nombre = nuevo_nombre
-    archivo.dropbox_path = new_path
+    # Dropbox puede aplicar autorename si hay conflicto; persistir el nombre/path final real.
+    final_name = nuevo_nombre
+    final_path_raw = new_path
+    try:
+        meta = getattr(result, "metadata", None)
+        if meta is not None:
+            final_name = getattr(meta, "name", None) or final_name
+            final_path_raw = (
+                getattr(meta, "path_display", None)
+                or getattr(meta, "path_lower", None)
+                or final_path_raw
+            )
+    except Exception:
+        pass
+
+    final_canonical = _canonical_archivo_path(final_path_raw)
+
+    archivo.nombre = final_name
+    archivo.dropbox_path = final_canonical
     db.session.commit()
 
     # Registrar actividad
-    current_user.registrar_actividad('file_renamed', f'Archivo renombrado de "{archivo_nombre_actual}" a "{nuevo_nombre}"')
+    current_user.registrar_actividad('file_renamed', f'Archivo renombrado de "{archivo_nombre_actual}" a "{final_name}"')
 
-    print(f"DEBUG | Renombrado exitoso: {old_path} -> {new_path}")
+    print(f"DEBUG | Renombrado exitoso: {old_path} -> {final_canonical}")
     flash("Archivo renombrado correctamente.", "success")
+
+    # Invalidar caché de estructura para reflejar el cambio inmediatamente en la UI
+    try:
+        _estructuras_cache.pop(usuario_id_int, None)
+        if hasattr(usuario, 'titular') and getattr(usuario, 'titular', None) is not None:
+            _estructuras_cache.pop(getattr(usuario.titular, 'id', None), None)
+    except Exception:
+        pass
     
     # Redirigir a la carpeta específica del usuario
     redirect_url = url_for("listar_dropbox.ver_usuario_carpetas", usuario_id=usuario_id_int)

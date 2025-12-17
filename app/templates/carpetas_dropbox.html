@@ -2193,6 +2193,45 @@ block content %}
       document.getElementById("renameFolderModal").classList.add("hidden");
     };
 
+    // Guard UX: si el usuario renombra sin extensión, re-agregar la original.
+    (function () {
+      const form = document.getElementById("renameForm");
+      if (!form) return;
+
+      const getOriginalExt = () => {
+        const originalNameEl = document.getElementById(
+          "renameArchivoNombreActual"
+        );
+        const originalName = (originalNameEl?.value || "").trim();
+        const base = originalName.split("/").pop() || originalName;
+        const lastDot = base.lastIndexOf(".");
+        // No tratar como extensión si es dotfile (".bashrc")
+        if (lastDot <= 0) return "";
+        return base.slice(lastDot);
+      };
+
+      const hasExt = (name) => {
+        const base = (name || "").trim().split("/").pop() || "";
+        const lastDot = base.lastIndexOf(".");
+        return lastDot > 0 && lastDot < base.length - 1;
+      };
+
+      form.addEventListener("submit", function () {
+        const nuevoNombreEl = document.getElementById("nuevoNombre");
+        if (!nuevoNombreEl) return;
+
+        let proposed = (nuevoNombreEl.value || "").trim();
+        const ext = getOriginalExt();
+        if (!ext) return;
+
+        if (!hasExt(proposed)) {
+          proposed = proposed.replace(/\.+$/, "");
+          proposed = proposed + ext;
+          nuevoNombreEl.value = proposed;
+        }
+      });
+    })();
+
     document.getElementById("moveForm").onsubmit = function (e) {
       const dest = document.getElementById("nuevaCarpetaSeleccionada").value;
       const selectedFolder = document.getElementById("selectedFolder");
