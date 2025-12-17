@@ -48,13 +48,16 @@ def _mail_config_summary(
     mail_sender: Optional[str],
     suppress_send: bool,
 ) -> str:
+    server_display = mail_server or ""
+    if len(server_display) > 80:
+        server_display = server_display[:77] + "..."
     username_hint = (mail_username or "")
     if username_hint and "@" in username_hint:
         user_display = username_hint.split("@", 1)[0] + "@…"
     else:
         user_display = bool(username_hint)
     return (
-        f"MAIL_SERVER={bool(mail_server)} PORT={mail_port} TLS={mail_use_tls} SSL={mail_use_ssl} "
+        f"MAIL_SERVER={server_display or bool(mail_server)} PORT={mail_port} TLS={mail_use_tls} SSL={mail_use_ssl} "
         f"USERNAME={user_display} DEFAULT_SENDER={bool(mail_sender)} SUPPRESS_SEND={suppress_send}"
     )
 
@@ -334,8 +337,7 @@ Hola {nombre_usuario},
         return True
         
     except Exception as e:
-        current_app.logger.error(f"❌ Error al enviar email de aprobación: {e}")
-        traceback.print_exc()
+        current_app.logger.exception(f"❌ Error al enviar email de aprobación: {e}")
         return False
 
 
@@ -487,8 +489,7 @@ Te informamos que tu documento "{nombre_archivo}" ha sido rechazado.
         return True
         
     except Exception as e:
-        current_app.logger.error(f"❌ Error al enviar email: {e}")
-        traceback.print_exc()
+        current_app.logger.exception(f"❌ Error al enviar email: {e}")
         return False
 
 
