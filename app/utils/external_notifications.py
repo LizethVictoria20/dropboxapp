@@ -79,7 +79,9 @@ def _send_mail_with_optional_ipv4(mail: Any, msg: Any, description: str) -> None
                 description,
             )
             with _force_ipv4_only():
+                current_app.logger.info("Intento IPv4 iniciado para %s", description)
                 mail.send(msg)
+                current_app.logger.info("Intento IPv4 finalizado para %s", description)
             return
         raise
 
@@ -274,6 +276,7 @@ def enviar_email_validado(
         mail_port = int(os.environ.get('MAIL_PORT') or current_app.config.get('MAIL_PORT', 587))
         mail_use_tls = _env_bool('MAIL_USE_TLS', bool(current_app.config.get('MAIL_USE_TLS', True)))
         mail_use_ssl = _env_bool('MAIL_USE_SSL', bool(current_app.config.get('MAIL_USE_SSL', False)))
+        mail_timeout = int(os.environ.get('MAIL_TIMEOUT') or current_app.config.get('MAIL_TIMEOUT', 10))
         mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
         mail_password = (os.environ.get('MAIL_PASSWORD') or current_app.config.get('MAIL_PASSWORD') or '')
         mail_password = str(mail_password).replace(' ', '')
@@ -303,6 +306,7 @@ def enviar_email_validado(
             'MAIL_PORT': mail_port,
             'MAIL_USE_TLS': mail_use_tls,
             'MAIL_USE_SSL': mail_use_ssl,
+            'MAIL_TIMEOUT': mail_timeout,
             'MAIL_USERNAME': mail_username,
             'MAIL_PASSWORD': mail_password,
             'MAIL_DEFAULT_SENDER': mail_sender,
@@ -317,6 +321,21 @@ def enviar_email_validado(
             mail = Mail(current_app)
         else:
             mail = current_app.extensions['mail']
+
+        # Asegurar que el objeto Mail use la configuración actual (Mail no re-lee app.config dinámicamente)
+        try:
+            mail.server = mail_server
+            mail.port = mail_port
+            mail.use_tls = mail_use_tls
+            mail.use_ssl = mail_use_ssl
+            mail.username = mail_username
+            mail.password = mail_password
+            mail.default_sender = mail_sender
+            mail.suppress_send = suppress_send
+            mail.timeout = mail_timeout
+        except Exception:
+            # Si por alguna razón no tiene esos atributos, continuamos con la instancia tal cual
+            pass
         
         asunto = f"✅ Documento Aprobado: {nombre_archivo}"
         
@@ -384,9 +403,11 @@ Hola {nombre_usuario},
         )
 
         current_app.logger.info(
-            "Enviando email de aprobación a %s (%s)" % (
+            "Enviando email de aprobación a %s (%s) timeout=%ss force_ipv4=%s" % (
                 destinatario,
                 _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send),
+                mail_timeout,
+                _should_force_ipv4(),
             )
         )
         
@@ -423,6 +444,7 @@ def enviar_email_rechazo(
         mail_port = int(os.environ.get('MAIL_PORT') or current_app.config.get('MAIL_PORT', 587))
         mail_use_tls = _env_bool('MAIL_USE_TLS', bool(current_app.config.get('MAIL_USE_TLS', True)))
         mail_use_ssl = _env_bool('MAIL_USE_SSL', bool(current_app.config.get('MAIL_USE_SSL', False)))
+        mail_timeout = int(os.environ.get('MAIL_TIMEOUT') or current_app.config.get('MAIL_TIMEOUT', 10))
         mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
         mail_password = (os.environ.get('MAIL_PASSWORD') or current_app.config.get('MAIL_PASSWORD') or '')
         mail_password = str(mail_password).replace(' ', '')
@@ -453,6 +475,7 @@ def enviar_email_rechazo(
             'MAIL_PORT': mail_port,
             'MAIL_USE_TLS': mail_use_tls,
             'MAIL_USE_SSL': mail_use_ssl,
+            'MAIL_TIMEOUT': mail_timeout,
             'MAIL_USERNAME': mail_username,
             'MAIL_PASSWORD': mail_password,
             'MAIL_DEFAULT_SENDER': mail_sender,
@@ -468,6 +491,20 @@ def enviar_email_rechazo(
             mail = Mail(current_app)
         else:
             mail = current_app.extensions['mail']
+
+        # Asegurar que el objeto Mail use la configuración actual (Mail no re-lee app.config dinámicamente)
+        try:
+            mail.server = mail_server
+            mail.port = mail_port
+            mail.use_tls = mail_use_tls
+            mail.use_ssl = mail_use_ssl
+            mail.username = mail_username
+            mail.password = mail_password
+            mail.default_sender = mail_sender
+            mail.suppress_send = suppress_send
+            mail.timeout = mail_timeout
+        except Exception:
+            pass
         
         # Crear mensaje
         asunto = f"Documento Rechazado: {nombre_archivo}"
@@ -536,9 +573,11 @@ Te informamos que tu documento "{nombre_archivo}" ha sido rechazado.
         )
 
         current_app.logger.info(
-            "Enviando email de rechazo a %s (%s)" % (
+            "Enviando email de rechazo a %s (%s) timeout=%ss force_ipv4=%s" % (
                 destinatario,
                 _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send),
+                mail_timeout,
+                _should_force_ipv4(),
             )
         )
         

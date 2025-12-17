@@ -41,8 +41,12 @@ class Config:
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'
+    MAIL_TIMEOUT = int(os.environ.get('MAIL_TIMEOUT', 10))
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    # Gmail App Password suele copiarse con espacios (XXXX XXXX XXXX XXXX).
+    # Normalizamos quitando espacios para evitar fallos de autenticación.
+    MAIL_PASSWORD = (os.environ.get('MAIL_PASSWORD') or '').replace(' ', '') or None
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME'))
     
     # Configuración de Twilio (SMS y WhatsApp)
@@ -53,7 +57,8 @@ class Config:
     TWILIO_DEFAULT_COUNTRY_CODE = os.environ.get('TWILIO_DEFAULT_COUNTRY_CODE', '+1')
     
     # URL de la aplicación para enlaces en notificaciones
-    APP_URL = os.environ.get('APP_URL', 'http://localhost:5000')
+    # Nota: si APP_URL existe pero está vacío, usar fallback.
+    APP_URL = os.environ.get('APP_URL') or 'http://localhost:5000'
     
     @staticmethod
     def init_app(app):
