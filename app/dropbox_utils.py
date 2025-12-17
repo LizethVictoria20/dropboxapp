@@ -79,11 +79,23 @@ def get_dropbox_base_folder():
     if _cached_base_folder is not None:
         return _cached_base_folder
 
+    def _clean_env_path(value: str | None) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        # Soportar valores con comillas (p.ej. en .env o EnvironmentFile)
+        if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+            text = text[1:-1].strip()
+        return text or None
+
     try:
         # 1) Revisar variable de entorno/config directa con el path deseado
         base_folder = (
             getattr(current_app, 'config', {}) and current_app.config.get('DROPBOX_BASE_FOLDER')
         ) or os.environ.get('DROPBOX_BASE_FOLDER')
+        base_folder = _clean_env_path(base_folder)
         if base_folder:
             _cached_base_folder = _normalize_dropbox_path(base_folder)
             return _cached_base_folder
@@ -95,6 +107,9 @@ def get_dropbox_base_folder():
         shared_link_password = (
             getattr(current_app, 'config', {}) and current_app.config.get('DROPBOX_BASE_SHARED_LINK_PASSWORD')
         ) or os.environ.get('DROPBOX_BASE_SHARED_LINK_PASSWORD')
+
+        shared_link = _clean_env_path(shared_link)
+        shared_link_password = _clean_env_path(shared_link_password)
 
         if shared_link:
             dbx = get_dropbox_client()

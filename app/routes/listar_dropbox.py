@@ -56,6 +56,15 @@ def obtener_estado_archivo():
     canonical_path = _canonical_archivo_path(raw_path)
     raw_norm = _normalize_dropbox_path(raw_path)
 
+    try:
+        from app.dropbox_utils import get_dropbox_base_folder
+        current_app.logger.info(
+            "GET /api/archivo/estado raw=%s raw_norm=%s canonical=%s base_folder=%s"
+            % (raw_path, raw_norm, canonical_path, get_dropbox_base_folder())
+        )
+    except Exception:
+        pass
+
     # 1) Buscar por canonical
     archivo = Archivo.query.filter_by(dropbox_path=canonical_path).order_by(Archivo.id.desc()).first()
     # 2) Fallbacks: registros antiguos que se guardaron con base folder o sin normalizar
@@ -103,6 +112,15 @@ def actualizar_estado_archivo():
     # Normalizar/canonicalizar path para BD (sin base folder)
     raw_norm = _normalize_dropbox_path(str(dropbox_path))
     dropbox_path = _canonical_archivo_path(raw_norm)
+
+    try:
+        from app.dropbox_utils import get_dropbox_base_folder
+        current_app.logger.info(
+            "POST /api/archivo/estado raw=%s raw_norm=%s canonical=%s base_folder=%s estado=%s"
+            % (data.get('path'), raw_norm, dropbox_path, get_dropbox_base_folder(), nuevo_estado)
+        )
+    except Exception:
+        pass
 
     # Buscar por canonical y fallbacks por compatibilidad
     archivo = Archivo.query.filter_by(dropbox_path=dropbox_path).order_by(Archivo.id.desc()).first()
