@@ -7,12 +7,28 @@ block content %}
       <h1 class="text-3xl font-bold text-primary-dark">Lista de Clientes</h1>
       <p class="text-gray-500 mt-1">Gestiona los clientes del sistema</p>
     </div>
-    <button
-      onclick="abrirModalCrearUsuario()"
-      class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition"
-    >
-      + Agregar cliente
-    </button>
+    <div class="flex items-center gap-2">
+      <button
+        onclick="abrirModalPendientesRevision()"
+        class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition"
+      >
+        <i class="fas fa-clock mr-2"></i>
+        Pendientes por revisión {% set _pendientes_count =
+        (archivos_pendientes_revision|length) if archivos_pendientes_revision is
+        defined else 0 %}
+        <span
+          id="pendientesRevisionCount"
+          class="ml-2 text-xs font-bold bg-white/70 text-primary-dark px-2 py-0.5 rounded-full"
+          >{{ _pendientes_count }}</span
+        >
+      </button>
+      <button
+        onclick="abrirModalCrearUsuario()"
+        class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition"
+      >
+        + Agregar cliente
+      </button>
+    </div>
   </div>
 
   <!-- Search -->
@@ -33,9 +49,7 @@ block content %}
   </form>
 
   <!-- Tabla de usuarios -->
-  <div
-    class="bg-white rounded-2xl shadow-md border border-gray-100"
-  >
+  <div class="bg-white rounded-2xl shadow-md border border-gray-100">
     <div class="px-6 py-3 border-b bg-blue-50 flex items-center">
       <div class="flex items-center gap-2 text-primary-dark font-semibold">
         <i class="fas fa-users"></i> {{ rol|capitalize }}s
@@ -46,120 +60,129 @@ block content %}
       >
     </div>
 
-  <script>
-    (function () {
-      const input = document.querySelector('input[name="q"]');
-      const tbody = document.getElementById('clientes-table-body');
-      let debounceTimer = null;
-      let currentController = null;
+    <script>
+      (function () {
+        const input = document.querySelector('input[name="q"]');
+        const tbody = document.getElementById("clientes-table-body");
+        let debounceTimer = null;
+        let currentController = null;
 
-      function buildUrl(query) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('q', query || '');
-        url.searchParams.set('page', '1');
-        return url.toString();
-      }
+        function buildUrl(query) {
+          const url = new URL(window.location.href);
+          url.searchParams.set("q", query || "");
+          url.searchParams.set("page", "1");
+          return url.toString();
+        }
 
-      async function fetchUsuarios(query) {
-        try {
-          const url = buildUrl(query);
-          // Actualizar la URL visible sin recargar
-          window.history.replaceState({}, '', url);
+        async function fetchUsuarios(query) {
+          try {
+            const url = buildUrl(query);
+            // Actualizar la URL visible sin recargar
+            window.history.replaceState({}, "", url);
 
-          // Cancelar petición anterior si existe
-          if (currentController) {
-            currentController.abort();
-          }
-          currentController = new AbortController();
+            // Cancelar petición anterior si existe
+            if (currentController) {
+              currentController.abort();
+            }
+            currentController = new AbortController();
 
-          const res = await fetch(url, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-store' },
-            credentials: 'same-origin',
-            signal: currentController.signal
-          });
-          const html = await res.text();
-          tbody.innerHTML = html;
-        } catch (e) {
-          if (e.name !== 'AbortError') {
-            console.error('Error buscando clientes:', e);
+            const res = await fetch(url, {
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "Cache-Control": "no-store",
+              },
+              credentials: "same-origin",
+              signal: currentController.signal,
+            });
+            const html = await res.text();
+            tbody.innerHTML = html;
+          } catch (e) {
+            if (e.name !== "AbortError") {
+              console.error("Error buscando clientes:", e);
+            }
           }
         }
-      }
 
-      input.addEventListener('input', function (e) {
-        const q = e.target.value.trim();
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => fetchUsuarios(q), 300);
-      });
-    })();
-  </script>
+        input.addEventListener("input", function (e) {
+          const q = e.target.value.trim();
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => fetchUsuarios(q), 300);
+        });
+      })();
+    </script>
     <div class="overflow-x-auto">
-    <table class="min-w-full text-sm text-gray-700">
-      <thead class="hidden md:table-header-group">
-        <tr class="border-b text-gray-500">
-          <th class="py-3 px-6 text-left">NOMBRE</th>
-          <th class="py-3 px-2 text-left">EMAIL</th>
-          <th class="py-3 px-2 text-left">CARPETAS</th>
-          <th class="py-3 px-2 text-right">ACCIONES</th>
-        </tr>
-      </thead>
-      <tbody id="clientes-table-body">
-        {% for u in usuarios %}
-        <!-- Fila de tabla en escritorio -->
-        <tr
-          class="border-b last:border-0 hover:bg-blue-50 transition hidden md:table-row cursor-pointer"
-          data-href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
-        >
-          <td class="flex items-center gap-3 py-3 px-6">
-            <span
-              class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-primary-dark font-bold text-lg"
-            >
-              {{ (u.nombre or u.email)[0]|upper }}
-            </span>
-            <div>
-              <div class="font-semibold text-gray-900">
-                      {{ (u.nombre or '') ~ (' ' if u.apellido else '') ~ (u.apellido or '') or u.nombre_completo or u.email }}
+      <table class="min-w-full text-sm text-gray-700">
+        <thead class="hidden md:table-header-group">
+          <tr class="border-b text-gray-500">
+            <th class="py-3 px-6 text-left">NOMBRE</th>
+            <th class="py-3 px-2 text-left">EMAIL</th>
+            <th class="py-3 px-2 text-left">CARPETAS</th>
+            <th class="py-3 px-2 text-right">ACCIONES</th>
+          </tr>
+        </thead>
+        <tbody id="clientes-table-body">
+          {% for u in usuarios %}
+          <!-- Fila de tabla en escritorio -->
+          <tr
+            class="border-b last:border-0 hover:bg-blue-50 transition hidden md:table-row cursor-pointer"
+            data-href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
+          >
+            <td class="flex items-center gap-3 py-3 px-6">
+              <span
+                class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-primary-dark font-bold text-lg"
+              >
+                {{ (u.nombre or u.email)[0]|upper }}
+              </span>
+              <div>
+                <div class="font-semibold text-gray-900">
+                  {{ (u.nombre or '') ~ (' ' if u.apellido else '') ~
+                  (u.apellido or '') or u.nombre_completo or u.email }}
+                </div>
               </div>
-            </div>
-          </td>
-          <td class="px-2">{{ u.email }}</td>
-          <td class="px-2">
-            {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %} {% if
-            ncarpetas > 0 %}
-            <span
-              class="bg-blue-100 text-primary-dark px-2.5 py-1 rounded-full text-xs font-semibold"
-            >
-              {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
-            </span>
-            {% else %}
-            <span
-              class="bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs"
-              >Sin carpetas</span
-            >
-            {% endif %}
-          </td>
-          <td class="px-2 text-right" x-data="{ 
+            </td>
+            <td class="px-2">{{ u.email }}</td>
+            <td class="px-2">
+              {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %} {% if
+              ncarpetas > 0 %}
+              <span
+                class="bg-blue-100 text-primary-dark px-2.5 py-1 rounded-full text-xs font-semibold"
+              >
+                {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
+              </span>
+              {% else %}
+              <span
+                class="bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs"
+                >Sin carpetas</span
+              >
+              {% endif %}
+            </td>
+            <td
+              class="px-2 text-right"
+              x-data="{ 
             get isOpen() { return $store.userMenu.openMenuId === 'user-menu-{{ u.id }}' },
             toggle() { 
               $store.userMenu.openMenuId = ($store.userMenu.openMenuId === 'user-menu-{{ u.id }}' ? null : 'user-menu-{{ u.id }}')
             }
-          }">
-            <button
-              @click="toggle()"
-              class="p-2 rounded hover:bg-gray-100 group relative"
-              data-menu-button="user-menu-{{ u.id }}"
-              onclick="event.stopPropagation()"
+          }"
             >
-              <i class="fas fa-ellipsis-v text-gray-400"></i>
-            </button>
-          </td>
-        </tr>
-        
-        <!-- Menú desplegable de acciones - Renderizado fuera del flujo -->
-        <template x-if="$store.userMenu.openMenuId === 'user-menu-{{ u.id }}'">
-          <div
-            x-data="{ menuId: 'user-menu-{{ u.id }}' }"
-            x-init="
+              <button
+                @click="toggle()"
+                class="p-2 rounded hover:bg-gray-100 group relative"
+                data-menu-button="user-menu-{{ u.id }}"
+                onclick="event.stopPropagation()"
+              >
+                <i class="fas fa-ellipsis-v text-gray-400"></i>
+              </button>
+            </td>
+          </tr>
+
+          <!-- Menú desplegable de acciones - Renderizado fuera del flujo -->
+          <template
+            x-if="$store.userMenu.openMenuId === 'user-menu-{{ u.id }}'"
+          >
+            <div
+              x-data="{ menuId: 'user-menu-{{ u.id }}' }"
+              x-init="
               $nextTick(() => {
                 const menuId = 'user-menu-{{ u.id }}';
                 const button = document.querySelector(`[data-menu-button='${menuId}']`);
@@ -187,156 +210,156 @@ block content %}
                 }
               })
             "
-            @click.away="$store.userMenu.openMenuId = null"
-            x-transition:enter="transition ease-out duration-100"
-            x-transition:enter-start="transform opacity-0 scale-95"
-            x-transition:enter-end="transform opacity-100 scale-100"
-            x-transition:leave="transition ease-in duration-75"
-            x-transition:leave-start="transform opacity-100 scale-100"
-            x-transition:leave-end="transform opacity-0 scale-95"
-            class="w-48 bg-white rounded-md shadow-lg border border-gray-200"
-            id="user-menu-{{ u.id }}"
-          >
-            <!-- Ver Carpetas -->
-            <a
-              href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
-              @click="$store.userMenu.openMenuId = null"
-              class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              @click.away="$store.userMenu.openMenuId = null"
+              x-transition:enter="transition ease-out duration-100"
+              x-transition:enter-start="transform opacity-0 scale-95"
+              x-transition:enter-end="transform opacity-100 scale-100"
+              x-transition:leave="transition ease-in duration-75"
+              x-transition:leave-start="transform opacity-100 scale-100"
+              x-transition:leave-end="transform opacity-0 scale-95"
+              class="w-48 bg-white rounded-md shadow-lg border border-gray-200"
+              id="user-menu-{{ u.id }}"
             >
-              <i class="fas fa-folder-open mr-3 text-blue-500"></i>
-              Ver Carpetas
-            </a>
+              <!-- Ver Carpetas -->
+              <a
+                href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
+                @click="$store.userMenu.openMenuId = null"
+                class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              >
+                <i class="fas fa-folder-open mr-3 text-blue-500"></i>
+                Ver Carpetas
+              </a>
 
-            <!-- Ver Historial -->
-            <button
-              @click="abrirModalHistorial({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
-              class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-            >
-              <i class="fas fa-history mr-3 text-green-500"></i>
-              Ver Historial
-            </button>
+              <!-- Ver Historial -->
+              <button
+                @click="abrirModalHistorial({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
+                class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              >
+                <i class="fas fa-history mr-3 text-green-500"></i>
+                Ver Historial
+              </button>
 
-            <!-- Importar Archivo -->
-            <button
-              @click="abrirModalImportar({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
-              class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-            >
-              <i class="fas fa-upload mr-3 text-purple-500"></i>
-              Importar Archivo
-            </button>
+              <!-- Importar Archivo -->
+              <button
+                @click="abrirModalImportar({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
+                class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              >
+                <i class="fas fa-upload mr-3 text-purple-500"></i>
+                Importar Archivo
+              </button>
 
-            <!-- Editar Usuario -->
-            <button
-              @click="abrirModalEditar({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
-              class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-            >
-              <i class="fas fa-edit mr-3 text-yellow-500"></i>
-              Editar Cliente
-            </button>
+              <!-- Editar Usuario -->
+              <button
+                @click="abrirModalEditar({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
+                class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              >
+                <i class="fas fa-edit mr-3 text-yellow-500"></i>
+                Editar Cliente
+              </button>
 
-            <!-- Separador -->
-            <div class="border-t border-gray-100"></div>
+              <!-- Separador -->
+              <div class="border-t border-gray-100"></div>
 
-            <!-- Eliminar Usuario -->
-            <button
-              @click="confirmarEliminarUsuario({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
-              class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-            >
-              <i class="fas fa-trash mr-3"></i>
-              Eliminar Cliente
-            </button>
-          </div>
-        </template>
+              <!-- Eliminar Usuario -->
+              <button
+                @click="confirmarEliminarUsuario({{ u.id }}, '{{ u.nombre or u.email }}'); $store.userMenu.openMenuId = null;"
+                class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              >
+                <i class="fas fa-trash mr-3"></i>
+                Eliminar Cliente
+              </button>
+            </div>
+          </template>
 
-        <!-- Tarjeta en móvil -->
-        <tr class="md:hidden">
-          <td colspan="5" class="p-4">
-            <div
-              class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-2 hover:bg-blue-50 transition"
-            >
-              <div class="flex items-center gap-3 mb-2">
-                <span
-                  class="w-10 h-10 rounded-full bg-blue-100 text-primary-dark font-bold text-lg flex items-center justify-center"
-                >
-                  {{ (u.nombre or u.email)[0]|upper }}
-                </span>
-                <div>
-                  <div class="font-semibold text-gray-900 text-base">
-                    {{ u.nombre or u.email.split('@')[0] }}
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    @{{ u.email.split('@')[0] }}
+          <!-- Tarjeta en móvil -->
+          <tr class="md:hidden">
+            <td colspan="5" class="p-4">
+              <div
+                class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-2 hover:bg-blue-50 transition"
+              >
+                <div class="flex items-center gap-3 mb-2">
+                  <span
+                    class="w-10 h-10 rounded-full bg-blue-100 text-primary-dark font-bold text-lg flex items-center justify-center"
+                  >
+                    {{ (u.nombre or u.email)[0]|upper }}
+                  </span>
+                  <div>
+                    <div class="font-semibold text-gray-900 text-base">
+                      {{ u.nombre or u.email.split('@')[0] }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      @{{ u.email.split('@')[0] }}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="text-sm text-gray-700">
-                <p><strong>Email:</strong> {{ u.email }}</p>
-                <p>
-                  <strong>Carpetas:</strong>
-                  {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %} {% if
-                  ncarpetas > 0 %}
-                  <span
-                    class="inline-block bg-blue-100 text-primary-dark px-2.5 py-1 rounded-full text-xs font-semibold"
-                  >
-                    {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
-                  </span>
-                  {% else %}
-                  <span
-                    class="inline-block bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs"
-                    >Sin carpetas</span
-                  >
-                  {% endif %}
-                </p>
-                <p>
-                  <strong>Creación:</strong>
-                  <span
-                    class="inline-block text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
-                  >
-                    {{ u.fecha_creacion.strftime('%Y-%m-%d') if u.fecha_creacion
-                    else '' }}
-                  </span>
-                </p>
-              </div>
+                <div class="text-sm text-gray-700">
+                  <p><strong>Email:</strong> {{ u.email }}</p>
+                  <p>
+                    <strong>Carpetas:</strong>
+                    {% set ncarpetas = carpetas_por_usuario.get(u.id, 0) %} {%
+                    if ncarpetas > 0 %}
+                    <span
+                      class="inline-block bg-blue-100 text-primary-dark px-2.5 py-1 rounded-full text-xs font-semibold"
+                    >
+                      {{ ncarpetas }} carpeta{{ 's' if ncarpetas > 1 else '' }}
+                    </span>
+                    {% else %}
+                    <span
+                      class="inline-block bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs"
+                      >Sin carpetas</span
+                    >
+                    {% endif %}
+                  </p>
+                  <p>
+                    <strong>Creación:</strong>
+                    <span
+                      class="inline-block text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
+                    >
+                      {{ u.fecha_creacion.strftime('%Y-%m-%d') if
+                      u.fecha_creacion else '' }}
+                    </span>
+                  </p>
+                </div>
 
-              <!-- Acciones en móvil -->
-              <div class="flex flex-wrap gap-2 mt-3">
-                <a
-                  href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
-                  class="flex-1 bg-blue-100 text-blue-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 transition text-center"
-                >
-                  <i class="fas fa-folder-open mr-1"></i> Carpetas
-                </a>
-                <button
-                  onclick="abrirModalHistorial({{ u.id }}, '{{ u.nombre or u.email }}')"
-                  class="flex-1 bg-green-100 text-green-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-200 transition text-center"
-                >
-                  <i class="fas fa-history mr-1"></i> Historial
-                </button>
-                <button
-                  onclick="abrirModalImportar({{ u.id }}, '{{ u.nombre or u.email }}')"
-                  class="flex-1 bg-purple-100 text-purple-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 transition text-center"
-                >
-                  <i class="fas fa-upload mr-1"></i> Importar
-                </button>
-                <button
-                  onclick="abrirModalEditar({{ u.id }}, '{{ u.nombre or u.email }}')"
-                  class="flex-1 bg-yellow-100 text-yellow-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-yellow-200 transition text-center"
-                >
-                  <i class="fas fa-edit mr-1"></i> Editar
-                </button>
-                <button
-                  onclick="confirmarEliminarUsuario({{ u.id }}, '{{ u.nombre or u.email }}')"
-                  class="flex-1 bg-red-100 text-red-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-200 transition"
-                >
-                  <i class="fas fa-trash mr-1"></i> Eliminar
-                </button>
+                <!-- Acciones en móvil -->
+                <div class="flex flex-wrap gap-2 mt-3">
+                  <a
+                    href="{{ url_for('listar_dropbox.ver_usuario_carpetas', usuario_id=u.id) }}"
+                    class="flex-1 bg-blue-100 text-blue-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 transition text-center"
+                  >
+                    <i class="fas fa-folder-open mr-1"></i> Carpetas
+                  </a>
+                  <button
+                    onclick="abrirModalHistorial({{ u.id }}, '{{ u.nombre or u.email }}')"
+                    class="flex-1 bg-green-100 text-green-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-200 transition text-center"
+                  >
+                    <i class="fas fa-history mr-1"></i> Historial
+                  </button>
+                  <button
+                    onclick="abrirModalImportar({{ u.id }}, '{{ u.nombre or u.email }}')"
+                    class="flex-1 bg-purple-100 text-purple-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 transition text-center"
+                  >
+                    <i class="fas fa-upload mr-1"></i> Importar
+                  </button>
+                  <button
+                    onclick="abrirModalEditar({{ u.id }}, '{{ u.nombre or u.email }}')"
+                    class="flex-1 bg-yellow-100 text-yellow-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-yellow-200 transition text-center"
+                  >
+                    <i class="fas fa-edit mr-1"></i> Editar
+                  </button>
+                  <button
+                    onclick="confirmarEliminarUsuario({{ u.id }}, '{{ u.nombre or u.email }}')"
+                    class="flex-1 bg-red-100 text-red-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-200 transition"
+                  >
+                    <i class="fas fa-trash mr-1"></i> Eliminar
+                  </button>
+                </div>
               </div>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
     <!-- Paginación -->
@@ -389,18 +412,209 @@ block content %}
 
 <script>
   // Delegado para filas clicables en /usuarios
-  (function(){
-    document.addEventListener('click', function(e){
-      const tr = e.target.closest('tr[data-href]');
+  (function () {
+    document.addEventListener("click", function (e) {
+      const tr = e.target.closest("tr[data-href]");
       if (!tr) return;
-      const interactive = e.target.closest('a, button, input, select, textarea, [role="button"]');
+      const interactive = e.target.closest(
+        'a, button, input, select, textarea, [role="button"]'
+      );
       if (interactive) return;
-      const href = tr.getAttribute('data-href');
+      const href = tr.getAttribute("data-href");
       if (href) window.location.assign(href);
     });
   })();
-  
+
   // Si se repinta el tbody por AJAX, sigue funcionando por delegación
+</script>
+
+<!-- Modal: Pendientes por revisión -->
+<div
+  id="modalPendientesRevision"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
+>
+  <div
+    class="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden"
+  >
+    <div class="flex items-center justify-between p-6 border-b">
+      <div>
+        <h3 class="text-xl font-semibold text-gray-900">
+          Documentos pendientes por revisión
+        </h3>
+        {% set _pendientes = (archivos_pendientes_revision if
+        archivos_pendientes_revision is defined else []) %}
+        <p id="pendientesRevisionModalCount" class="text-sm text-gray-500">
+          {{ _pendientes|length }} documento{{ 's' if _pendientes|length != 1
+          else '' }}
+        </p>
+      </div>
+      <button
+        onclick="cerrarModalPendientesRevision()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+      {% if _pendientes %}
+      <div id="pendientesRevisionTableWrap" class="overflow-x-auto">
+        <table class="min-w-full text-sm text-gray-700">
+          <thead>
+            <tr class="border-b text-gray-500">
+              <th class="py-3 px-4 text-left">ARCHIVO</th>
+              <th class="py-3 px-4 text-left">FECHA</th>
+              <th class="py-3 px-4 text-right">ACCIÓN</th>
+            </tr>
+          </thead>
+          <tbody id="pendientesRevisionTbody">
+            {% for a in _pendientes %}
+            <tr
+              class="border-b last:border-0 hover:bg-blue-50 transition"
+              data-dropbox-path="{{ a.dropbox_path }}"
+            >
+              <td class="py-3 px-4 text-gray-500">
+                {{ a.fecha_subida.strftime('%Y-%m-%d %H:%M') if a.fecha_subida
+                else '—' }}
+              </td>
+              <td class="py-3 px-4 text-right">
+                {% if a.usuario_id %}
+                <a
+                  class="inline-flex items-center px-3 py-2 bg-blue-100 text-primary-dark rounded-lg font-medium hover:bg-blue-200 transition"
+                  href="{{ url_for('listar_dropbox.carpetas_dropbox', user_id=a.usuario_id) }}"
+                >
+                  Ver en carpetas
+                </a>
+                {% else %}
+                <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p id="pendientesRevisionEmpty" class="text-sm text-gray-500 hidden">
+        No hay documentos pendientes por revisión.
+      </p>
+      {% else %}
+      <p class="text-sm text-gray-500">
+        No hay documentos pendientes por revisión.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function abrirModalPendientesRevision() {
+    const modal = document.getElementById("modalPendientesRevision");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+    refrescarPendientesRevision();
+  }
+
+  function cerrarModalPendientesRevision() {
+    const modal = document.getElementById("modalPendientesRevision");
+    if (!modal) return;
+    modal.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+  }
+
+  // Cerrar al hacer click fuera del contenedor
+  (function () {
+    const modal = document.getElementById("modalPendientesRevision");
+    if (!modal) return;
+    modal.addEventListener("click", function (e) {
+      if (e.target === modal) cerrarModalPendientesRevision();
+    });
+  })();
+
+  function _setPendientesCounters(value) {
+    const headerBadge = document.getElementById("pendientesRevisionCount");
+    if (headerBadge) headerBadge.textContent = String(Math.max(0, value));
+
+    const modalCount = document.getElementById("pendientesRevisionModalCount");
+    if (modalCount) {
+      const n = Math.max(0, value);
+      modalCount.textContent = `${n} documento${n === 1 ? "" : "s"}`;
+    }
+  }
+
+  function _renderPendientesRows(items) {
+    const tbody = document.getElementById("pendientesRevisionTbody");
+    if (!tbody) return;
+
+    const rowsHtml = (items || [])
+      .map((a) => {
+        const nombre = a.nombre || "";
+        const path = a.dropbox_path || "";
+        const usuario = a.usuario_email || a.usuario_id || "—";
+        const fecha = a.fecha_subida || "—";
+        const action = a.usuario_id
+          ? `<a class="inline-flex items-center px-3 py-2 bg-blue-100 text-primary-dark rounded-lg font-medium hover:bg-blue-200 transition" href="/carpetas_dropbox?user_id=${encodeURIComponent(
+              a.usuario_id
+            )}">Ver en carpetas</a>`
+          : `<span class="text-gray-400">—</span>`;
+
+        return `
+        <tr class="border-b last:border-0 hover:bg-blue-50 transition" data-dropbox-path="${String(
+          path
+        ).replace(/\"/g, "&quot;")}">
+          <td class="py-3 px-4">
+            <div class="font-semibold text-gray-900">${nombre}</div>
+            <div class="text-xs text-gray-500 truncate max-w-[38rem]" title="${path}">${path}</div>
+          </td>
+          <td class="py-3 px-4 text-gray-500">${fecha}</td>
+          <td class="py-3 px-4 text-right">${action}</td>
+        </tr>
+      `;
+      })
+      .join("");
+
+    tbody.innerHTML = rowsHtml;
+  }
+
+  function _setEmptyState(isEmpty) {
+    const empty = document.getElementById("pendientesRevisionEmpty");
+    const tableWrap = document.getElementById("pendientesRevisionTableWrap");
+    if (empty) empty.classList.toggle("hidden", !isEmpty);
+    if (tableWrap) tableWrap.classList.toggle("hidden", isEmpty);
+  }
+
+  async function refrescarPendientesRevision() {
+    try {
+      const url = "{{ url_for('usuarios.pendientes_revision_json') }}";
+      const res = await fetch(url, {
+        headers: { "Cache-Control": "no-store" },
+        credentials: "same-origin",
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error("Error cargando pendientes:", data);
+        return;
+      }
+
+      const count = Number(data.count || 0);
+      _setPendientesCounters(count);
+      _setEmptyState(count === 0);
+      _renderPendientesRows(data.items || []);
+    } catch (e) {
+      console.error("Error refrescando pendientes:", e);
+    }
+  }
+
+  // Si el usuario vuelve a esta pestaña (por ejemplo, después de cambiar estado en /carpetas_dropbox)
+  // refrescamos el contador y el modal cuando aplique.
+  (function () {
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) return;
+      // Mantener el contador actualizado siempre
+      refrescarPendientesRevision();
+    });
+  })();
 </script>
 <!-- Modal de confirmación para eliminar usuario -->
 <div
@@ -619,7 +833,9 @@ block content %}
     <div class="flex items-center justify-between p-6 border-b">
       <div>
         <h3 class="text-xl font-semibold text-gray-900">Crear Nuevo Cliente</h3>
-        <p class="text-sm text-gray-500">Completa la información del nuevo cliente</p>
+        <p class="text-sm text-gray-500">
+          Completa la información del nuevo cliente
+        </p>
       </div>
       <button
         onclick="cerrarModalCrearUsuario()"
@@ -1172,7 +1388,8 @@ block content %}
 <script>
   // Funciones para el modal de eliminar
   function confirmarEliminarUsuario(usuarioId, nombreUsuario) {
-    document.getElementById("nombreUsuarioEliminar").textContent = nombreUsuario;
+    document.getElementById("nombreUsuarioEliminar").textContent =
+      nombreUsuario;
     document.getElementById("modalEliminar").classList.remove("hidden");
     document.getElementById("btnConfirmarEliminar").onclick = function () {
       // Crear formulario temporal para enviar POST
@@ -1556,16 +1773,16 @@ block content %}
     ).textContent = `Editando información de ${nombreUsuario}`;
     document.getElementById("editarUsuarioId").value = usuarioId;
     document.getElementById("modalEditar").classList.remove("hidden");
-    
+
     // Agregar event listeners para limpiar estilos de error en campos de contraseña
     const newPasswordField = document.getElementById("new_password");
     const confirmPasswordField = document.getElementById("confirm_password");
-    
+
     const clearPasswordErrors = () => {
       if (newPasswordField) newPasswordField.style.borderColor = "";
       if (confirmPasswordField) confirmPasswordField.style.borderColor = "";
     };
-    
+
     if (newPasswordField) {
       newPasswordField.removeEventListener("input", clearPasswordErrors);
       newPasswordField.addEventListener("input", clearPasswordErrors);
@@ -1646,9 +1863,12 @@ block content %}
       // VALIDACIÓN TEMPRANA: Si hay contraseñas, validarlas ANTES de actualizar usuario
       if (newPassword || confirmPassword) {
         if (!newPassword || !confirmPassword) {
-          alert("Si deseas cambiar la contraseña, debes completar ambos campos");
+          alert(
+            "Si deseas cambiar la contraseña, debes completar ambos campos"
+          );
           const newPasswordField = document.getElementById("new_password");
-          const confirmPasswordField = document.getElementById("confirm_password");
+          const confirmPasswordField =
+            document.getElementById("confirm_password");
           if (newPasswordField) {
             newPasswordField.style.borderColor = "#ef4444";
             newPasswordField.focus();
@@ -1658,11 +1878,12 @@ block content %}
           }
           return;
         }
-        
+
         if (newPassword !== confirmPassword) {
           alert("Las contraseñas no coinciden");
           const newPasswordField = document.getElementById("new_password");
-          const confirmPasswordField = document.getElementById("confirm_password");
+          const confirmPasswordField =
+            document.getElementById("confirm_password");
           if (newPasswordField) {
             newPasswordField.value = "";
             newPasswordField.style.borderColor = "#ef4444";
@@ -1674,7 +1895,7 @@ block content %}
           }
           return;
         }
-        
+
         if (newPassword.length < 6) {
           alert("La contraseña debe tener al menos 6 caracteres");
           const newPasswordField = document.getElementById("new_password");
@@ -1742,7 +1963,8 @@ block content %}
             // Error en cambio de contraseña - mostrar error y limpiar campos
             alert("Error al cambiar contraseña: " + passwordData.error);
             const newPasswordField = document.getElementById("new_password");
-            const confirmPasswordField = document.getElementById("confirm_password");
+            const confirmPasswordField =
+              document.getElementById("confirm_password");
             if (newPasswordField) {
               newPasswordField.value = "";
               newPasswordField.style.borderColor = "#ef4444";
@@ -1812,61 +2034,67 @@ block content %}
   }
 
   // Manejo del formulario de crear usuario
-  document.getElementById("formCrearUsuario").addEventListener("submit", function (e) {
-    e.preventDefault();
+  document
+    .getElementById("formCrearUsuario")
+    .addEventListener("submit", function (e) {
+      e.preventDefault();
 
-    const formData = new FormData(this);
-    const password = document.getElementById("crear_password").value;
-    const confirmPassword = document.getElementById("crear_confirm_password").value;
+      const formData = new FormData(this);
+      const password = document.getElementById("crear_password").value;
+      const confirmPassword = document.getElementById(
+        "crear_confirm_password"
+      ).value;
 
-    // Validar contraseñas
-    if (password !== confirmPassword) {
-      alert("Las contraseñas no coinciden");
-      return;
-    }
+      // Validar contraseñas
+      if (password !== confirmPassword) {
+        alert("Las contraseñas no coinciden");
+        return;
+      }
 
-    if (password.length < 6) {
-      alert("La contraseña debe tener al menos 6 caracteres");
-      return;
-    }
+      if (password.length < 6) {
+        alert("La contraseña debe tener al menos 6 caracteres");
+        return;
+      }
 
-    // Enviar formulario
-    fetch("{{ url_for('users.crear_usuario') }}", {
-      method: "POST",
-      headers: {
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: formData,
-    })
-      .then((response) => {
-        if (response.redirected) {
-          // Si hay redirección, recargar la página
-          window.location.reload();
-        } else {
-          return response.text();
-        }
+      // Enviar formulario
+      fetch("{{ url_for('users.crear_usuario') }}", {
+        method: "POST",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: formData,
       })
-      .then((data) => {
-        if (data) {
-          try {
-            const jsonData = JSON.parse(data);
-            if (jsonData.success) {
-              alert("Usuario creado exitosamente");
-              cerrarModalCrearUsuario();
-              location.reload(); // Recargar para ver el nuevo usuario
-            } else {
-              alert("Error: " + jsonData.error);
-            }
-          } catch (e) {
-            // Si no es JSON, asumir que es HTML de error
-            alert("Error al crear usuario. Verifica los datos ingresados.");
+        .then((response) => {
+          if (response.redirected) {
+            // Si hay redirección, recargar la página
+            window.location.reload();
+          } else {
+            return response.text();
           }
-        }
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        alert("Error al crear usuario. Verifica tu conexión e inténtalo de nuevo.");
-      });
-  });
+        })
+        .then((data) => {
+          if (data) {
+            try {
+              const jsonData = JSON.parse(data);
+              if (jsonData.success) {
+                alert("Usuario creado exitosamente");
+                cerrarModalCrearUsuario();
+                location.reload(); // Recargar para ver el nuevo usuario
+              } else {
+                alert("Error: " + jsonData.error);
+              }
+            } catch (e) {
+              // Si no es JSON, asumir que es HTML de error
+              alert("Error al crear usuario. Verifica los datos ingresados.");
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          alert(
+            "Error al crear usuario. Verifica tu conexión e inténtalo de nuevo."
+          );
+        });
+    });
 </script>
 {% endblock %}

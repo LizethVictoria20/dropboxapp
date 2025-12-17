@@ -47,6 +47,14 @@ def lista_usuarios():
         u.id: Folder.query.filter_by(user_id=u.id).count() for u in usuarios
     }
 
+    archivos_pendientes_revision = (
+        Archivo.query
+        .filter(Archivo.estado == 'en_revision')
+        .order_by(Archivo.fecha_subida.desc())
+        .limit(50)
+        .all()
+    )
+
     # Para AJAX (búsqueda en vivo) devolver solo el tbody renderizado
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template(
@@ -59,10 +67,46 @@ def lista_usuarios():
         "lista_usuarios.html",
         usuarios=usuarios,
         carpetas_por_usuario=carpetas_por_usuario,
+        archivos_pendientes_revision=archivos_pendientes_revision,
         pagination=pagination,
         rol=rol,
         q=q,
     )
+
+
+@bp.route('/usuarios/pendientes-revision-json')
+@login_required
+def pendientes_revision_json():
+    """Devuelve documentos en estado 'en_revision' (más recientes primero) para el modal en /usuarios."""
+    if not current_user.puede_administrar():
+        return jsonify({"error": "No tienes permisos"}), 403
+
+    pendientes = (
+        Archivo.query
+        .filter(Archivo.estado == 'en_revision')
+        .order_by(Archivo.fecha_subida.desc())
+        .limit(200)
+        .all()
+    )
+
+    def _fmt_fecha(dt):
+        return dt.strftime('%Y-%m-%d %H:%M') if dt else None
+
+    items = []
+    for a in pendientes:
+        items.append({
+            "id": a.id,
+            "nombre": a.nombre,
+            "dropbox_path": a.dropbox_path,
+            "usuario_id": a.usuario_id,
+            "usuario_email": (a.usuario.email if a.usuario and a.usuario.email else None),
+            "fecha_subida": _fmt_fecha(a.fecha_subida),
+        })
+
+    return jsonify({
+        "count": len(items),
+        "items": items,
+    })
 
 @bp.route('/usuarios/<int:usuario_id>/historial')
 @login_required
