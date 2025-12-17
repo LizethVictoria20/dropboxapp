@@ -3663,8 +3663,9 @@ def ver_usuario_carpetas(usuario_id):
                 print("⚠️ get_dbx() devolvió None: token inválido o configuración incompleta. Mostrando estructura vacía.")
                 estructura = {"_subcarpetas": {}, "_archivos": []}
             else:
-                # Usar la función optimizada con recursión limitada para mejor rendimiento
-                estructura = obtener_estructura_dropbox_optimizada(path=path, max_depth=5)
+                # Usar EXACTAMENTE la misma función que /carpetas_dropbox
+                # (tolerante a DROPBOX_BASE_FOLDER y consistente en construcción de paths)
+                estructura = obtener_estructura_dropbox_recursiva_limitada(path=path, dbx=dbx, max_depth=5)
 
                 # Filtrar archivos ocultos de la estructura
                 print(f"DEBUG | Filtrando archivos ocultos para usuario {usuario.id}")
