@@ -8,6 +8,9 @@ from flask import current_app
 from app.models import User, Archivo
 import traceback
 from typing import Any
+import socket
+import threading
+from contextlib import contextmanager
 
 # Intentar importar dependencias opcionales
 try:
@@ -24,6 +27,61 @@ try:
 except ImportError:
     TWILIO_AVAILABLE = False
     TwilioClient = None  # type: ignore[assignment]
+
+
+_socket_patch_lock = threading.Lock()
+
+
+@contextmanager
+def _force_ipv4_only():
+    """Temporarily force DNS resolution to IPv4 only.
+
+    This helps on servers without IPv6 egress where a hostname (e.g. smtp.gmail.com)
+    resolves to IPv6 first and connection fails with Errno 101.
+
+    Note: This patches socket.getaddrinfo process-wide, so we guard with a lock.
+    """
+    original_getaddrinfo = socket.getaddrinfo
+
+    def ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):  # type: ignore[no-untyped-def]
+        return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+    with _socket_patch_lock:
+        socket.getaddrinfo = ipv4_getaddrinfo  # type: ignore[assignment]
+        try:
+            yield
+        finally:
+            socket.getaddrinfo = original_getaddrinfo  # type: ignore[assignment]
+
+
+def _should_force_ipv4() -> bool:
+    return _env_bool('MAIL_FORCE_IPV4', False)
+
+
+def _send_mail_with_optional_ipv4(mail: Any, msg: Any, description: str) -> None:
+    """Send email, optionally forcing IPv4 based on env var.
+
+    If MAIL_FORCE_IPV4=true, always send under IPv4-only resolver.
+    Otherwise, do a best-effort retry on Errno 101 (Network is unreachable).
+    """
+    if _should_force_ipv4():
+        current_app.logger.warning("MAIL_FORCE_IPV4=true: enviando %s forzando IPv4", description)
+        with _force_ipv4_only():
+            mail.send(msg)
+        return
+
+    try:
+        mail.send(msg)
+    except OSError as e:
+        if getattr(e, 'errno', None) == 101:
+            current_app.logger.warning(
+                "Fallo enviando %s por IPv6 sin salida (Errno 101). Reintentando forzando IPv4.",
+                description,
+            )
+            with _force_ipv4_only():
+                mail.send(msg)
+            return
+        raise
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -332,7 +390,7 @@ Hola {nombre_usuario},
             )
         )
         
-        mail.send(msg)
+        _send_mail_with_optional_ipv4(mail, msg, "email de aprobación")
         current_app.logger.info(f"✅ Email de aprobación enviado exitosamente a {destinatario}")
         return True
         
@@ -484,7 +542,7 @@ Te informamos que tu documento "{nombre_archivo}" ha sido rechazado.
             )
         )
         
-        mail.send(msg)
+        _send_mail_with_optional_ipv4(mail, msg, "email de rechazo")
         current_app.logger.info(f"✅ Email enviado exitosamente a {destinatario}")
         return True
         
