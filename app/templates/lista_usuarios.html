@@ -431,56 +431,92 @@ block content %}
 <!-- Modal: Pendientes por revisión -->
 <div
   id="modalPendientesRevision"
-  class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
+  class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm"
 >
   <div
-    class="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden"
+    class="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-gray-100"
   >
-    <div class="flex items-center justify-between p-6 border-b">
-      <div>
-        <h3 class="text-xl font-semibold text-gray-900">
-          Documentos pendientes por revisión
-        </h3>
-        {% set _pendientes = (archivos_pendientes_revision if
-        archivos_pendientes_revision is defined else []) %}
-        <p id="pendientesRevisionModalCount" class="text-sm text-gray-500">
-          {{ _pendientes|length }} documento{{ 's' if _pendientes|length != 1
-          else '' }}
-        </p>
+    <div
+      class="flex items-center justify-between px-6 py-5 border-b bg-gray-50"
+    >
+      <div class="flex items-start gap-3">
+        <div
+          class="w-10 h-10 rounded-xl bg-blue-100 text-primary-dark flex items-center justify-center"
+        >
+          <i class="fas fa-clock"></i>
+        </div>
+        <div>
+          <h3 class="text-xl font-semibold text-gray-900">
+            Documentos pendientes por revisión
+          </h3>
+          {% set _pendientes = (archivos_pendientes_revision if
+          archivos_pendientes_revision is defined else []) %}
+          <p class="mt-0.5 text-sm text-gray-500">
+            <span id="pendientesRevisionModalCount" class="font-medium">
+              {{ _pendientes|length }} documento{{ 's' if _pendientes|length !=
+              1 else '' }}
+            </span>
+            <span class="text-gray-400">•</span>
+            <span class="text-gray-500">Actualiza automáticamente</span>
+          </p>
+        </div>
       </div>
       <button
         onclick="cerrarModalPendientesRevision()"
-        class="text-gray-400 hover:text-gray-600"
+        class="w-10 h-10 inline-flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-700 hover:bg-white transition"
+        type="button"
+        aria-label="Cerrar"
       >
-        <i class="fas fa-times text-xl"></i>
+        <i class="fas fa-times text-lg"></i>
       </button>
     </div>
 
     <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
       {% if _pendientes %}
-      <div id="pendientesRevisionTableWrap" class="overflow-x-auto">
-        <table class="min-w-full text-sm text-gray-700">
-          <thead>
+      <div
+        id="pendientesRevisionTableWrap"
+        class="overflow-x-hidden rounded-xl border border-gray-100"
+      >
+        <table class="w-full text-sm text-gray-700 table-fixed">
+          <colgroup>
+            <col style="width: 52%" />
+            <col style="width: 48%" />
+          </colgroup>
+          <thead class="bg-white sticky top-0">
             <tr class="border-b text-gray-500">
-              <th class="py-3 px-4 text-left">ARCHIVO</th>
-              <th class="py-3 px-4 text-left">FECHA</th>
-              <th class="py-3 px-4 text-right">ACCIÓN</th>
+              <th
+                class="py-3 px-3 sm:px-4 text-left text-xs font-semibold tracking-wide uppercase"
+              >
+                Archivo
+              </th>
+              <th
+                class="py-3 px-3 sm:px-4 text-right text-xs font-semibold tracking-wide uppercase"
+              >
+                Acción
+              </th>
             </tr>
           </thead>
           <tbody id="pendientesRevisionTbody">
             {% for a in _pendientes %}
             <tr
-              class="border-b last:border-0 hover:bg-blue-50 transition"
+              class="border-b last:border-0 hover:bg-blue-50/60 transition"
               data-dropbox-path="{{ a.dropbox_path }}"
             >
-              <td class="py-3 px-4 text-gray-500">
-                {{ a.fecha_subida.strftime('%Y-%m-%d %H:%M') if a.fecha_subida
-                else '—' }}
+              <td class="py-3 px-3 sm:px-4">
+                <div class="font-semibold text-gray-900 break-words">
+                  {{ a.nombre }}
+                </div>
+                <div
+                  class="text-xs text-gray-500 break-all whitespace-normal"
+                  title="{{ a.dropbox_path }}"
+                >
+                  {{ a.dropbox_path }}
+                </div>
               </td>
-              <td class="py-3 px-4 text-right">
+              <td class="py-3 px-3 sm:px-4 text-right align-top">
                 {% if a.usuario_id %}
                 <a
-                  class="inline-flex items-center px-3 py-2 bg-blue-100 text-primary-dark rounded-lg font-medium hover:bg-blue-200 transition"
+                  class="inline-flex items-center justify-center px-2.5 py-2 sm:px-3 bg-blue-100 text-primary-dark rounded-lg font-medium hover:bg-blue-200 transition text-xs sm:text-sm whitespace-normal leading-tight"
                   href="{{ url_for('listar_dropbox.carpetas_dropbox', user_id=a.usuario_id) }}"
                 >
                   Ver en carpetas
@@ -494,13 +530,35 @@ block content %}
           </tbody>
         </table>
       </div>
-      <p id="pendientesRevisionEmpty" class="text-sm text-gray-500 hidden">
-        No hay documentos pendientes por revisión.
-      </p>
+      <div id="pendientesRevisionEmpty" class="hidden">
+        <div class="py-10 text-center">
+          <div
+            class="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400"
+          >
+            <i class="fas fa-inbox"></i>
+          </div>
+          <p class="mt-3 text-sm font-medium text-gray-700">
+            No hay documentos pendientes por revisión.
+          </p>
+          <p class="mt-1 text-xs text-gray-500">
+            Cuando un documento vuelva a “En revisión”, aparecerá aquí.
+          </p>
+        </div>
+      </div>
       {% else %}
-      <p class="text-sm text-gray-500">
-        No hay documentos pendientes por revisión.
-      </p>
+      <div class="py-10 text-center">
+        <div
+          class="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400"
+        >
+          <i class="fas fa-inbox"></i>
+        </div>
+        <p class="mt-3 text-sm font-medium text-gray-700">
+          No hay documentos pendientes por revisión.
+        </p>
+        <p class="mt-1 text-xs text-gray-500">
+          Cuando un documento vuelva a “En revisión”, aparecerá aquí.
+        </p>
+      </div>
       {% endif %}
     </div>
   </div>
@@ -553,7 +611,7 @@ block content %}
         const usuario = a.usuario_email || a.usuario_id || "—";
         const fecha = a.fecha_subida || "—";
         const action = a.usuario_id
-          ? `<a class="inline-flex items-center px-3 py-2 bg-blue-100 text-primary-dark rounded-lg font-medium hover:bg-blue-200 transition" href="/carpetas_dropbox?user_id=${encodeURIComponent(
+          ? `<a class="inline-flex items-center justify-center px-2.5 py-2 sm:px-3 bg-blue-100 text-primary-dark rounded-lg font-medium hover:bg-blue-200 transition text-xs sm:text-sm whitespace-normal leading-tight" href="/carpetas_dropbox?user_id=${encodeURIComponent(
               a.usuario_id
             )}">Ver en carpetas</a>`
           : `<span class="text-gray-400">—</span>`;
@@ -562,12 +620,11 @@ block content %}
         <tr class="border-b last:border-0 hover:bg-blue-50 transition" data-dropbox-path="${String(
           path
         ).replace(/\"/g, "&quot;")}">
-          <td class="py-3 px-4">
-            <div class="font-semibold text-gray-900">${nombre}</div>
-            <div class="text-xs text-gray-500 truncate max-w-[38rem]" title="${path}">${path}</div>
+          <td class="py-3 px-3 sm:px-4">
+            <div class="font-semibold text-gray-900 break-words">${nombre}</div>
+            <div class="text-xs text-gray-500 break-all whitespace-normal" title="${path}">${path}</div>
           </td>
-          <td class="py-3 px-4 text-gray-500">${fecha}</td>
-          <td class="py-3 px-4 text-right">${action}</td>
+          <td class="py-3 px-3 sm:px-4 text-right align-top">${action}</td>
         </tr>
       `;
       })
