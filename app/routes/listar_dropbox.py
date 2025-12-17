@@ -13,6 +13,17 @@ import time
 
 bp = Blueprint("listar_dropbox", __name__)
 
+
+def _canonical_archivo_path(path: str) -> str:
+    """Canonicaliza rutas para persistencia/consulta en BD.
+
+    Regla: siempre almacenar/consultar SIN la carpeta base configurada.
+    Esto evita que un mismo archivo tenga dos registros distintos
+    (uno con base folder y otro sin base folder), lo cual rompía la
+    sincronización de estados entre vistas (admin vs cliente).
+    """
+    return without_base_folder(_normalize_dropbox_path(path or ""))
+
 # Caché simple en memoria para estructuras por usuario (TTL en segundos)
 _estructuras_cache = {}
 _CACHE_TTL_SECONDS = 60
@@ -35,12 +46,37 @@ def _set_cached_estructura(user_id, estructura):
 def obtener_estado_archivo():
     """Obtiene el estado de un archivo por dropbox_path"""
     from app.models import Archivo
-    dropbox_path = request.args.get('path')
-    if dropbox_path:
-        dropbox_path = str(dropbox_path).replace('//', '/').rstrip('/')
-    if not dropbox_path:
+    raw_path = request.args.get('path')
+    if raw_path:
+        raw_path = str(raw_path)
+    if not raw_path:
         return jsonify({'success': False, 'error': 'Parámetro path requerido'}), 400
-    archivo = Archivo.query.filter_by(dropbox_path=dropbox_path).first()
+
+    # Canonicalizar para BD (sin base folder)
+    canonical_path = _canonical_archivo_path(raw_path)
+    raw_norm = _normalize_dropbox_path(raw_path)
+
+    # 1) Buscar por canonical
+    archivo = Archivo.query.filter_by(dropbox_path=canonical_path).order_by(Archivo.id.desc()).first()
+    # 2) Fallbacks: registros antiguos que se guardaron con base folder o sin normalizar
+    if not archivo:
+        try:
+            archivo = (
+                Archivo.query.filter(Archivo.dropbox_path.in_([raw_norm, with_base_folder(canonical_path)]))
+                .order_by(Archivo.id.desc())
+                .first()
+            )
+        except Exception:
+            archivo = Archivo.query.filter_by(dropbox_path=raw_norm).order_by(Archivo.id.desc()).first()
+
+    # Si encontramos un registro legacy, migrarlo en caliente al canonical
+    if archivo and archivo.dropbox_path != canonical_path:
+        try:
+            archivo.dropbox_path = canonical_path
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     estado = archivo.estado if archivo and archivo.estado else None
     es_publica = archivo.es_publica if archivo and hasattr(archivo, 'es_publica') else True
     return jsonify({'success': True, 'estado': estado, 'es_publica': es_publica})
@@ -64,9 +100,42 @@ def actualizar_estado_archivo():
     if not current_user.is_authenticated or not hasattr(current_user, 'rol'):
         return jsonify({'success': False, 'error': 'No autorizado'}), 401
 
-    # Normalizar path (evitar dobles //)
-    dropbox_path = str(dropbox_path).replace('//', '/').rstrip('/')
-    archivo = Archivo.query.filter_by(dropbox_path=dropbox_path).first()
+    # Normalizar/canonicalizar path para BD (sin base folder)
+    raw_norm = _normalize_dropbox_path(str(dropbox_path))
+    dropbox_path = _canonical_archivo_path(raw_norm)
+
+    # Buscar por canonical y fallbacks por compatibilidad
+    archivo = Archivo.query.filter_by(dropbox_path=dropbox_path).order_by(Archivo.id.desc()).first()
+    if not archivo:
+        try:
+            archivo = (
+                Archivo.query.filter(Archivo.dropbox_path.in_([raw_norm, with_base_folder(dropbox_path)]))
+                .order_by(Archivo.id.desc())
+                .first()
+            )
+        except Exception:
+            archivo = Archivo.query.filter_by(dropbox_path=raw_norm).order_by(Archivo.id.desc()).first()
+
+    # Si encontramos legacy, migrarlo al canonical
+    if archivo and archivo.dropbox_path != dropbox_path:
+        try:
+            archivo.dropbox_path = dropbox_path
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    # Inferir dueño por el primer segmento si parece ser un email
+    if archivo:
+        try:
+            owner_email = (dropbox_path.strip('/') or '').split('/')[0]
+            if owner_email and '@' in owner_email:
+                owner_user = User.query.filter_by(email=owner_email).first()
+                if owner_user and (not getattr(archivo, 'usuario_id', None) or archivo.usuario_id != owner_user.id):
+                    archivo.usuario_id = owner_user.id
+                    db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     if not archivo:
         # Crear registro mínimo si no existe
         usuario_email = dropbox_path.strip('/').split('/')[0]
@@ -844,8 +913,8 @@ def listar_comentarios():
     path = request.args.get('path', '').strip()
     if not path:
         return jsonify({'success': False, 'error': 'Falta parámetro path'}), 400
-    # Normalizar
-    path = str(path).replace('//', '/').rstrip('/')
+    # Normalizar/canonicalizar
+    path = _canonical_archivo_path(path)
     # Por defecto, listar todos. Si el usuario es cliente, solo mostrar comentarios de admin/superadmin
     q = Comentario.query.filter_by(dropbox_path=path).order_by(Comentario.fecha_creacion.desc())
     try:
@@ -880,8 +949,8 @@ def crear_comentario():
         return jsonify({'success': False, 'error': 'path y contenido son requeridos'}), 400
     if tipo not in ['archivo', 'carpeta']:
         tipo = 'archivo'
-    # Normalizar
-    path = str(path).replace('//', '/').rstrip('/')
+    # Normalizar/canonicalizar
+    path = _canonical_archivo_path(path)
     try:
         comentario = Comentario(
             user_id=current_user.id,
