@@ -1800,11 +1800,6 @@ Inmigración OK{% endblock %} {% block styles %}
                       <p class="text-xs text-gray-500 mt-1">${
                         activity.fecha
                       }</p>
-                      ${
-                        activity.ip_address
-                          ? `<p class="text-xs text-gray-400">IP: ${activity.ip_address}</p>`
-                          : ""
-                      }
                     </div>
                     <div class="flex-shrink-0">
                       <span class="bg-${getActivityColor(
