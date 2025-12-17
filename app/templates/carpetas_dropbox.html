@@ -544,13 +544,47 @@ block content %}
                     </div>
                     <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ parent }}">{{ parent|default('') }}</div>
                   </div>
-                  <div class="flex items-center space-x-2">
-                  <button onclick="openPreviewModal({{ filepath|tojson }}, {{ (archivo.split('.')[-1] if '.' in archivo else '')|tojson }}, {{ archivo|tojson }})" class="px-2 py-1 text-xs bg-gray-100 rounded">Ver</button>
-                    <button onclick="descargarArchivo('', {{ filepath|tojson }}, {{ archivo|tojson }})" class="px-2 py-1 text-xs bg-gray-100 rounded">Descargar</button>
-                    {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
-                    <button onclick="openMoveModal({{ archivo|tojson }}, {{ parent|tojson }}, {{ usuario_id|tojson }})" class="px-2 py-1 text-xs bg-amber-100 rounded">Mover</button>
-                      <button onclick="openRenameModal({{ archivo|tojson }}, {{ parent|tojson }}, {{ usuario_id|tojson }}, 'archivo')" class="px-2 py-1 text-xs bg-indigo-100 rounded">Renombrar</button>
-                    {% endif %}
+                  <div class="relative">
+                    {% set menu_id = ('file-menu-' ~ filepath)|replace('/','-')|replace('\\','-')|replace(' ','-') %}
+                    {% set badge_id = ('status-badge-' ~ filepath)|replace('/','-')|replace('\\','-')|replace(' ','-') %}
+                    <button onclick="toggleFileMenu('{{ menu_id }}', event)" class="p-1 hover:bg-gray-200 rounded-full transition-colors" aria-label="Menú de archivo">
+                      <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                      </svg>
+                    </button>
+
+                    <div id="{{ menu_id }}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed">
+                      <div class="py-1">
+                        <button onclick="openPreviewModal({{ filepath|tojson }}, {{ (archivo.split('.')[-1] if '.' in archivo else '')|tojson }}, {{ archivo|tojson }})"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                          Ver archivo
+                        </button>
+                        <button onclick="descargarArchivo('', {{ filepath|tojson }}, {{ archivo|tojson }})"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                          Descargar
+                        </button>
+                        {% if usuario_actual.rol in ['admin','superadmin'] or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+                        <button onclick="openRenameModal({{ archivo|tojson }}, {{ parent|tojson }}, {{ usuario_id|tojson }}, 'archivo')"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                          Renombrar
+                        </button>
+                        <button onclick="openStatusModalByPath({{ filepath|tojson }}, {{ archivo|tojson }}, {{ badge_id|tojson }})"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                          Estado
+                        </button>
+                        {% endif %}
+                        <button onclick="openCommentsModal({{ filepath|tojson }}, 'archivo')"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                          Comentarios
+                        </button>
+                        {% if usuario_actual.rol in ['admin','superadmin'] or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+                        <button onclick="confirmarEliminarArchivo({{ archivo|tojson }}, {{ parent|tojson }}, {{ usuario_id|tojson }})"
+                                class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100 transition-colors duration-150">
+                          Eliminar
+                        </button>
+                        {% endif %}
+                      </div>
+                    </div>
                   </div>
                 </li>
               {% endfor %}
@@ -601,14 +635,36 @@ block content %}
                       </div>
                       <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ file_dir }}">{{ file_dir | default('') }}</div>
                     </div>
-                    <div class="flex items-center space-x-2">
-                      <button onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')" class="px-2 py-1 text-xs bg-gray-100 rounded">Ver</button>
-                      <button onclick="descargarArchivo('', '{{ file_path }}', '{{ fname }}')" class="px-2 py-1 text-xs bg-gray-100 rounded">Descargar</button>
-                      {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
-                        <button onclick="openMoveModal('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}')" class="px-2 py-1 text-xs bg-amber-100 rounded">Mover</button>
-                        <button onclick="openRenameModal('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}', 'archivo')" class="px-2 py-1 text-xs bg-indigo-100 rounded">Renombrar</button>
-                      {% endif %}
-                    </div>
+                      <div class="relative">
+                        {% set menu_id = ('file-menu-' ~ file_path)|replace('/','-')|replace('\\','-')|replace(' ','-') %}
+                        {% set badge_id = ('status-badge-' ~ file_path)|replace('/','-')|replace('\\','-')|replace(' ','-') %}
+                        <button onclick="toggleFileMenu('{{ menu_id }}', event)" class="p-1 hover:bg-gray-200 rounded-full transition-colors" aria-label="Menú de archivo">
+                          <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                          </svg>
+                        </button>
+
+                        <div id="{{ menu_id }}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed">
+                          <div class="py-1">
+                            <button onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">Ver archivo</button>
+                            <button onclick="descargarArchivo('', '{{ file_path }}', '{{ fname }}')"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">Descargar</button>
+                            {% if usuario_actual.rol in ['admin','superadmin'] or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+                            <button onclick="openRenameModal('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}', 'archivo')"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">Renombrar</button>
+                            <button onclick="openStatusModalByPath('{{ file_path }}', '{{ fname }}', '{{ badge_id }}')"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">Estado</button>
+                            {% endif %}
+                            <button onclick="openCommentsModal('{{ file_path }}', 'archivo')"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">Comentarios</button>
+                            {% if usuario_actual.rol in ['admin','superadmin'] or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+                            <button onclick="confirmarEliminarArchivo('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}')"
+                                    class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100 transition-colors duration-150">Eliminar</button>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
                   </li>
                 {% endfor %}
               {% else %}
@@ -660,13 +716,35 @@ block content %}
                   </div>
                   <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ file_dir }}">{{ file_dir | default('') }}</div>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <button onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')" class="px-2 py-1 text-xs bg-gray-100 rounded">Ver</button>
-                  <button onclick="descargarArchivo('', '{{ file_path }}', '{{ fname }}')" class="px-2 py-1 text-xs bg-gray-100 rounded">Descargar</button>
-                  {% if usuario_actual.rol == 'admin' or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
-                    <button onclick="openMoveModal('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}')" class="px-2 py-1 text-xs bg-amber-100 rounded">Mover</button>
-                    <button onclick="openRenameModal('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}', 'archivo')" class="px-2 py-1 text-xs bg-indigo-100 rounded">Renombrar</button>
-                  {% endif %}
+                <div class="relative">
+                  {% set menu_id = ('file-menu-' ~ file_path)|replace('/','-')|replace('\\','-')|replace(' ','-') %}
+                  {% set badge_id = ('status-badge-' ~ file_path)|replace('/','-')|replace('\\','-')|replace(' ','-') %}
+                  <button onclick="toggleFileMenu('{{ menu_id }}', event)" class="p-1 hover:bg-gray-200 rounded-full transition-colors" aria-label="Menú de archivo">
+                    <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                    </svg>
+                  </button>
+
+                  <div id="{{ menu_id }}" class="fixed w-48 bg-white rounded-md shadow-2xl border border-gray-200 z-[99999] hidden" style="position: fixed">
+                    <div class="py-1">
+                      <button onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')"
+                              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">Ver archivo</button>
+                      <button onclick="descargarArchivo('', '{{ file_path }}', '{{ fname }}')"
+                              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">Descargar</button>
+                      {% if usuario_actual.rol in ['admin','superadmin'] or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+                      <button onclick="openRenameModal('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}', 'archivo')"
+                              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">Renombrar</button>
+                      <button onclick="openStatusModalByPath('{{ file_path }}', '{{ fname }}', '{{ badge_id }}')"
+                              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">Estado</button>
+                      {% endif %}
+                      <button onclick="openCommentsModal('{{ file_path }}', 'archivo')"
+                              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">Comentarios</button>
+                      {% if usuario_actual.rol in ['admin','superadmin'] or (usuario_actual.rol == 'lector' and usuario_actual.puede_modificar_archivos()) %}
+                      <button onclick="confirmarEliminarArchivo('{{ fname }}', '{{ file_dir }}', '{{ usuario_id }}')"
+                              class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100 transition-colors duration-150">Eliminar</button>
+                      {% endif %}
+                    </div>
+                  </div>
                 </div>
               </li>
             {% endfor %}
@@ -682,7 +760,7 @@ block content %}
             </div>
             <div class="flex items-center space-x-2">
               {% if page > 1 %}
-                <a href="?page={{ page - 1 }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                <a href="?page={{ page - 1 }}{% if request.args.get('user_id') %}&user_id={{ request.args.get('user_id') }}{% endif %}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                   Anterior
                 </a>
               {% else %}
@@ -696,7 +774,7 @@ block content %}
               {% set end_page = [total_pages, page + 2]|min %}
               
               {% if start_page > 1 %}
-                <a href="?page=1" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">1</a>
+                <a href="?page=1{% if request.args.get('user_id') %}&user_id={{ request.args.get('user_id') }}{% endif %}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">1</a>
                 {% if start_page > 2 %}
                   <span class="px-2 text-gray-500">...</span>
                 {% endif %}
@@ -706,7 +784,7 @@ block content %}
                 {% if p == page %}
                   <span class="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md">{{ p }}</span>
                 {% else %}
-                  <a href="?page={{ p }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">{{ p }}</a>
+                  <a href="?page={{ p }}{% if request.args.get('user_id') %}&user_id={{ request.args.get('user_id') }}{% endif %}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">{{ p }}</a>
                 {% endif %}
               {% endfor %}
               
@@ -714,11 +792,11 @@ block content %}
                 {% if end_page < total_pages - 1 %}
                   <span class="px-2 text-gray-500">...</span>
                 {% endif %}
-                <a href="?page={{ total_pages }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">{{ total_pages }}</a>
+                <a href="?page={{ total_pages }}{% if request.args.get('user_id') %}&user_id={{ request.args.get('user_id') }}{% endif %}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">{{ total_pages }}</a>
               {% endif %}
               
               {% if page < total_pages %}
-                <a href="?page={{ page + 1 }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                <a href="?page={{ page + 1 }}{% if request.args.get('user_id') %}&user_id={{ request.args.get('user_id') }}{% endif %}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                   Siguiente
                 </a>
               {% else %}
@@ -737,6 +815,46 @@ block content %}
       {% endif %} {% endfor %}
     </div>
   </div>
+</div>
+
+<!-- Modal para cambiar estado de archivo -->
+<div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-gray-900">Cambiar estado del archivo</h3>
+      <button onclick="closeStatusModal()" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <p id="statusFileName" class="text-sm text-gray-600 mb-4"></p>
+    <div class="space-y-3">
+      <label class="flex items-center space-x-3">
+        <input type="radio" name="estadoArchivo" value="en_revision" class="text-blue-600" onchange="toggleMotivoRechazo()" checked />
+        <span>En proceso de revisión</span>
+      </label>
+      <label class="flex items-center space-x-3">
+        <input type="radio" name="estadoArchivo" value="validado" class="text-green-600" onchange="toggleMotivoRechazo()" />
+        <span>Validado</span>
+      </label>
+      <label class="flex items-center space-x-3">
+        <input type="radio" name="estadoArchivo" value="rechazado" class="text-red-600" onchange="toggleMotivoRechazo()" />
+        <span>Rechazado</span>
+      </label>
+    </div>
+
+    <div id="motivoRechazoContainer" class="mt-4 hidden">
+      <label for="motivoRechazo" class="block text-sm font-medium text-gray-700 mb-1">Motivo del rechazo <span class="text-red-500">*</span></label>
+      <textarea id="motivoRechazo" name="motivoRechazo" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Explica al usuario por qué se rechazó el documento..."></textarea>
+      <p class="text-xs text-gray-500 mt-1">Este mensaje se enviará por correo al usuario.</p>
+    </div>
+
+    <div class="flex justify-end space-x-3 mt-6">
+      <button onclick="closeStatusModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+      <button onclick="saveStatus()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+    </div>
+  </div>
+  <input type="hidden" id="statusFilePath" />
+  <input type="hidden" id="statusFileIdForBadge" />
 </div>
 
 <!-- Modal Comentarios -->
@@ -1822,7 +1940,7 @@ block content %}
                       onclick="openPreviewModal('/${limpiarRuta(rutaBase)}/${archivo}', '${archivo.split('.').pop() || ''}', '${archivo}')">
                   ${archivo}
                 </span>
-                <span id="status-badge-${archivo.replace(/[^a-zA-Z0-9]/g, '-')}" data-file-path="/${limpiarRuta(rutaBase)}/${archivo}" class="text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
+                <span id="status-badge-${('/' + limpiarRuta(rutaBase) + '/' + archivo).replace(/[^a-zA-Z0-9]/g, '-')}" data-file-path="/${limpiarRuta(rutaBase)}/${archivo}" class="text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
               </div>
             </div>
             <div class="relative">
@@ -1855,8 +1973,6 @@ block content %}
                     </svg>
                     Ver archivo
                   </button>
-
-                  ${CURRENT_USER_CAN_MODIFY ? `
                   <button onclick="descargarArchivo('', '/${limpiarRuta(rutaBase)}/${archivo}', '${archivo}')"
                           class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1864,19 +1980,30 @@ block content %}
                     </svg>
                     Descargar
                   </button>
-                  <button onclick="openMoveModal('${archivo}', '${parent}', '${usuarioId}')"
-                          class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
-                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                    </svg>
-                    Mover archivo
-                  </button>
-                  <button onclick="openRenameModal('${archivo}', '${parent}', 'archivo')"
+
+                  ${(CURRENT_USER_ROLE === 'admin' || CURRENT_USER_ROLE === 'superadmin' || (CURRENT_USER_ROLE === 'lector' && CURRENT_USER_CAN_MODIFY)) ? `
+                  <button onclick="openRenameModal('${archivo}', '${parent}', '${usuarioId}', 'archivo')"
                           class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                     </svg>
                     Renombrar
+                  </button>
+                  <button onclick="openStatusModalByPath('/${limpiarRuta(rutaBase)}/${archivo}', '${archivo}', 'status-badge-${('/' + limpiarRuta(rutaBase) + '/' + archivo).replace(/[^a-zA-Z0-9]/g, '-')}')"
+                          class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                    Estado
+                  </button>
+                  ` : ''}
+
+                  <button onclick="openCommentsModal('/${limpiarRuta(rutaBase)}/${archivo}', 'archivo')"
+                          class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                    Comentarios
+                  </button>
+
+                  ${(CURRENT_USER_ROLE === 'admin' || CURRENT_USER_ROLE === 'superadmin' || (CURRENT_USER_ROLE === 'lector' && CURRENT_USER_CAN_MODIFY)) ? `
+                  <button onclick="confirmarEliminarArchivo('${archivo}', '${parent}', '${usuarioId}')"
+                          class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100 transition-colors duration-150">
+                    Eliminar
                   </button>
                   ` : ''}
                 </div>
@@ -3621,6 +3748,121 @@ block content %}
   console.log('- openCreateFolderModal:', typeof window.openCreateFolderModal);
   console.log('- openRenameModal:', typeof window.openRenameModal);
   console.log('- openMoveModal:', typeof window.openMoveModal);
+
+  // ========================
+  // ESTADO DE ARCHIVO (ADMIN/LECTOR CON PERMISO)
+  // ========================
+
+  window.openStatusModalByPath = function(filePath, filename, badgeId) {
+    try {
+      if (window.CURRENT_USER_ROLE === 'cliente') {
+        console.warn('Cliente no puede cambiar estado');
+        return;
+      }
+      const modal = document.getElementById('statusModal');
+      if (!modal) {
+        console.error('❌ statusModal no encontrado');
+        return;
+      }
+
+      document.getElementById('statusFileName').textContent = filename || '';
+      document.getElementById('statusFilePath').value = filePath || '';
+      document.getElementById('statusFileIdForBadge').value = badgeId || '';
+
+      // Cargar estado actual
+      fetch(`/api/archivo/estado?path=${encodeURIComponent(filePath)}`)
+        .then(r => r.json())
+        .then(d => {
+          const estado = (d && d.estado) ? d.estado : 'en_revision';
+          document.querySelectorAll('input[name="estadoArchivo"]').forEach(radio => {
+            radio.checked = (radio.value === estado);
+          });
+          if (typeof window.toggleMotivoRechazo === 'function') {
+            window.toggleMotivoRechazo();
+          }
+        })
+        .catch(() => {});
+
+      if (typeof window.hideAllMenus === 'function') {
+        window.hideAllMenus();
+      }
+      modal.classList.remove('hidden');
+    } catch (e) {
+      console.error('❌ Error abriendo status modal:', e);
+    }
+  };
+
+  window.closeStatusModal = function() {
+    const modal = document.getElementById('statusModal');
+    if (modal) modal.classList.add('hidden');
+    const motivo = document.getElementById('motivoRechazo');
+    if (motivo) motivo.value = '';
+    const container = document.getElementById('motivoRechazoContainer');
+    if (container) container.classList.add('hidden');
+  };
+
+  window.toggleMotivoRechazo = function() {
+    const checked = document.querySelector('input[name="estadoArchivo"]:checked');
+    const container = document.getElementById('motivoRechazoContainer');
+    if (!checked || !container) return;
+    if (checked.value === 'rechazado') {
+      container.classList.remove('hidden');
+    } else {
+      container.classList.add('hidden');
+    }
+  };
+
+  window.saveStatus = function() {
+    const path = (document.getElementById('statusFilePath') || {}).value;
+    const selected = document.querySelector('input[name="estadoArchivo"]:checked');
+    if (!path || !selected) {
+      window.closeStatusModal();
+      return;
+    }
+    const estado = selected.value;
+
+    let motivo = '';
+    if (estado === 'rechazado') {
+      motivo = (document.getElementById('motivoRechazo') || {}).value || '';
+      motivo = motivo.trim();
+      if (!motivo) {
+        alert('Por favor, indica el motivo del rechazo.');
+        return;
+      }
+    }
+
+    fetch('/api/archivo/estado', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, estado, motivo })
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.success) {
+          const badgeId = (document.getElementById('statusFileIdForBadge') || {}).value;
+          const badge = badgeId ? document.getElementById(badgeId) : null;
+          if (badge) {
+            badge.classList.remove('hidden');
+            badge.style.display = 'inline-block';
+            badge.style.visibility = 'visible';
+            if (estado === 'validado') {
+              badge.textContent = 'Validado';
+              badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700';
+            } else if (estado === 'rechazado') {
+              badge.textContent = 'Rechazado';
+              badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700';
+            } else {
+              badge.textContent = 'Pendiente para revisión';
+              badge.className = 'ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700';
+            }
+          }
+        }
+        window.closeStatusModal();
+      })
+      .catch(() => {
+        window.closeStatusModal();
+      });
+  };
   // Inicializar badges de estado de archivos INMEDIATAMENTE y de forma persistente
   window.initStatusBadgesDropboxes = function() {
     const badges = Array.from(document.querySelectorAll('span[id^="status-badge-"][data-file-path]'));
