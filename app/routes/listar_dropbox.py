@@ -24,9 +24,26 @@ def _canonical_archivo_path(path: str) -> str:
     """
     return without_base_folder(_normalize_dropbox_path(path or ""))
 
+
+def _strip_archivos_from_tree(tree):
+    """Devuelve una copia del árbol de Dropbox sin listas de archivos.
+
+    Esto reduce drásticamente el JSON embebido en la plantilla y evita que
+    el navegador se congele cuando un usuario tiene miles de archivos.
+    Solo preserva la jerarquía de carpetas ("_subcarpetas").
+    """
+    if not isinstance(tree, dict):
+        return {"_subcarpetas": {}, "_archivos": []}
+    subcarpetas = tree.get("_subcarpetas") or {}
+    out = {"_subcarpetas": {}, "_archivos": []}
+    if isinstance(subcarpetas, dict):
+        for name, sub in subcarpetas.items():
+            out["_subcarpetas"][name] = _strip_archivos_from_tree(sub)
+    return out
+
 # Caché simple en memoria para estructuras por usuario (TTL en segundos)
 _estructuras_cache = {}
-_CACHE_TTL_SECONDS = 60
+_CACHE_TTL_SECONDS = 300
 
 def _get_cached_estructura(user_id):
     entry = _estructuras_cache.get(user_id)
@@ -751,6 +768,7 @@ def carpetas_dropbox():
         return redirect(url_for("auth.login"))
     
     requested_user_id = request.args.get('user_id', type=int)
+    view_user_id = requested_user_id or getattr(current_user, 'id', None)
 
     # Obtener parámetro de página (default: 1)
     page = request.args.get('page', 1, type=int)
@@ -758,6 +776,7 @@ def carpetas_dropbox():
 
     try:
         estructuras_usuarios = {}
+        estructuras_usuarios_tree = {}
 
         # Verificar configuración de Dropbox
         api_key = get_valid_dropbox_token()
@@ -847,8 +866,23 @@ def carpetas_dropbox():
                     else:
                         max_depth = 3
 
-                    # Obtener estructura recursiva limitada (una sola pasada)
-                    estructura = obtener_estructura_dropbox_recursiva_limitada(path=path, dbx=dbx, max_depth=max_depth)
+                    # Cuando estamos viendo un SOLO usuario (via ?user_id=), evitar listados recursivos
+                    # de Dropbox porque pueden traer miles/millones de entradas y bloquear el request.
+                    if requested_user_id:
+                        estructura = obtener_estructura_dropbox_optimizada(
+                            path=path,
+                            dbx=dbx,
+                            max_depth=max_depth,
+                            current_depth=0,
+                        )
+                    else:
+                        # Vista general: una sola pasada (puede ser pesada, pero minimiza llamadas)
+                        estructura = obtener_estructura_dropbox_recursiva_limitada(
+                            path=path,
+                            dbx=dbx,
+                            max_depth=max_depth,
+                            max_entries=5000,
+                        )
                     # Guardar en caché
                     _set_cached_estructura(user.id, estructura)
 
@@ -866,6 +900,12 @@ def carpetas_dropbox():
                 import traceback
                 traceback.print_exc()
                 estructura = {"_subcarpetas": {}, "_archivos": []}
+
+            # Guardar una versión "carpetas solamente" para JS (evita congelamientos por JSON enorme)
+            try:
+                estructuras_usuarios_tree[user.id] = _strip_archivos_from_tree(estructura)
+            except Exception:
+                estructuras_usuarios_tree[user.id] = {"_subcarpetas": {}, "_archivos": []}
 
             # Para compatibilidad con diferentes roles, no se aplica filtra_arbol_por_rutas aquí:
             # la lógica de visibilidad ya fue aplicada en filtra_* y en la selección de usuarios arriba.
@@ -923,7 +963,8 @@ def carpetas_dropbox():
                     usuarios_emails[user.id] = str(user.id)
 
         # Asegurar conversión a JSON con claves string (seguro para JS en plantilla)
-        estructuras_usuarios_json = json.dumps({str(uid): estructura for uid, estructura in estructuras_usuarios.items()})
+        # Para JS: enviar solo árbol de carpetas (sin archivos) para evitar que el navegador se bloquee
+        estructuras_usuarios_json = json.dumps({str(uid): estructura for uid, estructura in estructuras_usuarios_tree.items()})
         usuarios_emails_json = json.dumps(usuarios_emails)
 
         return render_template(
@@ -931,6 +972,7 @@ def carpetas_dropbox():
             estructuras_usuarios=estructuras_usuarios,
             usuarios=usuarios_dict,
             usuario_actual=current_user,
+            view_user_id=view_user_id,
             estructuras_usuarios_json=estructuras_usuarios_json,
             usuarios_emails_json=usuarios_emails_json,
             folders_por_ruta=folders_por_ruta,
@@ -954,6 +996,7 @@ def carpetas_dropbox():
             estructuras_usuarios={},
             usuarios={},
             usuario_actual=current_user,
+            view_user_id=view_user_id,
             estructuras_usuarios_json="{}",
             usuarios_emails_json="{}",
             folders_por_ruta={},

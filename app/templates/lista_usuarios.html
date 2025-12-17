@@ -13,7 +13,7 @@ block content %}
         class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition"
       >
         <i class="fas fa-clock mr-2"></i>
-        Pendientes por revisión 
+        Pendientes por revisión
       </button>
       <button
         onclick="abrirModalCrearUsuario()"
@@ -506,6 +506,7 @@ block content %}
                 <a
                   class="inline-flex items-center justify-center px-2.5 py-2 sm:px-3 bg-blue-100 text-primary-dark rounded-lg font-medium hover:bg-blue-200 transition text-xs sm:text-sm whitespace-normal leading-tight"
                   href="{{ url_for('listar_dropbox.carpetas_dropbox', user_id=a.usuario_id) }}"
+                  onclick="cerrarModalPendientesRevision(); document.body.classList.remove('overflow-hidden'); document.body.style.overflow = '';"
                 >
                   Ver en carpetas
                 </a>
@@ -601,7 +602,7 @@ block content %}
         const action = a.usuario_id
           ? `<a class="inline-flex items-center justify-center px-2.5 py-2 sm:px-3 bg-blue-100 text-primary-dark rounded-lg font-medium hover:bg-blue-200 transition text-xs sm:text-sm whitespace-normal leading-tight" href="/carpetas_dropbox?user_id=${encodeURIComponent(
               a.usuario_id
-            )}">Ver en carpetas</a>`
+            )}" onclick="try{cerrarModalPendientesRevision();document.body.classList.remove('overflow-hidden');document.body.style.overflow='';}catch(e){}">Ver en carpetas</a>`
           : `<span class="text-gray-400">—</span>`;
 
         return `

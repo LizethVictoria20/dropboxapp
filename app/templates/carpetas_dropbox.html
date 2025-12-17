@@ -3,6 +3,23 @@ block content %}
 
 <!-- Script crítico: Definir funciones globales inmediatamente -->
 <script>
+  // Defensive: ensure scroll is enabled on entry (handles bfcache/AJAX-like navigation)
+  (function () {
+    const unlockScroll = () => {
+      try {
+        document.body.classList.remove('overflow-hidden');
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+      } catch (e) {}
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', unlockScroll, { once: true });
+    } else {
+      unlockScroll();
+    }
+    window.addEventListener('pageshow', unlockScroll);
+  })();
+
   // Definir funciones placeholder en window para que estén disponibles inmediatamente
   // Estas serán sobrescritas por las funciones reales cuando se carguen
   (function() {
@@ -105,10 +122,12 @@ block content %}
   window.USUARIOS_EMAILS = {{ usuarios_emails_json|safe }};
   window.CURRENT_USER_ROLE = {{ current_user.rol|tojson|safe }};
   window.CURRENT_USER_CAN_MODIFY = {{ (current_user.rol in ['admin','superadmin','cliente'] or (current_user.rol == 'lector' and current_user.puede_modificar_archivos()))|tojson|safe }};
+  window.VIEW_USER_ID = {{ (view_user_id if view_user_id is not none else current_user.id)|tojson|safe }};
   
   console.log('✅ Variables globales de datos inicializadas:', {
     estructurasDisponibles: Object.keys(window.ESTRUCTURAS_USUARIOS || {}).length,
     userId: window.CURRENT_USER_ID,
+    viewUserId: window.VIEW_USER_ID,
     userEmail: window.CURRENT_USER_EMAIL,
     userRole: window.CURRENT_USER_ROLE
   });
@@ -2630,7 +2649,7 @@ block content %}
 
     // Obtener las estructuras de carpetas del usuario actual
     const estructurasUsuarios = ESTRUCTURAS_USUARIOS;
-    const usuarioActual = CURRENT_USER_ID;
+    const usuarioActual = (typeof window.VIEW_USER_ID !== 'undefined' && window.VIEW_USER_ID) ? window.VIEW_USER_ID : CURRENT_USER_ID;
     const usuarioEmail = CURRENT_USER_EMAIL;
 
     console.log("🔍 DEBUG - Estructuras disponibles:", estructurasUsuarios);
@@ -3560,7 +3579,7 @@ block content %}
       const estructurasUsuarios = ESTRUCTURAS_USUARIOS;
       console.log("📊 Estructuras de usuarios cargadas:", Object.keys(estructurasUsuarios));
 
-      const usuarioActual = CURRENT_USER_ID;
+      const usuarioActual = (typeof window.VIEW_USER_ID !== 'undefined' && window.VIEW_USER_ID) ? window.VIEW_USER_ID : CURRENT_USER_ID;
       console.log("👤 Usuario actual:", usuarioActual);
 
       if (estructurasUsuarios[usuarioActual]) {
@@ -3589,7 +3608,7 @@ block content %}
     // Verificar que los datos estén disponibles
     try {
       const estructurasUsuarios = ESTRUCTURAS_USUARIOS;
-      const usuarioActual = CURRENT_USER_ID;
+      const usuarioActual = (typeof window.VIEW_USER_ID !== 'undefined' && window.VIEW_USER_ID) ? window.VIEW_USER_ID : CURRENT_USER_ID;
 
       console.log("📊 Datos disponibles:");
       console.log("- Estructuras:", Object.keys(estructurasUsuarios || {}));
