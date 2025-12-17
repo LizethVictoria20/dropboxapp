@@ -13,14 +13,7 @@ block content %}
         class="bg-blue-100 text-primary-dark rounded-lg px-4 py-2 font-medium hover:bg-blue-200 transition"
       >
         <i class="fas fa-clock mr-2"></i>
-        Pendientes por revisión {% set _pendientes_count =
-        (archivos_pendientes_revision|length) if archivos_pendientes_revision is
-        defined else 0 %}
-        <span
-          id="pendientesRevisionCount"
-          class="ml-2 text-xs font-bold bg-white/70 text-primary-dark px-2 py-0.5 rounded-full"
-          >{{ _pendientes_count }}</span
-        >
+        Pendientes por revisión 
       </button>
       <button
         onclick="abrirModalCrearUsuario()"
@@ -452,11 +445,6 @@ block content %}
           {% set _pendientes = (archivos_pendientes_revision if
           archivos_pendientes_revision is defined else []) %}
           <p class="mt-0.5 text-sm text-gray-500">
-            <span id="pendientesRevisionModalCount" class="font-medium">
-              {{ _pendientes|length }} documento{{ 's' if _pendientes|length !=
-              1 else '' }}
-            </span>
-            <span class="text-gray-400">•</span>
             <span class="text-gray-500">Actualiza automáticamente</span>
           </p>
         </div>
