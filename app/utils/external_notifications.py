@@ -14,6 +14,7 @@ from contextlib import contextmanager
 import json as _json
 import urllib.request
 import urllib.error
+import html as _html
 
 # Intentar importar dependencias opcionales
 try:
@@ -176,6 +177,166 @@ def _env_bool(name: str, default: bool) -> bool:
     if raw in {"0", "false", "no", "n", "off"}:
         return False
     return default
+
+
+def _escape_html(value: Optional[str]) -> str:
+        return _html.escape(value or "", quote=True)
+
+
+def _escape_html_preserve_breaks(value: Optional[str]) -> str:
+        return _escape_html(value).replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
+
+
+def _build_document_status_email(
+        *,
+        estado: str,
+        nombre_usuario: str,
+        nombre_archivo: str,
+        comentario: Optional[str],
+        url_archivo: Optional[str],
+) -> Dict[str, str]:
+        """Build subject + HTML + text for document status emails.
+
+        Notes:
+            - Uses conservative, email-client-friendly HTML (tables + inline styles).
+            - Escapes user-provided values to avoid HTML injection in emails.
+        """
+        estado_norm = (estado or "").strip().lower()
+        if estado_norm not in {"aprobado", "rechazado"}:
+                estado_norm = "aprobado"
+
+        safe_user = _escape_html(nombre_usuario)
+        safe_file = _escape_html(nombre_archivo)
+        safe_comment_html = _escape_html_preserve_breaks(comentario) if comentario else ""
+
+        if estado_norm == "aprobado":
+                subject = f"✅ Documento Aprobado: {nombre_archivo}"
+                title = "Documento aprobado"
+                header_bg = "#4caf50"
+                badge_bg = "#e8f5e9"
+                badge_border = "#4caf50"
+                badge_label = "Comentario"
+                intro = f"¡Buenas noticias! Tu documento <strong>{safe_file}</strong> ha sido <strong>aprobado</strong>."
+                helper = "Tu documentación está en orden. Gracias por tu colaboración."
+                cta_bg = "#4caf50"
+                cta_text = "Ver documentos"
+                preheader = f"Tu documento {nombre_archivo} fue aprobado."
+        else:
+                subject = f"Documento Rechazado: {nombre_archivo}"
+                title = "Documento rechazado"
+                header_bg = "#d32f2f"
+                badge_bg = "#fff3cd"
+                badge_border = "#ffc107"
+                badge_label = "Motivo del rechazo"
+                intro = f"Te informamos que tu documento <strong>{safe_file}</strong> ha sido rechazado."
+                helper = "Por favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión del documento."
+                cta_bg = "#1976d2"
+                cta_text = "Ver documentos"
+                preheader = f"Tu documento {nombre_archivo} fue rechazado."
+
+        safe_url = _escape_html(url_archivo) if url_archivo else ""
+
+        comment_block = ""
+        if comentario:
+                comment_block = f"""
+                    <tr>
+                        <td style="padding: 0 24px 16px 24px;">
+                            <div style="background-color: {badge_bg}; border-left: 4px solid {badge_border}; padding: 14px 14px; border-radius: 6px;">
+                                <div style="font-size: 13px; font-weight: 700; color: #333; margin: 0 0 6px 0;">{badge_label}</div>
+                                <div style="font-size: 14px; color: #333; line-height: 1.6;">{safe_comment_html}</div>
+                            </div>
+                        </td>
+                    </tr>
+                """
+
+        cta_block = ""
+        text_url_line = ""
+        if url_archivo:
+                cta_block = f"""
+                    <tr>
+                        <td align="center" style="padding: 8px 24px 22px 24px;">
+                            <a href="{safe_url}"
+                                 style="background-color: {cta_bg}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 6px; display: inline-block; font-size: 14px; font-weight: 700;">
+                                {cta_text}
+                            </a>
+                        </td>
+                    </tr>
+                """
+                text_url_line = f"\nAccede aquí: {url_archivo}\n"
+
+        html_body = f"""<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="x-apple-disable-message-reformatting">
+        <title>{_escape_html(subject)}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #ffffff;">
+        <div style="display: none; font-size: 1px; color: #ffffff; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">{_escape_html(preheader)}</div>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse; background-color: #ffffff;">
+            <tr>
+                <td align="center" style="padding: 24px 12px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width: 600px; max-width: 600px; border-collapse: collapse;">
+                        <tr>
+                            <td style="background-color: {header_bg}; padding: 18px 24px; border-radius: 10px 10px 0 0;">
+                                <div style="font-family: Arial, sans-serif; font-size: 18px; font-weight: 700; color: #ffffff;">{title}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="background-color: #ffffff; border-left: 1px solid #e6e6e6; border-right: 1px solid #e6e6e6;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
+                                    <tr>
+                                        <td style="padding: 22px 24px 10px 24px; font-family: Arial, sans-serif; color: #333;">
+                                            <div style="font-size: 14px; line-height: 1.6;">Hola {safe_user},</div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 0 24px 12px 24px; font-family: Arial, sans-serif; color: #333;">
+                                            <div style="font-size: 14px; line-height: 1.7;">{intro}</div>
+                                        </td>
+                                    </tr>
+                                    {comment_block}
+                                    <tr>
+                                        <td style="padding: 0 24px 8px 24px; font-family: Arial, sans-serif; color: #333;">
+                                            <div style="font-size: 14px; line-height: 1.7;">{_escape_html(helper)}</div>
+                                        </td>
+                                    </tr>
+                                    {cta_block}
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="background-color: #ffffff; border: 1px solid #e6e6e6; border-top: none; border-radius: 0 0 10px 10px; padding: 14px 24px 18px 24px;">
+                                <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; line-height: 1.6;">
+                                    Este es un mensaje automático. Por favor, no respondas a este correo.
+                                </div>
+                                {f'<div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; line-height: 1.6; margin-top: 10px;">Si el botón no funciona, copia y pega este enlace en tu navegador:<br><a href="{safe_url}" style="color: #1976d2;">{safe_url}</a></div>' if url_archivo else ''}
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>
+"""
+
+        text_body = f"""Hola {nombre_usuario},
+
+{_html.unescape(_html.escape(preheader))}
+
+Documento: {nombre_archivo}
+"""
+
+        if comentario:
+                label = "Comentario" if estado_norm == "aprobado" else "Motivo del rechazo"
+                text_body += f"\n{label}: {comentario}\n"
+
+        text_body += f"\n{helper}\n" + text_url_line
+
+        return {"subject": subject, "html": html_body, "text": text_body}
 
 
 def _mail_config_summary(
@@ -358,63 +519,16 @@ def enviar_email_validado(
             or ''
         ).strip()
 
-        # Contenido del email (común para SMTP y SendGrid)
-        asunto = f"✅ Documento Aprobado: {nombre_archivo}"
-
-        cuerpo_html = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #4caf50;">✅ Documento Aprobado</h2>
-                <p>Hola {nombre_usuario},</p>
-                <p>¡Buenas noticias! Tu documento <strong>{nombre_archivo}</strong> ha sido <strong style="color: #4caf50;">aprobado</strong>.</p>
-        """
-
-        if comentario:
-            cuerpo_html += f"""
-                <div style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 20px 0;">
-                    <p style="margin: 0;"><strong>Comentario:</strong></p>
-                    <p style="margin: 5px 0 0 0;">{comentario}</p>
-                </div>
-            """
-
-        cuerpo_html += """
-                <p>Tu documentación está en orden. Gracias por tu colaboración.</p>
-        """
-
-        if url_archivo:
-            cuerpo_html += f"""
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{url_archivo}"
-                       style="background-color: #4caf50; color: white; padding: 12px 24px;
-                              text-decoration: none; border-radius: 4px; display: inline-block;">
-                        Ver Documentos
-                    </a>
-                </div>
-            """
-
-        cuerpo_html += """
-                <p style="margin-top: 30px; font-size: 12px; color: #666;">
-                    Este es un mensaje automático. Por favor, no respondas a este correo.
-                </p>
-            </div>
-        </body>
-        </html>
-        """
-
-        cuerpo_texto = f"""
-Hola {nombre_usuario},
-
-¡Buenas noticias! Tu documento \"{nombre_archivo}\" ha sido APROBADO.
-        """
-
-        if comentario:
-            cuerpo_texto += f"\nComentario: {comentario}\n"
-
-        cuerpo_texto += "\nTu documentación está en orden. Gracias por tu colaboración.\n"
-
-        if url_archivo:
-            cuerpo_texto += f"\nAccede aquí: {url_archivo}\n"
+        content = _build_document_status_email(
+            estado="aprobado",
+            nombre_usuario=nombre_usuario,
+            nombre_archivo=nombre_archivo,
+            comentario=comentario,
+            url_archivo=url_archivo,
+        )
+        asunto = content["subject"]
+        cuerpo_html = content["html"]
+        cuerpo_texto = content["text"]
 
         # Backend SendGrid (HTTP): no requiere Flask-Mail ni SMTP
         if backend == 'sendgrid':
@@ -498,62 +612,7 @@ Hola {nombre_usuario},
             # Si por alguna razón no tiene esos atributos, continuamos con la instancia tal cual
             pass
         
-        asunto = f"✅ Documento Aprobado: {nombre_archivo}"
-        
-        cuerpo_html = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #4caf50;">✅ Documento Aprobado</h2>
-                <p>Hola {nombre_usuario},</p>
-                <p>¡Buenas noticias! Tu documento <strong>{nombre_archivo}</strong> ha sido <strong style="color: #4caf50;">aprobado</strong>.</p>
-        """
-        
-        if comentario:
-            cuerpo_html += f"""
-                <div style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 20px 0;">
-                    <p style="margin: 0;"><strong>Comentario:</strong></p>
-                    <p style="margin: 5px 0 0 0;">{comentario}</p>
-                </div>
-            """
-        
-        cuerpo_html += """
-                <p>Tu documentación está en orden. Gracias por tu colaboración.</p>
-        """
-        
-        if url_archivo:
-            cuerpo_html += f"""
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{url_archivo}" 
-                       style="background-color: #4caf50; color: white; padding: 12px 24px; 
-                              text-decoration: none; border-radius: 4px; display: inline-block;">
-                        Ver Documentos
-                    </a>
-                </div>
-            """
-        
-        cuerpo_html += """
-                <p style="margin-top: 30px; font-size: 12px; color: #666;">
-                    Este es un mensaje automático. Por favor, no respondas a este correo.
-                </p>
-            </div>
-        </body>
-        </html>
-        """
-        
-        cuerpo_texto = f"""
-Hola {nombre_usuario},
-
-¡Buenas noticias! Tu documento "{nombre_archivo}" ha sido APROBADO.
-        """
-        
-        if comentario:
-            cuerpo_texto += f"\nComentario: {comentario}\n"
-        
-        cuerpo_texto += "\nTu documentación está en orden. Gracias por tu colaboración.\n"
-        
-        if url_archivo:
-            cuerpo_texto += f"\nAccede aquí: {url_archivo}\n"
+        # Reusar el mismo asunto/cuerpo ya construido arriba (evita duplicación SMTP vs SendGrid)
         
         msg = Message(
             subject=asunto,
@@ -618,7 +677,7 @@ def enviar_email_rechazo(
         True si se envió exitosamente, False en caso contrario
     """
     backend = _email_backend()
-    
+
     try:
         mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
         mail_sender = (
@@ -629,63 +688,16 @@ def enviar_email_rechazo(
             or ''
         ).strip()
 
-        # Contenido del email (común para SMTP y SendGrid)
-        asunto = f"Documento Rechazado: {nombre_archivo}"
-
-        cuerpo_html = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #d32f2f;">Documento Rechazado</h2>
-                <p>Hola {nombre_usuario},</p>
-                <p>Te informamos que tu documento <strong>{nombre_archivo}</strong> ha sido rechazado.</p>
-        """
-
-        if comentario:
-            cuerpo_html += f"""
-                <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
-                    <p style="margin: 0;"><strong>Motivo del rechazo:</strong></p>
-                    <p style="margin: 5px 0 0 0;">{comentario}</p>
-                </div>
-            """
-
-        cuerpo_html += """
-                <p>Por favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión del documento.</p>
-        """
-
-        if url_archivo:
-            cuerpo_html += f"""
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{url_archivo}"
-                       style="background-color: #1976d2; color: white; padding: 12px 24px;
-                              text-decoration: none; border-radius: 4px; display: inline-block;">
-                        Ver Documentos
-                    </a>
-                </div>
-            """
-
-        cuerpo_html += """
-                <p style="margin-top: 30px; font-size: 12px; color: #666;">
-                    Este es un mensaje automático. Por favor, no respondas a este correo.
-                </p>
-            </div>
-        </body>
-        </html>
-        """
-
-        cuerpo_texto = f"""
-Hola {nombre_usuario},
-
-Te informamos que tu documento \"{nombre_archivo}\" ha sido rechazado.
-        """
-
-        if comentario:
-            cuerpo_texto += f"\nMotivo del rechazo: {comentario}\n"
-
-        cuerpo_texto += "\nPor favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión del documento.\n"
-
-        if url_archivo:
-            cuerpo_texto += f"\nAccede aquí: {url_archivo}\n"
+        content = _build_document_status_email(
+            estado="rechazado",
+            nombre_usuario=nombre_usuario,
+            nombre_archivo=nombre_archivo,
+            comentario=comentario,
+            url_archivo=url_archivo,
+        )
+        asunto = content["subject"]
+        cuerpo_html = content["html"]
+        cuerpo_texto = content["text"]
 
         # Backend SendGrid (HTTP): no requiere Flask-Mail ni SMTP
         if backend == 'sendgrid':
@@ -709,7 +721,6 @@ Te informamos que tu documento \"{nombre_archivo}\" ha sido rechazado.
             current_app.logger.warning("Flask-Mail no está disponible. Instala con: pip install flask-mail")
             return False
 
-        # Obtener configuración de email desde variables de entorno o config
         mail_server = os.environ.get('MAIL_SERVER') or current_app.config.get('MAIL_SERVER')
         mail_port = int(os.environ.get('MAIL_PORT') or current_app.config.get('MAIL_PORT', 587))
         mail_use_tls = _env_bool('MAIL_USE_TLS', bool(current_app.config.get('MAIL_USE_TLS', True)))
@@ -718,8 +729,7 @@ Te informamos que tu documento \"{nombre_archivo}\" ha sido rechazado.
         mail_password = (os.environ.get('MAIL_PASSWORD') or current_app.config.get('MAIL_PASSWORD') or '')
         mail_password = str(mail_password).replace(' ', '')
         suppress_send = _env_bool('MAIL_SUPPRESS_SEND', bool(current_app.config.get('MAIL_SUPPRESS_SEND', False)))
-        
-        # Verificar configuración mínima
+
         if not all([mail_server, mail_username, mail_password]):
             missing = []
             if not mail_server:
@@ -730,11 +740,21 @@ Te informamos que tu documento \"{nombre_archivo}\" ha sido rechazado.
                 missing.append('MAIL_PASSWORD')
             current_app.logger.warning(
                 "Configuración de email incompleta. Faltan: %s. (%s)"
-                % (', '.join(missing), _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send))
+                % (
+                    ', '.join(missing),
+                    _mail_config_summary(
+                        mail_server,
+                        mail_port,
+                        mail_use_tls,
+                        mail_use_ssl,
+                        mail_username,
+                        mail_sender,
+                        suppress_send,
+                    ),
+                )
             )
             return False
 
-        # Aplicar config (útil si Flask-Mail se inicializó antes de que existieran env vars)
         current_app.config.update({
             'MAIL_SERVER': mail_server,
             'MAIL_PORT': mail_port,
@@ -746,18 +766,24 @@ Te informamos que tu documento \"{nombre_archivo}\" ha sido rechazado.
             'MAIL_DEFAULT_SENDER': mail_sender,
             'MAIL_SUPPRESS_SEND': suppress_send,
         })
-        
-        # Configurar Flask-Mail si no está configurado
+
         if not hasattr(current_app, 'extensions') or 'mail' not in current_app.extensions:
             current_app.logger.warning(
                 "Flask-Mail no estaba inicializado en app.extensions; inicializando on-demand. (%s)"
-                % _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send)
+                % _mail_config_summary(
+                    mail_server,
+                    mail_port,
+                    mail_use_tls,
+                    mail_use_ssl,
+                    mail_username,
+                    mail_sender,
+                    suppress_send,
+                )
             )
             mail = Mail(current_app)
         else:
             mail = current_app.extensions['mail']
 
-        # Asegurar que el objeto Mail use la configuración actual (Mail no re-lee app.config dinámicamente)
         try:
             mail.server = mail_server
             mail.port = mail_port
@@ -770,77 +796,27 @@ Te informamos que tu documento \"{nombre_archivo}\" ha sido rechazado.
             mail.timeout = mail_timeout
         except Exception:
             pass
-        
-        # Crear mensaje
-        asunto = f"Documento Rechazado: {nombre_archivo}"
-        
-        cuerpo_html = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #d32f2f;">Documento Rechazado</h2>
-                <p>Hola {nombre_usuario},</p>
-                <p>Te informamos que tu documento <strong>{nombre_archivo}</strong> ha sido rechazado.</p>
-        """
-        
-        if comentario:
-            cuerpo_html += f"""
-                <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
-                    <p style="margin: 0;"><strong>Motivo del rechazo:</strong></p>
-                    <p style="margin: 5px 0 0 0;">{comentario}</p>
-                </div>
-            """
-        
-        cuerpo_html += f"""
-                <p>Por favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión del documento.</p>
-        """
-        
-        if url_archivo:
-            cuerpo_html += f"""
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{url_archivo}" 
-                       style="background-color: #1976d2; color: white; padding: 12px 24px; 
-                              text-decoration: none; border-radius: 4px; display: inline-block;">
-                        Ver Documentos
-                    </a>
-                </div>
-            """
-        
-        cuerpo_html += """
-                <p style="margin-top: 30px; font-size: 12px; color: #666;">
-                    Este es un mensaje automático. Por favor, no respondas a este correo.
-                </p>
-            </div>
-        </body>
-        </html>
-        """
-        
-        cuerpo_texto = f"""
-Hola {nombre_usuario},
 
-Te informamos que tu documento "{nombre_archivo}" ha sido rechazado.
-        """
-        
-        if comentario:
-            cuerpo_texto += f"\nMotivo del rechazo: {comentario}\n"
-        
-        cuerpo_texto += "\nPor favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión del documento.\n"
-        
-        if url_archivo:
-            cuerpo_texto += f"\nAccede aquí: {url_archivo}\n"
-        
         msg = Message(
             subject=asunto,
             recipients=[destinatario],
             sender=mail_sender,
             html=cuerpo_html,
-            body=cuerpo_texto
+            body=cuerpo_texto,
         )
 
         current_app.logger.info(
             "Enviando email de rechazo a %s (%s) timeout=%ss force_ipv4=%s" % (
                 destinatario,
-                _mail_config_summary(mail_server, mail_port, mail_use_tls, mail_use_ssl, mail_username, mail_sender, suppress_send),
+                _mail_config_summary(
+                    mail_server,
+                    mail_port,
+                    mail_use_tls,
+                    mail_use_ssl,
+                    mail_username,
+                    mail_sender,
+                    suppress_send,
+                ),
                 mail_timeout,
                 _should_force_ipv4(),
             )
@@ -865,13 +841,15 @@ Te informamos que tu documento "{nombre_archivo}" ha sido rechazado.
                     sender=mail_sender,
                 )
                 if ok:
-                    current_app.logger.info(f"✅ Email enviado exitosamente a {destinatario} (fallback SendGrid)")
+                    current_app.logger.info(
+                        f"✅ Email enviado exitosamente a {destinatario} (fallback SendGrid)"
+                    )
                     return True
             raise
 
         current_app.logger.info(f"✅ Email enviado exitosamente a {destinatario}")
         return True
-        
+
     except Exception as e:
         current_app.logger.exception(f"❌ Error al enviar email: {e}")
         return False
