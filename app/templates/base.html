@@ -519,20 +519,20 @@
                   >
                     {% if header_notifications and header_notifications|length >
                     0 %} {% for notif in header_notifications %}
-                    <div
-                      class="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer notification-item"
+                    <a
+                      href="{{ url_for('main.ver_notificaciones') }}"
+                      class="block p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer notification-item"
                       data-id="{{ notif.id }}"
                       data-unread="{{ 'true' if not notif.leida else 'false' }}"
+                      data-target="{{ url_for('main.ver_notificaciones') }}"
                     >
                       <div class="flex items-start">
                         <div class="flex-1 min-w-0">
                           <p class="text-sm font-medium text-gray-900 truncate">
-                            {{ notif.titulo }}
+                            {{ (notif.titulo or '')|truncate(38, True, '…') }}
                           </p>
-                          <p
-                            class="text-sm text-gray-500 mt-1 break-words whitespace-normal"
-                          >
-                            {{ notif.mensaje }}
+                          <p class="text-sm text-gray-500 mt-1 truncate">
+                            {{ (notif.mensaje or '')|truncate(55, True, '…') }}
                           </p>
                           <p class="text-xs text-gray-400 mt-2">
                             {{
@@ -541,7 +541,7 @@
                           </p>
                         </div>
                       </div>
-                    </div>
+                    </a>
                     {% endfor %} {% else %}
                     <div class="p-8 text-center">
                       <i
@@ -2880,6 +2880,15 @@
           markAllReadButton: !!markAllReadButton,
         });
 
+        const NOTIF_HISTORY_URL = "{{ url_for('main.ver_notificaciones') }}";
+
+        function truncateText(value, maxLen) {
+          const text = (value ?? "").toString();
+          if (!maxLen || maxLen <= 0) return "";
+          if (text.length <= maxLen) return text;
+          return text.slice(0, Math.max(0, maxLen - 1)).trimEnd() + "…";
+        }
+
         // Cargar notificaciones al iniciar
         function loadNotifications() {
           const timestamp = Date.now();
@@ -2956,23 +2965,25 @@
             notificationList.innerHTML = notifications
               .map(
                 (notif) => `
-            <div class="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer notification-item" data-id="${
-              notif.id
-            }" data-unread="${!notif.leida}">
+            <a href="${NOTIF_HISTORY_URL}" class="block p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer notification-item" data-id="${
+                  notif.id
+                }" data-unread="${!notif.leida}" data-target="${NOTIF_HISTORY_URL}">
               <div class="flex items-start">
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 truncate">${
-                    notif.titulo
-                  }</p>
-                  <p class="text-sm text-gray-500 mt-1 break-words whitespace-normal">${
-                    notif.mensaje
-                  }</p>
+                  <p class="text-sm font-medium text-gray-900 truncate">${truncateText(
+                    notif.titulo,
+                    38
+                  )}</p>
+                  <p class="text-sm text-gray-500 mt-1 truncate">${truncateText(
+                    notif.mensaje,
+                    55
+                  )}</p>
                   <p class="text-xs text-gray-400 mt-2">${
                     notif.fecha_creacion
                   }</p>
                 </div>
               </div>
-            </div>
+            </a>
           `
               )
               .join("");
@@ -2980,25 +2991,38 @@
 
           // Agregar evento click a cada notificación
           document.querySelectorAll(".notification-item").forEach((item) => {
-            item.addEventListener("click", function () {
+            item.addEventListener("click", function (e) {
+              if (e && e.preventDefault) e.preventDefault();
+              if (e && e.stopPropagation) e.stopPropagation();
               const notifId = this.getAttribute("data-id");
               const wasUnread = this.getAttribute("data-unread") === "true";
-              markAsRead(notifId, this, wasUnread);
+              const targetUrl =
+                this.getAttribute("data-target") || NOTIF_HISTORY_URL;
+
+              if (!wasUnread) {
+                window.location.href = targetUrl;
+                return;
+              }
+
+              markAsRead(notifId, this, wasUnread, { redirectUrl: targetUrl });
             });
           });
         }
 
         // Marcar notificación como leída
-        function markAsRead(notifId, itemEl, wasUnread) {
+        function markAsRead(notifId, itemEl, wasUnread, options = {}) {
+          const redirectUrl = options && options.redirectUrl;
+
           fetch(`/api/notificaciones/${notifId}/marcar_leida`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
+            keepalive: true,
           })
             .then((response) => response.json())
             .then((data) => {
-              if (data.success) {
+              if (data.success && !redirectUrl) {
                 // Actualizar UI inmediata
                 if (wasUnread) {
                   unreadCount = Math.max(0, (unreadCount || 0) - 1);
@@ -3017,6 +3041,11 @@
             })
             .catch((error) => {
               console.error("Error al marcar notificación como leída:", error);
+            })
+            .finally(() => {
+              if (redirectUrl) {
+                window.location.href = redirectUrl;
+              }
             });
         }
 

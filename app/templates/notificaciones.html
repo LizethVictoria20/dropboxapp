@@ -54,16 +54,12 @@ block content %}
             </div>
             <div class="flex-1 min-w-0 overflow-hidden">
               <div class="flex items-start justify-between gap-3 min-w-0">
-                <p
-                  class="text-sm font-medium text-gray-900 break-words whitespace-normal min-w-0"
-                >
-                  {{ n.titulo }}
+                <p class="text-sm font-medium text-gray-900 truncate min-w-0">
+                  {{ (n.titulo or '')|truncate(60, True, '…') }}
                 </p>
               </div>
-              <p
-                class="text-sm text-gray-600 mt-1 break-words whitespace-normal"
-              >
-                {{ n.mensaje }}
+              <p class="text-sm text-gray-600 mt-1 truncate">
+                {{ (n.mensaje or '')|truncate(90, True, '…') }}
               </p>
               <div
                 class="text-xs text-gray-400 mt-2 flex flex-wrap items-center gap-2"
