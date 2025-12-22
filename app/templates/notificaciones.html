@@ -1,134 +1,198 @@
-{% extends "base.html" %}
-{% block title %}Mis Notificaciones{% endblock %}
-{% block content %}
+{% extends "base.html" %} {% block title %}Mis Notificaciones{% endblock %} {%
+block content %}
 <div class="max-w-5xl mx-auto">
   <div class="flex items-center justify-between mb-4">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Historial de notificaciones</h1>
-      <p class="text-sm text-gray-500">Consulta y gestiona tus notificaciones</p>
+      <h1 class="text-2xl font-bold text-gray-900">
+        Historial de notificaciones
+      </h1>
+      <p class="text-sm text-gray-500">
+        Consulta y gestiona tus notificaciones
+      </p>
     </div>
-    <button id="markAllPageRead" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20">
+    <button
+      id="markAllPageRead"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
+    >
       <i class="fas fa-check-double"></i>
       Marcar todas como leídas
     </button>
   </div>
 
-  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+  <div
+    class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+  >
     {% if notificaciones and notificaciones|length > 0 %}
-      <div class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-        {% set unread_on_page = (notificaciones | selectattr('leida', 'equalto', False) | list | length) %}
-        <div class="text-sm text-gray-600">
-          {{ pagination.total if pagination and pagination.total is defined else notificaciones|length }} notificaciones
-          {% if unread_on_page > 0 %}
-            · <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style="background-color:#E6F3F9;color:#0176a8;">{{ unread_on_page }} sin leer (página)</span>
-          {% endif %}
-        </div>
+    <div
+      class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between"
+    >
+      {% set unread_on_page = (notificaciones | selectattr('leida', 'equalto',
+      False) | list | length) %}
+      <div class="text-sm text-gray-600">
+        {{ pagination.total if pagination and pagination.total is defined else
+        notificaciones|length }} notificaciones {% if unread_on_page > 0 %} ·
+        <span
+          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+          style="background-color: #e6f3f9; color: #0176a8"
+          >{{ unread_on_page }} sin leer (página)</span
+        >
+        {% endif %}
       </div>
+    </div>
 
-      <ul class="divide-y divide-gray-100">
-        {% for n in notificaciones[:10] %}
-        <li class="group p-4 {{ 'bg-blue-50/30' if not n.leida else '' }}">
-          <div class="flex items-start gap-3">
-            <div class="mt-1">
-              <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg {{ 'bg-[#E6F3F9] text-[#0176a8]' if not n.leida else 'bg-gray-100 text-gray-500' }}">
-                <i class="fas fa-bell"></i>
-              </span>
+    <ul class="divide-y divide-gray-100">
+      {% for n in notificaciones[:10] %}
+      <li class="group p-4 {{ 'bg-blue-50/30' if not n.leida else '' }}">
+        <div class="flex items-start gap-3">
+          <div class="mt-1">
+            <span
+              class="inline-flex items-center justify-center w-8 h-8 rounded-lg {{ 'bg-[#E6F3F9] text-[#0176a8]' if not n.leida else 'bg-gray-100 text-gray-500' }}"
+            >
+              <i class="fas fa-bell"></i>
+            </span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-3">
+              <p class="text-sm font-medium text-gray-900 truncate">
+                {{ n.titulo }}
+              </p>
+              {% if not n.leida %}
+              <form
+                method="post"
+                action="{{ url_for('main.marcar_notif_leida', notif_id=n.id) }}"
+                onsubmit="event.preventDefault(); fetch(this.action, {method: 'POST'}).then(()=>location.reload());"
+              >
+                <button
+                  class="text-xs px-2 py-1 rounded-md"
+                  style="background-color: #e6f3f9; color: #0176a8"
+                >
+                  Marcar leída
+                </button>
+              </form>
+              {% endif %}
             </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-start justify-between gap-3">
-                <p class="text-sm font-medium text-gray-900 truncate">{{ n.titulo }}</p>
-                {% if not n.leida %}
-                <form method="post" action="{{ url_for('main.marcar_notif_leida', notif_id=n.id) }}" onsubmit="event.preventDefault(); fetch(this.action, {method: 'POST'}).then(()=>location.reload());">
-                  <button class="text-xs px-2 py-1 rounded-md" style="background-color:#E6F3F9;color:#0176a8;">Marcar leída</button>
-                </form>
-                {% endif %}
-              </div>
-              <p class="text-sm text-gray-600 mt-1">{{ n.mensaje }}</p>
-              <div class="text-xs text-gray-400 mt-2 flex flex-wrap items-center gap-2">
-                <span>{{ n.fecha_creacion|format_colombia_time|datetime }}</span>
-                {% if n.archivo %}
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                    <i class="fas fa-file text-gray-400"></i>
-                    {{ n.archivo.nombre }}{% if n.archivo.categoria %} · {{ n.archivo.categoria }}{% endif %}
-                  </span>
-                {% endif %}
-              </div>
+            <p class="text-sm text-gray-600 mt-1">{{ n.mensaje }}</p>
+            <div
+              class="text-xs text-gray-400 mt-2 flex flex-wrap items-center gap-2"
+            >
+              <span>{{ n.fecha_creacion|format_colombia_time|datetime }}</span>
+              {% if n.archivo %}
+              <span
+                class="inline-flex items-start gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 max-w-full"
+              >
+                <i class="fas fa-file text-gray-400 mt-0.5 shrink-0"></i>
+                <span class="min-w-0 break-all whitespace-normal leading-snug">
+                  {{ n.archivo.nombre }}{% if n.archivo.categoria %} · {{
+                  n.archivo.categoria }}{% endif %}
+                </span>
+              </span>
+              {% endif %}
             </div>
           </div>
-        </li>
-        {% endfor %}
-      </ul>
-
-      <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-sm bg-white">
-        <div class="text-gray-600">
-          Página <span class="font-medium text-gray-900">{{ pagination.page }}</span> de <span class="font-medium text-gray-900">{{ pagination.pages }}</span>
         </div>
-        <div class="flex items-center gap-2">
-          {% if pagination.has_prev %}
-            <a class="px-3 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700" href="{{ url_for('main.ver_notificaciones', page=pagination.prev_num) }}">Anterior</a>
-          {% else %}
-            <span class="px-3 py-1.5 rounded-md border border-gray-100 bg-gray-50 text-gray-400">Anterior</span>
-          {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
 
-          {# Ventana de páginas alrededor de la actual #}
-          {% set start = 1 if (pagination.page - 2) < 1 else (pagination.page - 2) %}
-          {% set end = pagination.pages if (pagination.page + 2) > pagination.pages else (pagination.page + 2) %}
-
-          {% if start > 1 %}
-            <a class="px-3 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700" href="{{ url_for('main.ver_notificaciones', page=1) }}">1</a>
-            {% if start > 2 %}<span class="px-2 text-gray-400">…</span>{% endif %}
-          {% endif %}
-
-          {% for p in range(start, end + 1) %}
-            {% if p == pagination.page %}
-              <span class="px-3 py-1.5 rounded-md border border-gray-200" style="background-color:#E6F3F9;color:#0176a8;">{{ p }}</span>
-            {% else %}
-              <a class="px-3 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700" href="{{ url_for('main.ver_notificaciones', page=p) }}">{{ p }}</a>
-            {% endif %}
-          {% endfor %}
-
-          {% if end < pagination.pages %}
-            {% if end < pagination.pages - 1 %}<span class="px-2 text-gray-400">…</span>{% endif %}
-            <a class="px-3 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700" href="{{ url_for('main.ver_notificaciones', page=pagination.pages) }}">{{ pagination.pages }}</a>
-          {% endif %}
-
-          {% if pagination.has_next %}
-            <a class="px-3 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700" href="{{ url_for('main.ver_notificaciones', page=pagination.next_num) }}">Siguiente</a>
-          {% else %}
-            <span class="px-3 py-1.5 rounded-md border border-gray-100 bg-gray-50 text-gray-400">Siguiente</span>
-          {% endif %}
-        </div>
+    <div
+      class="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-sm bg-white"
+    >
+      <div class="text-gray-600">
+        Página
+        <span class="font-medium text-gray-900">{{ pagination.page }}</span> de
+        <span class="font-medium text-gray-900">{{ pagination.pages }}</span>
       </div>
+      <div class="flex items-center gap-2">
+        {% if pagination.has_prev %}
+        <a
+          class="px-3 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+          href="{{ url_for('main.ver_notificaciones', page=pagination.prev_num) }}"
+          >Anterior</a
+        >
+        {% else %}
+        <span
+          class="px-3 py-1.5 rounded-md border border-gray-100 bg-gray-50 text-gray-400"
+          >Anterior</span
+        >
+        {% endif %} {# Ventana de páginas alrededor de la actual #} {% set start
+        = 1 if (pagination.page - 2) < 1 else (pagination.page - 2) %} {% set
+        end = pagination.pages if (pagination.page + 2) > pagination.pages else
+        (pagination.page + 2) %} {% if start > 1 %}
+        <a
+          class="px-3 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+          href="{{ url_for('main.ver_notificaciones', page=1) }}"
+          >1</a
+        >
+        {% if start > 2 %}<span class="px-2 text-gray-400">…</span>{% endif %}
+        {% endif %} {% for p in range(start, end + 1) %} {% if p ==
+        pagination.page %}
+        <span
+          class="px-3 py-1.5 rounded-md border border-gray-200"
+          style="background-color: #e6f3f9; color: #0176a8"
+          >{{ p }}</span
+        >
+        {% else %}
+        <a
+          class="px-3 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+          href="{{ url_for('main.ver_notificaciones', page=p) }}"
+          >{{ p }}</a
+        >
+        {% endif %} {% endfor %} {% if end < pagination.pages %} {% if end <
+        pagination.pages - 1 %}<span class="px-2 text-gray-400">…</span>{% endif
+        %}
+        <a
+          class="px-3 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+          href="{{ url_for('main.ver_notificaciones', page=pagination.pages) }}"
+          >{{ pagination.pages }}</a
+        >
+        {% endif %} {% if pagination.has_next %}
+        <a
+          class="px-3 py-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+          href="{{ url_for('main.ver_notificaciones', page=pagination.next_num) }}"
+          >Siguiente</a
+        >
+        {% else %}
+        <span
+          class="px-3 py-1.5 rounded-md border border-gray-100 bg-gray-50 text-gray-400"
+          >Siguiente</span
+        >
+        {% endif %}
+      </div>
+    </div>
     {% else %}
-      <div class="p-12 text-center">
-        <div class="mx-auto h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-          <i class="fas fa-bell-slash text-gray-300 text-2xl"></i>
-        </div>
-        <h3 class="text-sm font-medium text-gray-900">No tienes notificaciones</h3>
-        <p class="mt-1 text-sm text-gray-500">Aquí verás tus alertas y novedades.</p>
+    <div class="p-12 text-center">
+      <div
+        class="mx-auto h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center mb-4"
+      >
+        <i class="fas fa-bell-slash text-gray-300 text-2xl"></i>
       </div>
+      <h3 class="text-sm font-medium text-gray-900">
+        No tienes notificaciones
+      </h3>
+      <p class="mt-1 text-sm text-gray-500">
+        Aquí verás tus alertas y novedades.
+      </p>
+    </div>
     {% endif %}
   </div>
 </div>
 
 <script>
-document.getElementById('markAllPageRead')?.addEventListener('click', function(){
-  fetch('{{ url_for('main.marcar_todas_notif_leidas') }}', {method: 'POST'})
-    .then(r=>r.json())
-    .then(d=>{
-      if(d && d.success){
-        const badge = document.getElementById('notificationBadge');
-        if (badge) {
-          badge.style.display = 'none';
-          badge.style.opacity = '0';
-          badge.style.visibility = 'hidden';
-          badge.textContent = '0';
+  document.getElementById('markAllPageRead')?.addEventListener('click', function(){
+    fetch('{{ url_for('main.marcar_todas_notif_leidas') }}', {method: 'POST'})
+      .then(r=>r.json())
+      .then(d=>{
+        if(d && d.success){
+          const badge = document.getElementById('notificationBadge');
+          if (badge) {
+            badge.style.display = 'none';
+            badge.style.opacity = '0';
+            badge.style.visibility = 'hidden';
+            badge.textContent = '0';
+          }
+          location.reload();
         }
-        location.reload();
-      }
-    });
-});
+      });
+  });
 </script>
 {% endblock %}
-
-

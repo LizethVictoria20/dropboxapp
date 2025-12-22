@@ -504,7 +504,7 @@
                 <!-- Dropdown de Notificaciones -->
                 <div
                   id="notificationDropdown"
-                  class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-surface-dark/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out z-50"
+                  class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-surface-dark/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out z-50 overflow-x-hidden"
                 >
                   <div class="p-3 border-b border-gray-100">
                     <div class="flex items-center justify-between gap-3">
@@ -513,7 +513,10 @@
                       </h3>
                     </div>
                   </div>
-                  <div id="notificationList" class="max-h-96 overflow-y-auto">
+                  <div
+                    id="notificationList"
+                    class="max-h-96 overflow-y-auto overflow-x-hidden"
+                  >
                     {% if header_notifications and header_notifications|length >
                     0 %} {% for notif in header_notifications %}
                     <div
@@ -526,7 +529,9 @@
                           <p class="text-sm font-medium text-gray-900 truncate">
                             {{ notif.titulo }}
                           </p>
-                          <p class="text-sm text-gray-500 mt-1">
+                          <p
+                            class="text-sm text-gray-500 mt-1 break-words whitespace-normal"
+                          >
                             {{ notif.mensaje }}
                           </p>
                           <p class="text-xs text-gray-400 mt-2">
@@ -2959,7 +2964,9 @@
                   <p class="text-sm font-medium text-gray-900 truncate">${
                     notif.titulo
                   }</p>
-                  <p class="text-sm text-gray-500 mt-1">${notif.mensaje}</p>
+                  <p class="text-sm text-gray-500 mt-1 break-words whitespace-normal">${
+                    notif.mensaje
+                  }</p>
                   <p class="text-xs text-gray-400 mt-2">${
                     notif.fecha_creacion
                   }</p>
