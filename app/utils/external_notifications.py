@@ -180,91 +180,104 @@ def _env_bool(name: str, default: bool) -> bool:
 
 
 def _escape_html(value: Optional[str]) -> str:
-        return _html.escape(value or "", quote=True)
+    return _html.escape(value or "", quote=True)
 
 
 def _escape_html_preserve_breaks(value: Optional[str]) -> str:
-        return _escape_html(value).replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
+    return _escape_html(value).replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
 
 
 def _build_document_status_email(
-        *,
-        estado: str,
-        nombre_usuario: str,
-        nombre_archivo: str,
-        comentario: Optional[str],
-        url_archivo: Optional[str],
+    *,
+    estado: str,
+    nombre_usuario: str,
+    nombre_archivo: str,
+    comentario: Optional[str],
+    url_archivo: Optional[str],
+    logo_url: Optional[str] = None,
 ) -> Dict[str, str]:
-        """Build subject + HTML + text for document status emails.
+    """Build subject + HTML + text for document status emails.
 
         Notes:
             - Uses conservative, email-client-friendly HTML (tables + inline styles).
             - Escapes user-provided values to avoid HTML injection in emails.
         """
-        estado_norm = (estado or "").strip().lower()
-        if estado_norm not in {"aprobado", "rechazado"}:
-                estado_norm = "aprobado"
+    estado_norm = (estado or "").strip().lower()
+    if estado_norm not in {"aprobado", "rechazado"}:
+        estado_norm = "aprobado"
 
-        safe_user = _escape_html(nombre_usuario)
-        safe_file = _escape_html(nombre_archivo)
-        safe_comment_html = _escape_html_preserve_breaks(comentario) if comentario else ""
+    safe_user = _escape_html(nombre_usuario)
+    safe_file = _escape_html(nombre_archivo)
+    safe_comment_html = _escape_html_preserve_breaks(comentario) if comentario else ""
 
-        if estado_norm == "aprobado":
-                subject = f"✅ Documento Aprobado: {nombre_archivo}"
-                title = "Documento aprobado"
-                header_bg = "#4caf50"
-                badge_bg = "#e8f5e9"
-                badge_border = "#4caf50"
-                badge_label = "Comentario"
-                intro = f"¡Buenas noticias! Tu documento <strong>{safe_file}</strong> ha sido <strong>aprobado</strong>."
-                helper = "Tu documentación está en orden. Gracias por tu colaboración."
-                cta_bg = "#4caf50"
-                cta_text = "Ver documentos"
-                preheader = f"Tu documento {nombre_archivo} fue aprobado."
-        else:
-                subject = f"Documento Rechazado: {nombre_archivo}"
-                title = "Documento rechazado"
-                header_bg = "#d32f2f"
-                badge_bg = "#fff3cd"
-                badge_border = "#ffc107"
-                badge_label = "Motivo del rechazo"
-                intro = f"Te informamos que tu documento <strong>{safe_file}</strong> ha sido rechazado."
-                helper = "Por favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión del documento."
-                cta_bg = "#1976d2"
-                cta_text = "Ver documentos"
-                preheader = f"Tu documento {nombre_archivo} fue rechazado."
+    base_blue = "#1976d2"
+    outer_bg = "#f5f8ff"
 
-        safe_url = _escape_html(url_archivo) if url_archivo else ""
+    if estado_norm == "aprobado":
+        subject = f"✅ Documento Aprobado: {nombre_archivo}"
+        title = "Documento aprobado"
+        accent = "#2e7d32"  
+        badge_bg = "#e8f5e9"
+        badge_border = accent
+        badge_label = "Comentario"
+        intro = f"¡Buenas noticias! Tu documento <strong>{safe_file}</strong> ha sido <strong>aprobado</strong>."
+        helper = "Tu documentación está en orden. Gracias por tu colaboración."
+        preheader = f"Tu documento {nombre_archivo} fue aprobado."
+        status_text = "APROBADO"
+    else:
+        subject = f"Documento Rechazado: {nombre_archivo}"
+        title = "Documento rechazado"
+        accent = "#d32f2f" 
+        badge_bg = "#fff3cd"
+        badge_border = "#ffc107"
+        badge_label = "Motivo del rechazo"
+        intro = f"Te informamos que tu documento <strong>{safe_file}</strong> ha sido rechazado."
+        helper = "Por favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión del documento."
+        preheader = f"Tu documento {nombre_archivo} fue rechazado."
+        status_text = "RECHAZADO"
 
-        comment_block = ""
-        if comentario:
-                comment_block = f"""
+    safe_url = _escape_html(url_archivo) if url_archivo else ""
+    safe_logo_url = _escape_html(logo_url) if logo_url else ""
+
+    comment_block = ""
+    if comentario:
+        comment_block = f"""
                     <tr>
                         <td style="padding: 0 24px 16px 24px;">
-                            <div style="background-color: {badge_bg}; border-left: 4px solid {badge_border}; padding: 14px 14px; border-radius: 6px;">
-                                <div style="font-size: 13px; font-weight: 700; color: #333; margin: 0 0 6px 0;">{badge_label}</div>
-                                <div style="font-size: 14px; color: #333; line-height: 1.6;">{safe_comment_html}</div>
+                            <div style="background-color: {badge_bg}; border-left: 4px solid {badge_border}; padding: 14px 14px; border-radius: 8px;">
+                                <div style="font-size: 13px; font-weight: 700; color: #1f2937; margin: 0 0 6px 0;">{badge_label}</div>
+                                <div style="font-size: 14px; color: #111827; line-height: 1.6;">{safe_comment_html}</div>
                             </div>
                         </td>
                     </tr>
                 """
 
-        cta_block = ""
-        text_url_line = ""
-        if url_archivo:
-                cta_block = f"""
+    cta_block = ""
+    text_url_line = ""
+    if url_archivo:
+        cta_block = f"""
                     <tr>
-                        <td align="center" style="padding: 8px 24px 22px 24px;">
+                        <td align="center" style="padding: 10px 24px 22px 24px;">
                             <a href="{safe_url}"
-                                 style="background-color: {cta_bg}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 6px; display: inline-block; font-size: 14px; font-weight: 700;">
-                                {cta_text}
+                                 style="background-color: {base_blue}; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 8px; display: inline-block; font-size: 14px; font-weight: 700;">
+                                Ver documentos
                             </a>
                         </td>
                     </tr>
                 """
-                text_url_line = f"\nAccede aquí: {url_archivo}\n"
+        text_url_line = f"\nAccede aquí: {url_archivo}\n"
 
-        html_body = f"""<!doctype html>
+    logo_block = ""
+    if logo_url:
+        logo_block = f"""
+                    <tr>
+                        <td align="center" style="padding: 18px 24px 6px 24px;">
+                            <img src="{safe_logo_url}" alt="Logotipo" width="140" style="display: block; border: 0; outline: none; text-decoration: none; max-width: 100%; height: auto;">
+                        </td>
+                    </tr>
+                """
+
+    html_body = f"""<!doctype html>
 <html lang="es">
     <head>
         <meta charset="utf-8">
@@ -272,21 +285,32 @@ def _build_document_status_email(
         <meta name="x-apple-disable-message-reformatting">
         <title>{_escape_html(subject)}</title>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #ffffff;">
+    <body style="margin: 0; padding: 0; background-color: {outer_bg};">
         <div style="display: none; font-size: 1px; color: #ffffff; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">{_escape_html(preheader)}</div>
 
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse; background-color: #ffffff;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse; background-color: {outer_bg};">
             <tr>
                 <td align="center" style="padding: 24px 12px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width: 600px; max-width: 600px; border-collapse: collapse;">
                         <tr>
-                            <td style="background-color: {header_bg}; padding: 18px 24px; border-radius: 10px 10px 0 0;">
-                                <div style="font-family: Arial, sans-serif; font-size: 18px; font-weight: 700; color: #ffffff;">{title}</div>
-                            </td>
+                            <td style="background-color: {accent}; height: 6px; line-height: 6px; font-size: 0; border-radius: 12px 12px 0 0;">&nbsp;</td>
                         </tr>
                         <tr>
                             <td style="background-color: #ffffff; border-left: 1px solid #e6e6e6; border-right: 1px solid #e6e6e6;">
                                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
+                                    {logo_block}
+                                    <tr>
+                                        <td style="padding: 10px 24px 0 24px;">
+                                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
+                                                <tr>
+                                                    <td style="background-color: {base_blue}; padding: 16px 18px; border-radius: 10px;">
+                                                        <div style="font-family: Arial, sans-serif; font-size: 16px; font-weight: 800; color: #ffffff;">{title}</div>
+                                                        <div style="font-family: Arial, sans-serif; font-size: 12px; font-weight: 700; color: #eaf2ff; margin-top: 4px; letter-spacing: 0.6px;">{status_text}</div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
                                     <tr>
                                         <td style="padding: 22px 24px 10px 24px; font-family: Arial, sans-serif; color: #333;">
                                             <div style="font-size: 14px; line-height: 1.6;">Hola {safe_user},</div>
@@ -308,11 +332,11 @@ def _build_document_status_email(
                             </td>
                         </tr>
                         <tr>
-                            <td style="background-color: #ffffff; border: 1px solid #e6e6e6; border-top: none; border-radius: 0 0 10px 10px; padding: 14px 24px 18px 24px;">
+                            <td style="background-color: #ffffff; border: 1px solid #e6e6e6; border-top: none; border-radius: 0 0 12px 12px; padding: 14px 24px 18px 24px;">
                                 <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; line-height: 1.6;">
                                     Este es un mensaje automático. Por favor, no respondas a este correo.
                                 </div>
-                                {f'<div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; line-height: 1.6; margin-top: 10px;">Si el botón no funciona, copia y pega este enlace en tu navegador:<br><a href="{safe_url}" style="color: #1976d2;">{safe_url}</a></div>' if url_archivo else ''}
+                                {f'<div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; line-height: 1.6; margin-top: 10px;">Si el botón no funciona, copia y pega este enlace en tu navegador:<br><a href="{safe_url}" style="color: {base_blue};">{safe_url}</a></div>' if url_archivo else ''}
                             </td>
                         </tr>
                     </table>
@@ -323,20 +347,20 @@ def _build_document_status_email(
 </html>
 """
 
-        text_body = f"""Hola {nombre_usuario},
+    text_body = f"""Hola {nombre_usuario},
 
 {_html.unescape(_html.escape(preheader))}
 
 Documento: {nombre_archivo}
 """
 
-        if comentario:
-                label = "Comentario" if estado_norm == "aprobado" else "Motivo del rechazo"
-                text_body += f"\n{label}: {comentario}\n"
+    if comentario:
+        label = "Comentario" if estado_norm == "aprobado" else "Motivo del rechazo"
+        text_body += f"\n{label}: {comentario}\n"
 
-        text_body += f"\n{helper}\n" + text_url_line
+    text_body += f"\n{helper}\n" + text_url_line
 
-        return {"subject": subject, "html": html_body, "text": text_body}
+    return {"subject": subject, "html": html_body, "text": text_body}
 
 
 def _mail_config_summary(
@@ -386,7 +410,11 @@ def enviar_notificacion_documento_validado(
     
     try:
         nombre_usuario = usuario.nombre_completo or usuario.email.split('@')[0]
-        app_url = os.environ.get('APP_URL') or 'http://localhost:5000'
+        app_url = (
+            os.environ.get('APP_URL')
+            or current_app.config.get('APP_URL')
+            or 'http://localhost:5000'
+        ).strip().rstrip('/')
         url_archivo = f"{app_url}/carpetas_dropbox"
         
         # Enviar email de aprobación
@@ -442,7 +470,11 @@ def enviar_notificacion_documento_rechazado(
         mensaje_base += " Por favor, ingresa a la aplicación para revisar los detalles y subir una nueva versión."
         
         # URL de la aplicación (ajustar según tu dominio)
-        app_url = os.environ.get('APP_URL') or 'http://localhost:5000'
+        app_url = (
+            os.environ.get('APP_URL')
+            or current_app.config.get('APP_URL')
+            or 'http://localhost:5000'
+        ).strip().rstrip('/')
         # Usar la ruta directamente en lugar de url_for para evitar problemas de contexto
         url_archivo = f"{app_url}/carpetas_dropbox"
         
@@ -511,6 +543,8 @@ def enviar_email_validado(
     
     try:
         mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
+        app_url = (os.environ.get('APP_URL') or current_app.config.get('APP_URL') or '').strip()
+        logo_url = f"{app_url.rstrip('/')}/static/image/logotipo.png" if app_url else None
         mail_sender = (
             os.environ.get('SENDGRID_FROM')
             or os.environ.get('MAIL_DEFAULT_SENDER')
@@ -525,6 +559,7 @@ def enviar_email_validado(
             nombre_archivo=nombre_archivo,
             comentario=comentario,
             url_archivo=url_archivo,
+            logo_url=logo_url,
         )
         asunto = content["subject"]
         cuerpo_html = content["html"]
@@ -680,6 +715,8 @@ def enviar_email_rechazo(
 
     try:
         mail_username = os.environ.get('MAIL_USERNAME') or current_app.config.get('MAIL_USERNAME')
+        app_url = (os.environ.get('APP_URL') or current_app.config.get('APP_URL') or '').strip()
+        logo_url = f"{app_url.rstrip('/')}/static/image/logotipo.png" if app_url else None
         mail_sender = (
             os.environ.get('SENDGRID_FROM')
             or os.environ.get('MAIL_DEFAULT_SENDER')
@@ -694,6 +731,7 @@ def enviar_email_rechazo(
             nombre_archivo=nombre_archivo,
             comentario=comentario,
             url_archivo=url_archivo,
+            logo_url=logo_url,
         )
         asunto = content["subject"]
         cuerpo_html = content["html"]
