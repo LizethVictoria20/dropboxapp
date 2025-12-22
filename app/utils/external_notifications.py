@@ -217,6 +217,8 @@ def _build_document_status_email(
         subject = f"✅ Documento Aprobado: {nombre_archivo}"
         title = "Documento aprobado"
         accent = "#2e7d32"  
+        status_pill_bg = "#e8f5e9" 
+        status_pill_fg = "#2e7d32"
         badge_bg = "#e8f5e9"
         badge_border = accent
         badge_label = "Comentario"
@@ -228,6 +230,8 @@ def _build_document_status_email(
         subject = f"Documento Rechazado: {nombre_archivo}"
         title = "Documento rechazado"
         accent = "#d32f2f" 
+        status_pill_bg = "#ffebee"  
+        status_pill_fg = "#b71c1c"
         badge_bg = "#fff3cd"
         badge_border = "#ffc107"
         badge_label = "Motivo del rechazo"
@@ -303,9 +307,13 @@ def _build_document_status_email(
                                         <td style="padding: 10px 24px 0 24px;">
                                             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
                                                 <tr>
-                                                    <td style="background-color: {base_blue}; padding: 16px 18px; border-radius: 10px;">
-                                                        <div style="font-family: Arial, sans-serif; font-size: 16px; font-weight: 800; color: #ffffff;">{title}</div>
-                                                        <div style="font-family: Arial, sans-serif; font-size: 12px; font-weight: 700; color: #eaf2ff; margin-top: 4px; letter-spacing: 0.6px;">{status_text}</div>
+                                                    <td style="background-color: #ffffff; padding: 14px 16px; border-radius: 10px; border: 1px solid #dbe7ff;">
+                                                        <div style="font-family: Arial, sans-serif; font-size: 16px; font-weight: 800; color: {base_blue};">{title}</div>
+                                                        <div style="margin-top: 8px;">
+                                                            <span style="display: inline-block; background-color: {status_pill_bg}; color: {status_pill_fg}; padding: 6px 10px; border-radius: 999px; font-family: Arial, sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.6px;">
+                                                                {status_text}
+                                                            </span>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             </table>
@@ -415,7 +423,7 @@ def enviar_notificacion_documento_validado(
             or current_app.config.get('APP_URL')
             or 'http://localhost:5000'
         ).strip().rstrip('/')
-        url_archivo = f"{app_url}/carpetas_dropbox"
+        url_archivo = f"{app_url}"
         
         # Enviar email de aprobación
         if usuario.email:
