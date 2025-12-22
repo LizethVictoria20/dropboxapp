@@ -565,13 +565,21 @@ block content %}
                       </svg>
                     </div>
                     <div class="flex items-center gap-2 min-w-0 flex-1">
-                      <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium truncate" title="{{ archivo }}"
+                      <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium whitespace-normal break-all" title="{{ archivo }}"
                             onclick="openPreviewModal({{ filepath|tojson }}, {{ (archivo.split('.')[-1] if '.' in archivo else '')|tojson }}, {{ archivo|tojson }})">
                         {{ archivo }}
                       </span>
                       <span id="status-badge-{{ filepath.replace('/', '-').replace('\\', '-') }}" data-file-path="{{ filepath }}" class="text-xs font-medium px-2 py-0.5 rounded-full hidden"></span>
                     </div>
-                    <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ parent }}">{{ parent|default('') }}</div>
+                    {% set _parent_norm = (parent or '').lstrip('/') %}
+                    {% set _parent_parts = _parent_norm.split('/') if _parent_norm else [] %}
+                    {% set _categoria = '' %}
+                    {% if _parent_parts|length >= 2 and ('@' in _parent_parts[0]) %}
+                      {% set _categoria = _parent_parts[1] %}
+                    {% elif _parent_parts|length >= 1 %}
+                      {% set _categoria = _parent_parts[0] %}
+                    {% endif %}
+                    <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ _categoria }}">{{ _categoria }}</div>
                   </div>
                   <div class="relative">
                     {% set menu_id = ('file-menu-' ~ filepath)|replace('/','-')|replace('\\','-')|replace(' ','-') %}
@@ -655,14 +663,22 @@ block content %}
                         </svg>
                       </div>
                       <div class="flex items-center gap-2 min-w-0 flex-1">
-                        <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium truncate" title="{{ fname }}"
+                        <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium whitespace-normal break-all" title="{{ fname }}"
                               onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')">
                           {{ fname }}
                         </span>
                         {% set _estado = (estado_por_path.get(file_path) if estado_por_path is defined else None) %}
                         <span id="status-badge-{{ file_path.replace('/', '-').replace('\\', '-') }}" data-file-path="{{ file_path }}" class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full {{ 'bg-green-100 text-green-700' if _estado == 'validado' else ('bg-red-100 text-red-700' if _estado == 'rechazado' else ('bg-yellow-100 text-yellow-700' if _estado == 'en_revision' else 'bg-blue-100 text-blue-700')) }}">{{ 'Validado' if _estado == 'validado' else ('Rechazado' if _estado == 'rechazado' else ('Pendiente para revisión' if _estado == 'en_revision' else 'Nuevo')) }}</span>
                       </div>
-                      <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ file_dir }}">{{ file_dir | default('') }}</div>
+                      {% set _dir_norm = (file_dir or '').lstrip('/') %}
+                      {% set _dir_parts = _dir_norm.split('/') if _dir_norm else [] %}
+                      {% set _categoria = '' %}
+                      {% if _dir_parts|length >= 2 and ('@' in _dir_parts[0]) %}
+                        {% set _categoria = _dir_parts[1] %}
+                      {% elif _dir_parts|length >= 1 %}
+                        {% set _categoria = _dir_parts[0] %}
+                      {% endif %}
+                      <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ _categoria }}">{{ _categoria }}</div>
                     </div>
                       <div class="relative">
                         {% set menu_id = ('file-menu-' ~ file_path)|replace('/','-')|replace('\\','-')|replace(' ','-') %}
@@ -736,14 +752,22 @@ block content %}
                     </svg>
                   </div>
                   <div class="flex items-center gap-2 min-w-0 flex-1">
-                    <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium truncate" title="{{ fname }}"
+                    <span class="text-sm text-blue-700 hover:underline cursor-pointer font-medium whitespace-normal break-all" title="{{ fname }}"
                           onclick="openPreviewModal('{{ file_path }}', '{{ (fname.split('.')[-1] if '.' in fname else '') }}', '{{ fname }}')">
                       {{ fname }}
                     </span>
                     {% set _estado = (estado_por_path.get(file_path) if estado_por_path is defined else None) %}
                     <span id="status-badge-{{ file_path.replace('/', '-').replace('\\', '-') }}" data-file-path="{{ file_path }}" class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full {{ 'bg-green-100 text-green-700' if _estado == 'validado' else ('bg-red-100 text-red-700' if _estado == 'rechazado' else ('bg-yellow-100 text-yellow-700' if _estado == 'en_revision' else 'bg-blue-100 text-blue-700')) }}">{{ 'Validado' if _estado == 'validado' else ('Rechazado' if _estado == 'rechazado' else ('Pendiente para revisión' if _estado == 'en_revision' else 'Nuevo')) }}</span>
                   </div>
-                  <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ file_dir }}">{{ file_dir | default('') }}</div>
+                  {% set _dir_norm = (file_dir or '').lstrip('/') %}
+                  {% set _dir_parts = _dir_norm.split('/') if _dir_norm else [] %}
+                  {% set _categoria = '' %}
+                  {% if _dir_parts|length >= 2 and ('@' in _dir_parts[0]) %}
+                    {% set _categoria = _dir_parts[1] %}
+                  {% elif _dir_parts|length >= 1 %}
+                    {% set _categoria = _dir_parts[0] %}
+                  {% endif %}
+                  <div class="text-xs text-gray-400 truncate" style="max-width:20rem;" title="{{ _categoria }}">{{ _categoria }}</div>
                 </div>
                 <div class="relative">
                   {% set menu_id = ('file-menu-' ~ file_path)|replace('/','-')|replace('\\','-')|replace(' ','-') %}
