@@ -175,6 +175,12 @@ def create_app(config_name=None):
             from flask_login import current_user as cu
             from app.models import Notification
             if cu.is_authenticated:
+                try:
+                    from app.utils.notification_utils import marcar_notificaciones_archivos_fuera_de_revision_como_leidas
+                    marcar_notificaciones_archivos_fuera_de_revision_como_leidas(cu.id)
+                except Exception:
+                    # Si falla el auto-marcado, no bloquea el render del header
+                    pass
                 ultimas = Notification.query \
                     .filter_by(user_id=cu.id) \
                     .order_by(Notification.fecha_creacion.desc()) \

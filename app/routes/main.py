@@ -817,7 +817,14 @@ def marcar_notificacion_leida(notif_id):
 @login_required
 def api_notificaciones_no_leidas():
     """API para obtener el número de notificaciones no leídas"""
-    
+
+    # Solo "Pendiente para revisión" debe quedar como pendiente: auto-marcar el resto.
+    try:
+        from app.utils.notification_utils import marcar_notificaciones_archivos_fuera_de_revision_como_leidas
+        marcar_notificaciones_archivos_fuera_de_revision_como_leidas(current_user.id)
+    except Exception:
+        pass
+
     count = Notification.query.filter_by(user_id=current_user.id, leida=False).count()
     return jsonify({'count': count}) 
 
@@ -1485,6 +1492,11 @@ def obtener_ultimas_notificaciones():
     """
     try:
         from app.models import Notification
+        from app.utils.notification_utils import marcar_notificaciones_archivos_fuera_de_revision_como_leidas
+
+        # Solo "Pendiente para revisión" debe quedar como pendiente.
+        marcar_notificaciones_archivos_fuera_de_revision_como_leidas(current_user.id)
+
         q = Notification.query \
             .filter_by(user_id=current_user.id) \
             .order_by(Notification.fecha_creacion.desc())
@@ -1558,12 +1570,16 @@ def obtener_ultimas_notificaciones():
 def ver_notificaciones():
     """Página con el historial completo de notificaciones del usuario actual (paginado)."""
     from app.models import Notification
+    from app.utils.notification_utils import marcar_notificaciones_archivos_fuera_de_revision_como_leidas
     try:
         page = int(request.args.get('page', '1'))
     except Exception:
         page = 1
     # Mostrar 10 notificaciones por página
     per_page = 10
+
+    # Solo "Pendiente para revisión" debe quedar como pendiente.
+    marcar_notificaciones_archivos_fuera_de_revision_como_leidas(current_user.id)
 
     q = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.fecha_creacion.desc())
     pagination = q.paginate(page=page, per_page=per_page, error_out=False)

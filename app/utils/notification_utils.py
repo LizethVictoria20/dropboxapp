@@ -1,12 +1,80 @@
 """
 Utilidades para el sistema de notificaciones
 """
-from app.models import User, Notification, Beneficiario
+from app.models import User, Notification, Beneficiario, Archivo
 from app import db
 from datetime import datetime
 from typing import Optional
 from flask import current_app
 import traceback
+
+
+def archivo_tiene_etiqueta_pendiente_revision(archivo: Optional[Archivo]) -> bool:
+    """Retorna True si, según la UI, el archivo mostraría la etiqueta 'Pendiente para revisión'.
+
+    En los templates esto corresponde a `estado == 'en_revision'`.
+    """
+    if not archivo:
+        return False
+    estado = getattr(archivo, 'estado', None)
+    if not isinstance(estado, str):
+        return False
+    return estado.strip() == 'en_revision'
+
+
+def marcar_notificaciones_archivos_fuera_de_revision_como_leidas(user_id: int) -> int:
+    """Marca como leídas las notificaciones *no leídas* asociadas a archivos cuyo estado NO es 'en_revision'.
+
+    Regla UX: solo los documentos con etiqueta "Pendiente para revisión" deben aparecer como
+    pendientes por leer en el centro de notificaciones.
+
+    Returns:
+        Cantidad de notificaciones actualizadas.
+    """
+    try:
+        now = datetime.utcnow()
+        notif_ids = [
+            nid for (nid,) in (
+                db.session.query(Notification.id)
+                .outerjoin(Archivo, Notification.archivo_id == Archivo.id)
+                .filter(
+                    Notification.user_id == user_id,
+                    Notification.leida.is_(False),
+                    Notification.archivo_id.isnot(None),
+                    # No auto-marcar las notificaciones de cambio de estado (validado/rechazado)
+                    # porque el cliente debe enterarse.
+                    Notification.tipo != 'estado_archivo',
+                    db.or_(
+                        Archivo.id.is_(None),
+                        Archivo.estado.is_(None),
+                        Archivo.estado != 'en_revision',
+                    ),
+                )
+                .all()
+            )
+        ]
+
+        if not notif_ids:
+            return 0
+
+        updated = (
+            Notification.query
+            .filter(Notification.user_id == user_id, Notification.id.in_(notif_ids))
+            .update(
+                {Notification.leida: True, Notification.fecha_leida: now},
+                synchronize_session=False,
+            )
+        )
+        if updated:
+            db.session.commit()
+        return int(updated or 0)
+    except Exception as e:
+        db.session.rollback()
+        try:
+            current_app.logger.error(f"Error al auto-marcar notificaciones fuera de revision como leídas: {e}")
+        except Exception:
+            print(f"Error al auto-marcar notificaciones fuera de revision como leídas: {e}")
+        return 0
 
 
 def notificar_archivo_subido(nombre_archivo: str, usuario_subio, categoria: str, archivo_id: Optional[int] = None):
@@ -20,6 +88,17 @@ def notificar_archivo_subido(nombre_archivo: str, usuario_subio, categoria: str,
         archivo_id: ID del archivo subido (opcional)
     """
     try:
+        # Regla: solo generar notificaciones si el documento está etiquetado como
+        # "Pendiente para revisión" (estado == 'en_revision').
+        if not archivo_id:
+            return True
+        try:
+            archivo = Archivo.query.get(archivo_id)
+        except Exception:
+            archivo = None
+        if not archivo_tiene_etiqueta_pendiente_revision(archivo):
+            return True
+
         # Determinar nombre del usuario que subió
         if isinstance(usuario_subio, Beneficiario):
             nombre_usuario = f"{usuario_subio.nombre} {usuario_subio.lastname or ''}".strip()
@@ -162,6 +241,9 @@ def obtener_notificaciones_no_leidas(user_id: int):
         Lista de notificaciones no leídas
     """
     try:
+        # Auto-marcar como leídas las notificaciones de archivos fuera de revisión,
+        # para que solo "Pendiente para revisión" quede como pendiente.
+        marcar_notificaciones_archivos_fuera_de_revision_como_leidas(user_id)
         notificaciones = Notification.query.filter_by(
             user_id=user_id,
             leida=False
@@ -183,6 +265,9 @@ def contar_notificaciones_no_leidas(user_id: int):
         Número de notificaciones no leídas
     """
     try:
+        # Auto-marcar como leídas las notificaciones de archivos fuera de revisión,
+        # para que solo "Pendiente para revisión" quede como pendiente.
+        marcar_notificaciones_archivos_fuera_de_revision_como_leidas(user_id)
         count = Notification.query.filter_by(
             user_id=user_id,
             leida=False

@@ -195,6 +195,20 @@ def actualizar_estado_archivo():
     archivo.estado = nuevo_estado
     db.session.commit()
 
+    # Asegurar usuario_id (hay registros legacy sin dueño). Intentar inferirlo del path.
+    if not getattr(archivo, 'usuario_id', None):
+        try:
+            # El canonical suele iniciar con el email del cliente: "email/..."
+            parts = [p for p in (dropbox_path.strip('/') or '').split('/') if p]
+            owner_email = next((p for p in parts if '@' in p), None)
+            if owner_email:
+                owner_user = User.query.filter_by(email=owner_email).first()
+                if owner_user:
+                    archivo.usuario_id = owner_user.id
+                    db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     current_app.logger.info(
         "Estado de archivo actualizado: path=%s usuario_id=%s %s->%s motivo_len=%s"
         % (
@@ -247,19 +261,31 @@ def actualizar_estado_archivo():
         titulo = f'Cambio de estado: {archivo.nombre}'
         mensaje = mensajes_estado.get(nuevo_estado, f'El estado de tu archivo "{archivo.nombre}" ha cambiado.')
         
-        notificacion = Notification(
-            user_id=archivo.usuario_id,
-            titulo=titulo,
-            mensaje=mensaje,
-            tipo='estado_archivo',
-            leida=False,
-            fecha_creacion=datetime.utcnow(),
-            archivo_id=archivo.id
-        )
-        db.session.add(notificacion)
-        db.session.commit()
-        
-        current_app.logger.info(f'Notificación creada para usuario {archivo.usuario_id}: {titulo}')
+        # Requisito (rol cliente): cuando un admin/lector cambie de "Pendiente para revisión"
+        # a "Validado" o "Rechazado", informar en el sistema de notificaciones.
+        try:
+            emisor_rol = getattr(current_user, 'rol', None)
+        except Exception:
+            emisor_rol = None
+
+        estado_anterior_norm = (estado_anterior or '').strip() if isinstance(estado_anterior, str) or estado_anterior is None else str(estado_anterior)
+        if (
+            nuevo_estado in ['validado', 'rechazado']
+            and emisor_rol in ['admin', 'superadmin', 'lector']
+            and estado_anterior_norm in ['en_revision', '']
+        ):
+            notificacion = Notification(
+                user_id=archivo.usuario_id,
+                titulo=titulo,
+                mensaje=mensaje,
+                tipo='estado_archivo',
+                leida=False,
+                fecha_creacion=datetime.utcnow(),
+                archivo_id=archivo.id
+            )
+            db.session.add(notificacion)
+            db.session.commit()
+            current_app.logger.info(f'Notificación de estado creada para usuario {archivo.usuario_id}: {titulo}')
         
         # Si el documento fue rechazado o validado, enviar notificaciones externas
         if nuevo_estado == 'rechazado':
@@ -1796,6 +1822,8 @@ def subir_archivo():
         # Enviar notificaciones al propietario o titular cuando otro usuario sube archivos a su carpeta
         if archivos_procesados:
             try:
+                from app.utils.notification_utils import archivo_tiene_etiqueta_pendiente_revision
+
                 destinatarios = []
                 if isinstance(usuario, User):
                     destinatarios.append(usuario)
@@ -1803,6 +1831,19 @@ def subir_archivo():
                     titular = getattr(usuario, "titular", None)
                     if titular:
                         destinatarios.append(titular)
+
+                # Regla: solo notificar si el documento (primer archivo) está etiquetado como
+                # "Pendiente para revisión" (estado == 'en_revision').
+                archivo_ref = archivos_procesados[0] if archivos_procesados else None
+                archivo_ref_db = None
+                try:
+                    if archivo_ref and getattr(archivo_ref, 'id', None):
+                        archivo_ref_db = Archivo.query.get(archivo_ref.id)
+                except Exception:
+                    archivo_ref_db = archivo_ref
+
+                if not archivo_tiene_etiqueta_pendiente_revision(archivo_ref_db):
+                    destinatarios = []
 
                 if destinatarios:
                     notificaciones_creadas = 0
@@ -3704,19 +3745,30 @@ def subir_archivo_rapido():
             try:
                 if current_user.rol in ['admin', 'superadmin', 'lector'] and usuario and getattr(usuario, 'rol', None) == 'cliente':
                     from app.models import Notification
-                    mensaje_notif = f'Se ha{"n" if archivos_subidos > 1 else ""} subido {archivos_subidos} archivo{"s" if archivos_subidos > 1 else ""} a tu carpeta.'
-                    notif_cliente = Notification(
-                        user_id=usuario.id,
-                        archivo_id=archivos_procesados[0].id,
-                        titulo=f"{archivos_subidos} archivo(s) subido(s) a tu carpeta",
-                        mensaje=mensaje_notif,
-                        tipo='file_upload',
-                        leida=False,
-                        fecha_creacion=datetime.utcnow()
-                    )
-                    db.session.add(notif_cliente)
-                    db.session.commit()
-                    current_app.logger.info(f"✅ Notificación enviada al cliente {usuario.id} por subida de {archivos_subidos} archivo(s)")
+                    from app.utils.notification_utils import archivo_tiene_etiqueta_pendiente_revision
+
+                    archivo_ref = archivos_procesados[0] if archivos_procesados else None
+                    archivo_ref_db = None
+                    try:
+                        if archivo_ref and getattr(archivo_ref, 'id', None):
+                            archivo_ref_db = Archivo.query.get(archivo_ref.id)
+                    except Exception:
+                        archivo_ref_db = archivo_ref
+
+                    if archivo_tiene_etiqueta_pendiente_revision(archivo_ref_db):
+                        mensaje_notif = f'Se ha{"n" if archivos_subidos > 1 else ""} subido {archivos_subidos} archivo{"s" if archivos_subidos > 1 else ""} a tu carpeta.'
+                        notif_cliente = Notification(
+                            user_id=usuario.id,
+                            archivo_id=archivos_procesados[0].id,
+                            titulo=f"{archivos_subidos} archivo(s) subido(s) a tu carpeta",
+                            mensaje=mensaje_notif,
+                            tipo='file_upload',
+                            leida=False,
+                            fecha_creacion=datetime.utcnow()
+                        )
+                        db.session.add(notif_cliente)
+                        db.session.commit()
+                        current_app.logger.info(f"✅ Notificación enviada al cliente {usuario.id} por subida de {archivos_subidos} archivo(s)")
             except Exception as e_notif_cliente:
                 print(f"⚠️ Error al notificar al cliente: {e_notif_cliente}")
                 # No interrumpir el flujo
