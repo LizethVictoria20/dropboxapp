@@ -1700,8 +1700,6 @@ def subir_archivo():
         # Subcategoría eliminada del flujo
         
         # Procesar múltiples archivos
-        import time
-        import random
         archivos_subidos = 0
         archivos_fallidos = 0
         archivos_procesados = []
@@ -1714,7 +1712,7 @@ def subir_archivo():
                 archivo_content = archivo.read()
                 archivo.seek(0)  # Resetear el puntero del archivo
                 
-                # Generar nombre final del archivo incluyendo nombre original y timestamp
+                # Generar nombre final del archivo (sin incluir IDs/timestamps)
                 nombre_original = archivo.filename
                 nombre_base = nombre_original
                 ext = ""
@@ -1725,16 +1723,11 @@ def subir_archivo():
                 # Normalizar el nombre base del archivo
                 nombre_base_normalizado = sanitize_dropbox_segment(nombre_base)
                 
-                # Generar timestamp único para cada archivo
-                # Agregar un pequeño delay y número aleatorio para asegurar timestamps únicos
-                time.sleep(0.001)  # 1 milisegundo de delay entre archivos
-                timestamp = str(int(time.time() * 1000)) + str(random.randint(100, 999))  # Timestamp + random para mayor unicidad
-                
-                # Determinar tipo de usuario y generar nombre único
+                # Determinar tipo de usuario y generar nombre base
                 if isinstance(usuario, User) and not getattr(usuario, "es_beneficiario", False):
                     # TITULAR
                     nombre_titular = sanitize_dropbox_segment(usuario.nombre or usuario.email.split('@')[0])
-                    nombre_final = f"TITULAR_{nombre_titular}_{nombre_base_normalizado}_{timestamp}{ext}"
+                    nombre_base_final = f"TITULAR_{nombre_titular}_{nombre_base_normalizado}"
                 elif isinstance(usuario, Beneficiario):
                     # BENEFICIARIO
                     nombre_ben = sanitize_dropbox_segment(usuario.nombre)
@@ -1742,28 +1735,42 @@ def subir_archivo():
                         nombre_titular = sanitize_dropbox_segment(usuario.titular.nombre)
                     else:
                         nombre_titular = "SIN_TITULAR"
-                    nombre_final = f"{nombre_ben}_TITULAR_{nombre_titular}_{nombre_base_normalizado}_{timestamp}{ext}"
+                    nombre_base_final = f"{nombre_ben}_TITULAR_{nombre_titular}_{nombre_base_normalizado}"
                 else:
                     # Usuario genérico
-                    nombre_final = f"{sanitize_dropbox_segment(usuario.nombre or usuario.email.split('@')[0])}_{nombre_base_normalizado}_{timestamp}{ext}"
+                    nombre_usuario = sanitize_dropbox_segment(usuario.nombre or usuario.email.split('@')[0])
+                    nombre_base_final = f"{nombre_usuario}_{nombre_base_normalizado}"
+
+                def _nombre_con_sufijo(idx_conflicto: int) -> str:
+                    if idx_conflicto == 0:
+                        return f"{nombre_base_final}{ext}"
+                    return f"{nombre_base_final}_{idx_conflicto}{ext}"
+
+                nombre_final = _nombre_con_sufijo(0)
 
                 print(f"📄 Procesando archivo {idx}/{len(archivos)}: {nombre_original} -> {nombre_final}")
 
                 # Subir archivo con nombre final (sin sobrescribir)
-                dropbox_dest = f"{ruta_categoria}/{nombre_final}"
                 try:
-                    dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
-                except dropbox.exceptions.ApiError as e:
-                    if "conflict" in str(e):
-                        # Si hay conflicto, agregar un sufijo adicional
-                        sufijo_random = str(random.randint(1000, 9999))
-                        nombre_sin_ext = nombre_final.rsplit(".", 1)[0] if "." in nombre_final else nombre_final
-                        ext_final = "." + nombre_final.rsplit(".", 1)[1] if "." in nombre_final else ""
-                        nombre_final = f"{nombre_sin_ext}_{sufijo_random}{ext_final}"
+                    dropbox_dest = None
+                    for intento in range(0, 50):
+                        nombre_final = _nombre_con_sufijo(intento)
                         dropbox_dest = f"{ruta_categoria}/{nombre_final}"
-                        dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=dropbox.files.WriteMode("add"))
-                    else:
-                        raise e
+                        try:
+                            dbx.files_upload(
+                                archivo_content,
+                                with_base_folder(dropbox_dest),
+                                mode=dropbox.files.WriteMode("add"),
+                            )
+                            break
+                        except dropbox.exceptions.ApiError as e:
+                            if "conflict" in str(e).lower():
+                                continue
+                            raise
+                    if not dropbox_dest:
+                        raise RuntimeError("No se pudo determinar el destino en Dropbox")
+                except dropbox.exceptions.ApiError as e:
+                    raise e
                 print(f"✅ Archivo {idx}/{len(archivos)} subido exitosamente a Dropbox: {dropbox_dest}")
 
                 # Guardar en la base de datos
@@ -3485,7 +3492,6 @@ def sincronizar_carpetas_dropbox():
 def subir_archivo_rapido():
     from app.models import User, Beneficiario, Archivo, Folder
     from dropbox.files import WriteMode
-    import random
 
     # permisos / sesión
     if not current_user.is_authenticated or not hasattr(current_user, "rol"):
@@ -3628,7 +3634,6 @@ def subir_archivo_rapido():
                 raise e
 
         # Procesar múltiples archivos
-        import time
         archivos_subidos = 0
         archivos_fallidos = 0
         archivos_procesados = []
@@ -3646,26 +3651,29 @@ def subir_archivo_rapido():
                 name_base = orig_name.rsplit(".", 1)[0]
                 ext = ("." + orig_name.rsplit(".", 1)[1]) if "." in orig_name else ""
                 
-                # Generar timestamp único para cada archivo
-                time.sleep(0.001)  # 1 milisegundo de delay entre archivos
-                timestamp = str(int(time.time() * 1000)) + str(random.randint(100, 999))
-                
-                nombre_normalizado = f"{normaliza(name_base)}_{timestamp}{ext}"
+                base_normalizada = f"{normaliza(name_base)}"
+
+                def _nombre_con_sufijo(idx_conflicto: int) -> str:
+                    if idx_conflicto == 0:
+                        return f"{base_normalizada}{ext}"
+                    return f"{base_normalizada}_{idx_conflicto}{ext}"
+
+                nombre_normalizado = _nombre_con_sufijo(0)
                 dropbox_dest = f"{carpeta_destino_completa.rstrip('/')}/{nombre_normalizado}".replace("//", "/")
 
                 print(f"📄 Procesando archivo {idx}/{len(archivos)}: {orig_name} -> {nombre_normalizado}")
 
                 # intentar subir (mode=add). si conflicto, añadir sufijo
-                try:
-                    dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=WriteMode.add)
-                except dropbox.exceptions.ApiError as e:
-                    if "conflict" in str(e).lower():
-                        sufijo = str(random.randint(1000, 9999))
-                        nombre_normalizado = f"{normaliza(name_base)}_{timestamp}_{sufijo}{ext}"
-                        dropbox_dest = f"{carpeta_destino_completa.rstrip('/')}/{nombre_normalizado}"
+                for intento in range(0, 50):
+                    nombre_normalizado = _nombre_con_sufijo(intento)
+                    dropbox_dest = f"{carpeta_destino_completa.rstrip('/')}/{nombre_normalizado}".replace("//", "/")
+                    try:
                         dbx.files_upload(archivo_content, with_base_folder(dropbox_dest), mode=WriteMode.add)
-                    else:
-                        raise e
+                        break
+                    except dropbox.exceptions.ApiError as e:
+                        if "conflict" in str(e).lower():
+                            continue
+                        raise
 
                 print(f"✅ Archivo {idx}/{len(archivos)} subido exitosamente a Dropbox: {dropbox_dest}")
 
