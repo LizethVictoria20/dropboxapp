@@ -10,13 +10,6 @@ block content %}
         Consulta y gestiona tus notificaciones
       </p>
     </div>
-    <button
-      id="markAllPageRead"
-      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
-    >
-      <i class="fas fa-check-double"></i>
-      Marcar todas como leídas
-    </button>
   </div>
 
   <div
@@ -58,20 +51,6 @@ block content %}
               >
                 {{ n.titulo }}
               </p>
-              {% if not n.leida %}
-              <form
-                method="post"
-                action="{{ url_for('main.marcar_notif_leida', notif_id=n.id) }}"
-                onsubmit="event.preventDefault(); fetch(this.action, {method: 'POST'}).then(()=>location.reload());"
-              >
-                <button
-                  class="text-xs px-2 py-1 rounded-md"
-                  style="background-color: #e6f3f9; color: #0176a8"
-                >
-                  Marcar leída
-                </button>
-              </form>
-              {% endif %}
             </div>
             <p class="text-sm text-gray-600 mt-1 break-words whitespace-normal">
               {{ n.mensaje }}
@@ -180,23 +159,4 @@ block content %}
     {% endif %}
   </div>
 </div>
-
-<script>
-  document.getElementById('markAllPageRead')?.addEventListener('click', function(){
-    fetch('{{ url_for('main.marcar_todas_notif_leidas') }}', {method: 'POST'})
-      .then(r=>r.json())
-      .then(d=>{
-        if(d && d.success){
-          const badge = document.getElementById('notificationBadge');
-          if (badge) {
-            badge.style.display = 'none';
-            badge.style.opacity = '0';
-            badge.style.visibility = 'hidden';
-            badge.textContent = '0';
-          }
-          location.reload();
-        }
-      });
-  });
-</script>
 {% endblock %}
