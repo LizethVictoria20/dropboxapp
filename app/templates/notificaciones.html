@@ -43,7 +43,7 @@ block content %}
     <ul class="divide-y divide-gray-100">
       {% for n in notificaciones[:10] %}
       <li class="group p-4 {{ 'bg-blue-50/30' if not n.leida else '' }}">
-        <div class="flex items-start gap-3">
+        <div class="flex items-start gap-3 min-w-0 overflow-hidden">
           <div class="mt-1">
             <span
               class="inline-flex items-center justify-center w-8 h-8 rounded-lg {{ 'bg-[#E6F3F9] text-[#0176a8]' if not n.leida else 'bg-gray-100 text-gray-500' }}"
@@ -51,9 +51,11 @@ block content %}
               <i class="fas fa-bell"></i>
             </span>
           </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-start justify-between gap-3">
-              <p class="text-sm font-medium text-gray-900 truncate">
+          <div class="flex-1 min-w-0 overflow-hidden">
+            <div class="flex items-start justify-between gap-3 min-w-0">
+              <p
+                class="text-sm font-medium text-gray-900 break-words whitespace-normal min-w-0"
+              >
                 {{ n.titulo }}
               </p>
               {% if not n.leida %}
@@ -71,7 +73,9 @@ block content %}
               </form>
               {% endif %}
             </div>
-            <p class="text-sm text-gray-600 mt-1">{{ n.mensaje }}</p>
+            <p class="text-sm text-gray-600 mt-1 break-words whitespace-normal">
+              {{ n.mensaje }}
+            </p>
             <div
               class="text-xs text-gray-400 mt-2 flex flex-wrap items-center gap-2"
             >
