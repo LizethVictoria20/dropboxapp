@@ -36,43 +36,60 @@ block content %}
     <ul class="divide-y divide-gray-100">
       {% for n in notificaciones[:10] %}
       <li class="group p-4 {{ 'bg-blue-50/30' if not n.leida else '' }}">
-        <div class="flex items-start gap-3 min-w-0 overflow-hidden">
-          <div class="mt-1">
-            <span
-              class="inline-flex items-center justify-center w-8 h-8 rounded-lg {{ 'bg-[#E6F3F9] text-[#0176a8]' if not n.leida else 'bg-gray-100 text-gray-500' }}"
-            >
-              <i class="fas fa-bell"></i>
-            </span>
-          </div>
-          <div class="flex-1 min-w-0 overflow-hidden">
-            <div class="flex items-start justify-between gap-3 min-w-0">
-              <p
-                class="text-sm font-medium text-gray-900 break-words whitespace-normal min-w-0"
-              >
-                {{ n.titulo }}
-              </p>
-            </div>
-            <p class="text-sm text-gray-600 mt-1 break-words whitespace-normal">
-              {{ n.mensaje }}
-            </p>
-            <div
-              class="text-xs text-gray-400 mt-2 flex flex-wrap items-center gap-2"
-            >
-              <span>{{ n.fecha_creacion|format_colombia_time|datetime }}</span>
-              {% if n.archivo %}
+        {% if n.archivo and n.archivo.usuario_id %}
+        <a
+          href="{{ url_for('listar_dropbox.carpetas_dropbox', user_id=n.archivo.usuario_id) }}"
+          class="block"
+        >
+          {% endif %}
+          <div
+            class="flex items-start gap-3 min-w-0 overflow-hidden {{ 'cursor-pointer' if n.archivo else '' }}"
+          >
+            <div class="mt-1">
               <span
-                class="inline-flex items-start gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 max-w-full"
+                class="inline-flex items-center justify-center w-8 h-8 rounded-lg {{ 'bg-[#E6F3F9] text-[#0176a8]' if not n.leida else 'bg-gray-100 text-gray-500' }}"
               >
-                <i class="fas fa-file text-gray-400 mt-0.5 shrink-0"></i>
-                <span class="min-w-0 break-all whitespace-normal leading-snug">
-                  {{ n.archivo.nombre }}{% if n.archivo.categoria %} · {{
-                  n.archivo.categoria }}{% endif %}
-                </span>
+                <i class="fas fa-bell"></i>
               </span>
-              {% endif %}
+            </div>
+            <div class="flex-1 min-w-0 overflow-hidden">
+              <div class="flex items-start justify-between gap-3 min-w-0">
+                <p
+                  class="text-sm font-medium text-gray-900 break-words whitespace-normal min-w-0"
+                >
+                  {{ n.titulo }}
+                </p>
+              </div>
+              <p
+                class="text-sm text-gray-600 mt-1 break-words whitespace-normal"
+              >
+                {{ n.mensaje }}
+              </p>
+              <div
+                class="text-xs text-gray-400 mt-2 flex flex-wrap items-center gap-2"
+              >
+                <span
+                  >{{ n.fecha_creacion|format_colombia_time|datetime }}</span
+                >
+                {% if n.archivo %}
+                <span
+                  class="inline-flex items-start gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 max-w-full"
+                >
+                  <i class="fas fa-file text-gray-400 mt-0.5 shrink-0"></i>
+                  <span
+                    class="min-w-0 break-all whitespace-normal leading-snug"
+                  >
+                    {{ n.archivo.nombre }}{% if n.archivo.categoria %} · {{
+                    n.archivo.categoria }}{% endif %}
+                  </span>
+                </span>
+                {% endif %}
+              </div>
             </div>
           </div>
-        </div>
+          {% if n.archivo and n.archivo.usuario_id %}
+        </a>
+        {% endif %}
       </li>
       {% endfor %}
     </ul>

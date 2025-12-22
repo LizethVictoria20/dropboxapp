@@ -1811,6 +1811,57 @@ block content %}
   document.addEventListener("DOMContentLoaded", function () {
     console.log("DOM cargado, inicializando funciones...");
 
+    // Deep-link: si viene focus_path, hacer scroll al archivo y abrirlo
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const focusPathRaw = params.get('focus_path');
+
+      const cssEscape = (value) => {
+        try {
+          if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(value);
+        } catch (e) {}
+        return String(value).replace(/([\\"\'])/g, '\\$1');
+      };
+
+      const tryFocus = (focusPath) => {
+        if (!focusPath) return false;
+        const selector = `[data-file-path="${cssEscape(focusPath)}"]`;
+        const badgeOrMarker = document.querySelector(selector);
+        if (!badgeOrMarker) return false;
+
+        const li = badgeOrMarker.closest('li') || badgeOrMarker.closest('div');
+        if (li && typeof li.scrollIntoView === 'function') {
+          li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Intentar abrir el preview haciendo click en el nombre del archivo
+        const clickable = li?.querySelector('span[onclick*="openPreviewModal"]');
+        if (clickable && typeof clickable.click === 'function') {
+          setTimeout(() => clickable.click(), 250);
+        }
+        return true;
+      };
+
+      if (focusPathRaw) {
+        const decoded = (() => {
+          try {
+            return decodeURIComponent(focusPathRaw);
+          } catch (e) {
+            return focusPathRaw;
+          }
+        })();
+
+        // 1) Intento con el path tal cual
+        // 2) Intento sin slash inicial (por si en algún listado se guarda relativo)
+        if (!tryFocus(decoded)) {
+          const noLeading = decoded.startsWith('/') ? decoded.slice(1) : decoded;
+          tryFocus(noLeading);
+        }
+      }
+    } catch (e) {
+      console.warn('No se pudo procesar focus_path:', e);
+    }
+
     window.cargarContenidoCarpeta = function (folderId, container) {
       console.log("cargarContenidoCarpeta llamado con:", folderId);
 
