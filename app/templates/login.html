@@ -384,6 +384,12 @@
           recuperarContrasenaModal.classList.add("hidden");
         });
 
+        recuperarContrasenaModal.addEventListener("click", function (event) {
+          if (event.target === recuperarContrasenaModal) {
+            recuperarContrasenaModal.classList.add("hidden");
+          }
+        });
+
         formRecuperarContrasena.addEventListener("submit", async function (e) {
           e.preventDefault();
           const email = document
@@ -416,7 +422,7 @@
             const resp = await fetch("/auth/check-email", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email })
+              body: JSON.stringify({ email }),
             });
             const data = await resp.json();
             if (!data.success || !data.exists) {
@@ -535,6 +541,12 @@
 
           btnCerrarModalVerificacion.addEventListener("click", function () {
             modalVerificacionElement.remove();
+          });
+
+          modalVerificacionElement.addEventListener("click", function (event) {
+            if (event.target === modalVerificacionElement) {
+              modalVerificacionElement.remove();
+            }
           });
           btnVerificarCodigo.addEventListener("click", function () {
             const codigoIngresado = codigoVerificacion.value.trim();
@@ -701,6 +713,19 @@
 
                   document.body.appendChild(confirmacionModal);
                   document.getElementById("modalNuevaContrasena").remove();
+
+                  const confirmacionModalElement =
+                    document.getElementById("confirmacionModal");
+                  if (confirmacionModalElement) {
+                    confirmacionModalElement.addEventListener(
+                      "click",
+                      function (event) {
+                        if (event.target === confirmacionModalElement) {
+                          confirmacionModal.remove();
+                        }
+                      }
+                    );
+                  }
 
                   const botonCerrar =
                     document.getElementById("cerrarConfirmacion");
