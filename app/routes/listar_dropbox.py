@@ -804,10 +804,10 @@ def carpetas_dropbox():
         estructuras_usuarios = {}
         estructuras_usuarios_tree = {}
 
-        # Verificar configuración de Dropbox
-        api_key = get_valid_dropbox_token()
-        if not api_key:
-            # Render con error de configuración (plantilla maneja config_error)
+        # Verificar configuración de Dropbox (cliente con refresh automático)
+        from app.dropbox_utils import get_dbx
+        dbx = get_dbx()
+        if dbx is None:
             return render_template(
                 "carpetas_dropbox.html",
                 estructuras_usuarios={},
@@ -818,7 +818,6 @@ def carpetas_dropbox():
                 folders_por_ruta={},
                 config_error=True,
             )
-        dbx = dropbox.Dropbox(api_key)
 
         # Determina qué usuarios cargar según rol (y opcionalmente por user_id)
         if requested_user_id:

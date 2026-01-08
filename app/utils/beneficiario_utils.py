@@ -357,12 +357,11 @@ def verify_folder_exists(folder_path):
         bool: True si existe, False si no
     """
     try:
-        api_key = get_valid_dropbox_token()
-        if not api_key:
-            logger.error("DROPBOX_API_KEY no configurada")
+        from app.dropbox_utils import get_dbx
+        dbx = get_dbx()
+        if dbx is None:
+            logger.error("Cliente de Dropbox no disponible (token inválido o no configurado)")
             return False
-        
-        dbx = dropbox.Dropbox(api_key)
         metadata = dbx.files_get_metadata(folder_path)
         return True
     except dropbox.exceptions.ApiError as e:

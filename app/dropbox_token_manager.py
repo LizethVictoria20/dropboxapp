@@ -270,16 +270,20 @@ class DropboxTokenManager:
             if not validation["valid"]:
                 status["errors"].append(f"Refresh token: {validation['error']}")
         
-        # Validar access token haciendo una prueba rápida
-        if self.access_token:
-            try:
+        # Validar access token usando el flujo normal (incluye refresh on-demand)
+        try:
+            token = self.get_valid_access_token()
+            if token:
                 import dropbox
-                dbx = dropbox.Dropbox(self.access_token)
+                dbx = dropbox.Dropbox(token)
                 dbx.users_get_current_account()
                 status["access_token_valid"] = True
-            except Exception as e:
+            else:
                 status["access_token_valid"] = False
-                status["errors"].append(f"Access token: {str(e)}")
+                status["errors"].append("Access token: No hay token de acceso disponible")
+        except Exception as e:
+            status["access_token_valid"] = False
+            status["errors"].append(f"Access token: {str(e)}")
         
         return status
 
@@ -315,18 +319,36 @@ class DropboxTokenManager:
             logger.warning("Error validando refresh token, usando access token actual")
             return self.access_token
         
-        # Verificar si necesitamos renovar (cada 50 minutos para estar seguros)
-        if (self.last_refresh is None or 
-            datetime.now() - self.last_refresh > timedelta(minutes=50)):
-            
+        def _is_access_token_valid(token: str) -> bool:
+            try:
+                import dropbox
+                dropbox.Dropbox(token).users_get_current_account()
+                return True
+            except Exception:
+                return False
+
+        # Si no tenemos certeza de frescura, refrescar (cada ~50 min por seguridad)
+        needs_refresh = (
+            self.last_refresh is None or
+            datetime.now() - self.last_refresh > timedelta(minutes=50)
+        )
+
+        # Si no "toca" refrescar por tiempo, igual validamos el token.
+        # Esto cubre el caso típico en local: access token viejo en .env pero refresh token válido.
+        if not needs_refresh and self.access_token:
+            if _is_access_token_valid(self.access_token):
+                return self.access_token
+            logger.warning("Access token inválido detectado; forzando refresh...")
+            needs_refresh = True
+
+        if needs_refresh:
             logger.info("Renovando token de acceso...")
             if self.refresh_access_token():
                 logger.info("Token renovado exitosamente")
                 return self.access_token
-            else:
-                logger.error("No se pudo renovar el token")
-                return None  # No devolver token potencialmente expirado
-        
+            logger.error("No se pudo renovar el token")
+            return None
+
         return self.access_token
     
     def _start_auto_refresh_thread(self):

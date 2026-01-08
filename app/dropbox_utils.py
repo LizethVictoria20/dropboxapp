@@ -167,17 +167,36 @@ def get_dropbox_client():
     - Si no hay token válido, retorna None y loguea la causa.
     """
     try:
+        manager = get_token_manager()
         token = get_valid_dropbox_token()
+
+        # Si no hay access token pero sí refresh token, intentar refrescar on-demand
+        if not token and manager and getattr(manager, 'refresh_token', None):
+            logger.info("No hay access token; intentando renovar via refresh token...")
+            if manager.refresh_access_token():
+                token = manager.access_token
+
         if not token:
             logger.error("No hay token de Dropbox válido disponible (refresh revocado o access token ausente)")
             return None
 
-        client = dropbox.Dropbox(token)
-        try:
+        def _build_and_verify(access_token: str):
+            client = dropbox.Dropbox(access_token)
             client.users_get_current_account()
             return client
+
+        try:
+            return _build_and_verify(token)
         except dropbox.exceptions.AuthError as e:
-            logger.error(f"Token de Dropbox inválido o expirado: {e}")
+            # Si el token expiró/revocó, intentar una renovación inmediata y reintentar 1 vez.
+            logger.warning(f"Token de Dropbox inválido o expirado, intentando refresh: {e}")
+            if manager and getattr(manager, 'refresh_token', None):
+                if manager.refresh_access_token() and manager.access_token:
+                    try:
+                        return _build_and_verify(manager.access_token)
+                    except Exception as e2:
+                        logger.error(f"No se pudo verificar la cuenta de Dropbox tras refresh: {e2}")
+                        return None
             return None
         except Exception as e:
             logger.error(f"No se pudo verificar la cuenta de Dropbox: {e}")

@@ -4,7 +4,21 @@ Script de gestión para la aplicación Flask
 """
 import os
 import sys
+from pathlib import Path
+from dotenv import load_dotenv
 from app import create_app
+
+# Cargar variables desde .env (ruta absoluta) para modo local/CLI
+BASE_DIR = Path(__file__).resolve().parent
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    # Fallback: buscar .env en el cwd
+    try:
+        load_dotenv()
+    except Exception:
+        pass
 
 def main():
     """Función principal para ejecutar la aplicación"""

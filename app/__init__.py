@@ -106,7 +106,16 @@ def create_app(config_name=None):
     # Inicializar el gestor de tokens de Dropbox una vez cargada la config
     try:
         from app.dropbox_token_manager import get_token_manager
-        _ = get_token_manager()
+        manager = get_token_manager()
+
+        # Si hay refresh token, intentar refrescar/validar el access token al arranque.
+        # Esto evita errores en local cuando el .env tiene un access token viejo.
+        try:
+            if getattr(manager, 'refresh_token', None):
+                _ = manager.get_valid_access_token()
+        except Exception as _e:
+            # No bloquear el arranque por un fallo de Dropbox.
+            logger.warning(f"⚠️ No se pudo validar/refrescar el token de Dropbox al arrancar: {_e}")
     except Exception as e:
         print(f"Advertencia: No se pudo inicializar el gestor de tokens de Dropbox: {e}")
     
