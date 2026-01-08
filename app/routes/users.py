@@ -398,6 +398,16 @@ def get_user(user_id):
     try:
         user = User.query.get(user_id)
         if user:
+            from datetime import timedelta
+
+            def _fmt_colombia(dt, fmt: str):
+                if not dt:
+                    return None
+                try:
+                    return (dt + timedelta(hours=-5)).strftime(fmt)
+                except Exception:
+                    return str(dt)
+
             user_data = {
                 'id': user.id,
                 'email': user.email,
@@ -415,7 +425,7 @@ def get_user(user_id):
                 'fecha_nacimiento': user.fecha_nacimiento.strftime('%Y-%m-%d') if user.fecha_nacimiento else None,
                 'rol': user.rol,
                 'activo': user.activo,
-                'fecha_registro': user.fecha_registro.strftime('%d/%m/%Y') if user.fecha_registro else None,
+                'fecha_registro': _fmt_colombia(user.fecha_registro, '%d/%m/%Y %H:%M'),
                 'lector_extra_permissions': user.lector_extra_permissions,
                 'alien_number': user.alien_number
             }
@@ -572,6 +582,16 @@ def update_user():
 def get_user_history(user_id):
     """Obtener historial de actividades de un usuario específico desde la base de datos"""
     try:
+        from datetime import timedelta
+
+        def _fmt_colombia(dt, fmt: str) -> str:
+            if not dt:
+                return "N/A"
+            try:
+                return (dt + timedelta(hours=-5)).strftime(fmt)
+            except Exception:
+                return str(dt)
+
         # Obtener usuario
         user = User.query.get(user_id)
         if not user:
@@ -696,7 +716,7 @@ def get_user_history(user_id):
             fecha_str = "N/A"
             if activity.fecha:
                 try:
-                    fecha_str = activity.fecha.strftime("%d/%m/%Y %H:%M")
+                    fecha_str = _fmt_colombia(activity.fecha, "%d/%m/%Y %H:%M")
                 except:
                     fecha_str = str(activity.fecha)
             
@@ -714,7 +734,7 @@ def get_user_history(user_id):
             fecha_registro = "N/A"
             if user.fecha_registro:
                 try:
-                    fecha_registro = user.fecha_registro.strftime("%d/%m/%Y %H:%M")
+                    fecha_registro = _fmt_colombia(user.fecha_registro, "%d/%m/%Y %H:%M")
                 except:
                     fecha_registro = str(user.fecha_registro)
             
@@ -728,7 +748,7 @@ def get_user_history(user_id):
             if user.ultimo_acceso:
                 fecha_ultimo = "N/A"
                 try:
-                    fecha_ultimo = user.ultimo_acceso.strftime("%d/%m/%Y %H:%M")
+                    fecha_ultimo = _fmt_colombia(user.ultimo_acceso, "%d/%m/%Y %H:%M")
                 except:
                     fecha_ultimo = str(user.ultimo_acceso)
                 
@@ -752,7 +772,7 @@ def get_user_history(user_id):
                         fecha_registro = "N/A"
                         if user.fecha_registro:
                             try:
-                                fecha_registro = user.fecha_registro.strftime("%d/%m/%Y %H:%M")
+                                fecha_registro = _fmt_colombia(user.fecha_registro, "%d/%m/%Y %H:%M")
                             except:
                                 fecha_registro = str(user.fecha_registro)
                         

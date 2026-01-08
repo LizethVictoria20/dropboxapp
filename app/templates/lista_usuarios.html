@@ -110,6 +110,7 @@ block content %}
             <th class="py-3 px-6 text-left">NOMBRE</th>
             <th class="py-3 px-2 text-left">EMAIL</th>
             <th class="py-3 px-2 text-left">CARPETAS</th>
+            <th class="py-3 px-2 text-left">REGISTRO</th>
             <th class="py-3 px-2 text-right">ACCIONES</th>
           </tr>
         </thead>
@@ -148,6 +149,10 @@ block content %}
                 >Sin carpetas</span
               >
               {% endif %}
+            </td>
+            <td class="px-2 text-xs text-gray-600 whitespace-nowrap">
+              {{ (u.fecha_registro|format_colombia_time).strftime('%d/%m/%Y
+              %H:%M') if u.fecha_registro else 'N/A' }}
             </td>
             <td
               class="px-2 text-right"
@@ -304,12 +309,13 @@ block content %}
                     {% endif %}
                   </p>
                   <p>
-                    <strong>Creación:</strong>
+                    <strong>Registro:</strong>
                     <span
                       class="inline-block text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
                     >
-                      {{ u.fecha_creacion.strftime('%Y-%m-%d') if
-                      u.fecha_creacion else '' }}
+                      {{
+                      (u.fecha_registro|format_colombia_time).strftime('%d/%m/%Y
+                      %H:%M') if u.fecha_registro else 'N/A' }}
                     </span>
                   </p>
                 </div>

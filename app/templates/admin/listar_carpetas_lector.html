@@ -151,8 +151,9 @@
                     class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
                   >
                     <i class="fas fa-calendar mr-1"></i>
-                    Registro: {{ usuario.fecha_registro.strftime('%d/%m/%Y') if
-                    usuario.fecha_registro else 'N/A' }}
+                    Registro: {{
+                    (usuario.fecha_registro|format_colombia_time).strftime('%d/%m/%Y')
+                    if usuario.fecha_registro else 'N/A' }}
                   </span>
                 </div>
               </div>

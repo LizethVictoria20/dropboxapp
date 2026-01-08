@@ -236,7 +236,9 @@ Inmigración OK{% endblock %} {% block styles %}
                   </div>
                   <div class="ml-2 min-w-0">
                     <div class="text-sm font-medium text-gray-900 truncate">
-                      {{ (usuario.nombre or '') ~ (' ' if usuario.apellido else '') ~ (usuario.apellido or '') or usuario.nombre_completo or usuario.email }}
+                      {{ (usuario.nombre or '') ~ (' ' if usuario.apellido else
+                      '') ~ (usuario.apellido or '') or usuario.nombre_completo
+                      or usuario.email }}
                     </div>
                     <div class="text-xs text-gray-500">
                       ID: {{ usuario.id }}
@@ -245,7 +247,9 @@ Inmigración OK{% endblock %} {% block styles %}
                 </div>
               </td>
               <td class="px-3 py-3">
-                <div class="text-sm text-gray-900 truncate max-w-xs">{{ usuario.email }}</div>
+                <div class="text-sm text-gray-900 truncate max-w-xs">
+                  {{ usuario.email }}
+                </div>
               </td>
               <td class="px-3 py-3">
                 <span
@@ -281,15 +285,19 @@ Inmigración OK{% endblock %} {% block styles %}
                 {% endif %}
               </td>
               <td class="px-3 py-3 text-sm text-gray-500 whitespace-nowrap">
-                {{ usuario.fecha_registro.strftime('%d/%m/%Y') if
-                usuario.fecha_registro else 'N/A' }}
+                {{
+                (usuario.fecha_registro|format_colombia_time).strftime('%d/%m/%Y
+                %H:%M') if usuario.fecha_registro else 'N/A' }}
               </td>
-              <td class="px-3 py-3 text-sm font-medium" x-data="{ 
+              <td
+                class="px-3 py-3 text-sm font-medium"
+                x-data="{ 
                 get isOpen() { return $store.userMenu.openMenuId === 'user-menu-{{ usuario.id }}' },
                 toggle() { 
                   $store.userMenu.openMenuId = ($store.userMenu.openMenuId === 'user-menu-{{ usuario.id }}' ? null : 'user-menu-{{ usuario.id }}')
                 }
-              }">
+              }"
+              >
                 <button
                   @click="toggle()"
                   class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary rounded-full p-1"
@@ -300,9 +308,11 @@ Inmigración OK{% endblock %} {% block styles %}
                 </button>
               </td>
             </tr>
-            
+
             <!-- Menú desplegable - Renderizado fuera del flujo -->
-            <template x-if="$store.userMenu.openMenuId === 'user-menu-{{ usuario.id }}'">
+            <template
+              x-if="$store.userMenu.openMenuId === 'user-menu-{{ usuario.id }}'"
+            >
               <div
                 x-data="{ menuId: 'user-menu-{{ usuario.id }}' }"
                 x-init="
@@ -510,29 +520,31 @@ Inmigración OK{% endblock %} {% block styles %}
 
     <script>
       (function () {
-        const input = document.getElementById('search');
-        const tbody = document.getElementById('users-table-body');
+        const input = document.getElementById("search");
+        const tbody = document.getElementById("users-table-body");
         let debounceTimer = null;
 
         function buildUrl(query) {
           const url = new URL(window.location.href);
-          url.searchParams.set('q', query || '');
-          url.searchParams.set('page', '1');
+          url.searchParams.set("q", query || "");
+          url.searchParams.set("page", "1");
           return url.toString();
         }
 
         async function fetchUsers(query) {
           try {
             const url = buildUrl(query);
-            const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const res = await fetch(url, {
+              headers: { "X-Requested-With": "XMLHttpRequest" },
+            });
             const html = await res.text();
             tbody.innerHTML = html;
           } catch (e) {
-            console.error('Error buscando usuarios:', e);
+            console.error("Error buscando usuarios:", e);
           }
         }
 
-        input.addEventListener('input', function (e) {
+        input.addEventListener("input", function (e) {
           const q = e.target.value.trim();
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => fetchUsers(q), 300);
@@ -970,7 +982,9 @@ Inmigración OK{% endblock %} {% block styles %}
           <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
           Confirmar Eliminación
         </h3>
-        <p class="text-sm text-gray-500 mt-1">Esta acción no se puede deshacer</p>
+        <p class="text-sm text-gray-500 mt-1">
+          Esta acción no se puede deshacer
+        </p>
       </div>
       <button
         onclick="closeDeleteModal()"
@@ -983,7 +997,7 @@ Inmigración OK{% endblock %} {% block styles %}
     <div class="p-6">
       <div class="mb-4">
         <p class="text-gray-700">
-          ¿Estás seguro de que quieres eliminar al usuario 
+          ¿Estás seguro de que quieres eliminar al usuario
           <span id="deleteUserName" class="font-semibold text-red-600"></span>?
         </p>
         <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -992,7 +1006,8 @@ Inmigración OK{% endblock %} {% block styles %}
             <div>
               <p class="text-sm text-red-700 font-medium">Advertencia</p>
               <p class="text-xs text-red-600 mt-1">
-                Se eliminarán también todos los archivos, carpetas y beneficiarios asociados a este usuario.
+                Se eliminarán también todos los archivos, carpetas y
+                beneficiarios asociados a este usuario.
               </p>
             </div>
           </div>
@@ -1030,7 +1045,9 @@ Inmigración OK{% endblock %} {% block styles %}
           <i class="fas fa-check-circle text-green-500 mr-2"></i>
           Usuario Eliminado
         </h3>
-        <p class="text-sm text-gray-500 mt-1">Operación completada exitosamente</p>
+        <p class="text-sm text-gray-500 mt-1">
+          Operación completada exitosamente
+        </p>
       </div>
       <button
         onclick="closeSuccessModal()"
@@ -1154,7 +1171,7 @@ Inmigración OK{% endblock %} {% block styles %}
                 >
                   Información Básica
                 </button>
-                
+
                 <button
                   type="button"
                   class="whitespace-nowrap tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent font-medium border-b-2 py-3 px-1"
@@ -1226,7 +1243,10 @@ Inmigración OK{% endblock %} {% block styles %}
 
                   <!-- Área -->
                   <div class="space-y-2">
-                    <label for="edit-area" class="block text-sm font-medium text-text">
+                    <label
+                      for="edit-area"
+                      class="block text-sm font-medium text-text"
+                    >
                       Área
                     </label>
                     <input
@@ -1240,7 +1260,10 @@ Inmigración OK{% endblock %} {% block styles %}
 
                   <!-- Cargo -->
                   <div class="space-y-2">
-                    <label for="edit-cargo" class="block text-sm font-medium text-text">
+                    <label
+                      for="edit-cargo"
+                      class="block text-sm font-medium text-text"
+                    >
                       Cargo
                     </label>
                     <input
@@ -1266,14 +1289,14 @@ Inmigración OK{% endblock %} {% block styles %}
                     >
                       <option value="">Seleccionar nacionalidad</option>
                       {% for code, nationality in nationalities %}
-                      <option value="{{ nationality }}">{{ nationality }}</option>
+                      <option value="{{ nationality }}">
+                        {{ nationality }}
+                      </option>
                       {% endfor %}
                     </select>
                   </div>
                 </div>
               </div>
-
-              
 
               <!-- Tab 3: Cambiar Contraseña -->
               <div id="contrasena-tab" class="tab-pane hidden">
@@ -1976,7 +1999,7 @@ Inmigración OK{% endblock %} {% block styles %}
           if (editCargo) editCargo.value = user.cargo || "";
           const fNationality = document.getElementById("edit-nationality");
           if (fNationality) fNationality.value = user.nacionality || "";
-          
+
           // Seleccionar el radio button correspondiente al rol
           const roleRadio = document.querySelector(
             `input[name="rol"][value="${user.rol}"]`
@@ -2032,9 +2055,12 @@ Inmigración OK{% endblock %} {% block styles %}
                 'input[name="puede_agregar_beneficiarios"]'
               ).checked = permisos.includes("agregar_beneficiarios");
 
-              const editarClienteInput = document.querySelector('input[name="puede_editar_cliente"]');
+              const editarClienteInput = document.querySelector(
+                'input[name="puede_editar_cliente"]'
+              );
               if (editarClienteInput) {
-                editarClienteInput.checked = permisos.includes("editar_cliente");
+                editarClienteInput.checked =
+                  permisos.includes("editar_cliente");
               }
 
               // Mostrar la sección de permisos
@@ -2270,12 +2296,16 @@ Inmigración OK{% endblock %} {% block styles %}
 
       // Validación de contraseñas
       const newPassword = document.getElementById("edit-password").value;
-      const confirmPassword = document.getElementById("edit-password-confirm").value;
+      const confirmPassword = document.getElementById(
+        "edit-password-confirm"
+      ).value;
 
       // Si se proporcionó alguna contraseña, validar ambas
       if (newPassword || confirmPassword) {
         if (!newPassword || !confirmPassword) {
-          alert("Debe completar ambos campos de contraseña o dejar ambos vacíos");
+          alert(
+            "Debe completar ambos campos de contraseña o dejar ambos vacíos"
+          );
           return;
         }
 
@@ -2414,9 +2444,9 @@ Inmigración OK{% endblock %} {% block styles %}
   // Función para manejar el menú de usuarios (siguiendo el patrón de toggleFolderMenu)
   window.toggleUserMenu = function (menuId, event) {
     try {
-      if (event && typeof event.stopPropagation === 'function') {
+      if (event && typeof event.stopPropagation === "function") {
         event.stopPropagation();
-        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.preventDefault === "function") event.preventDefault();
       }
 
       const menu = document.getElementById(menuId);
@@ -2426,45 +2456,62 @@ Inmigración OK{% endblock %} {% block styles %}
       }
 
       // Botón disparador: funcionar tanto con onclick inline como con delegación
-      const fromButton = (event && (event.target || event.currentTarget)) ? (event.target || event.currentTarget).closest('button') : null;
-      const triggerButton = fromButton || document.querySelector(`button.user-menu-trigger[data-menu-id="${menuId}"]`);
+      const fromButton =
+        event && (event.target || event.currentTarget)
+          ? (event.target || event.currentTarget).closest("button")
+          : null;
+      const triggerButton =
+        fromButton ||
+        document.querySelector(
+          `button.user-menu-trigger[data-menu-id="${menuId}"]`
+        );
       if (!triggerButton) {
-        console.warn('⚠️ Botón disparador no encontrado para', menuId);
+        console.warn("⚠️ Botón disparador no encontrado para", menuId);
       }
 
       // Ocultar todos los menús primero
-      document.querySelectorAll('[id^="user-menu-"]').forEach((m) => m.classList.add('hidden'));
+      document
+        .querySelectorAll('[id^="user-menu-"]')
+        .forEach((m) => m.classList.add("hidden"));
 
-      if (menu.classList.contains('hidden')) {
+      if (menu.classList.contains("hidden")) {
         // Posicionar el menú cerca del botón si existe; de lo contrario, usar posición por defecto
         let left = 0;
         let top = 0;
         const menuWidth = 192; // w-48 = 12rem = 192px
         const menuHeight = menu.offsetHeight || 0;
 
-        if (triggerButton && typeof triggerButton.getBoundingClientRect === 'function') {
+        if (
+          triggerButton &&
+          typeof triggerButton.getBoundingClientRect === "function"
+        ) {
           const rect = triggerButton.getBoundingClientRect();
           left = Math.max(0, rect.right - menuWidth);
           top = rect.bottom + 5;
-          if (top + menuHeight > window.innerHeight) top = rect.top - menuHeight - 5;
+          if (top + menuHeight > window.innerHeight)
+            top = rect.top - menuHeight - 5;
         } else {
           // Fallback: posicionar cerca del cursor si es posible
-          if (event && typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+          if (
+            event &&
+            typeof event.clientX === "number" &&
+            typeof event.clientY === "number"
+          ) {
             left = Math.max(0, event.clientX - Math.round(menuWidth / 2));
             top = event.clientY + 8;
           }
         }
 
-        menu.style.position = 'fixed';
-        menu.style.left = left + 'px';
-        menu.style.top = top + 'px';
-        menu.style.zIndex = '99999';
-        menu.classList.remove('hidden');
+        menu.style.position = "fixed";
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+        menu.style.zIndex = "99999";
+        menu.classList.remove("hidden");
       } else {
-        menu.classList.add('hidden');
+        menu.classList.add("hidden");
       }
     } catch (err) {
-      console.error('Error al togglear menú:', err);
+      console.error("Error al togglear menú:", err);
     }
   };
 
@@ -2479,117 +2526,126 @@ Inmigración OK{% endblock %} {% block styles %}
   // Función para abrir modal de confirmación de eliminación
   window.confirmDeleteUser = function (userId, userName) {
     // Configurar el modal
-    document.getElementById('deleteUserName').textContent = userName;
-    
+    document.getElementById("deleteUserName").textContent = userName;
+
     // Configurar el botón de confirmación
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-    confirmBtn.onclick = function() {
+    const confirmBtn = document.getElementById("confirmDeleteBtn");
+    confirmBtn.onclick = function () {
       deleteUserConfirmed(userId, userName, this);
     };
-    
+
     // Mostrar el modal
-    document.getElementById('deleteUserModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    document.getElementById("deleteUserModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
   };
 
   // Función para cerrar modal de eliminación
   window.closeDeleteModal = function () {
-    document.getElementById('deleteUserModal').classList.add('hidden');
-    document.body.style.overflow = 'auto';
+    document.getElementById("deleteUserModal").classList.add("hidden");
+    document.body.style.overflow = "auto";
   };
 
   // Función para eliminar usuario confirmado
   window.deleteUserConfirmed = function (userId, userName, button) {
     // Mostrar indicador de carga
     const originalText = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Eliminando...';
+    button.innerHTML =
+      '<i class="fas fa-spinner fa-spin mr-2"></i>Eliminando...';
     button.disabled = true;
-    
+
     // Hacer petición AJAX para eliminar el usuario
     fetch(`/users/delete_user/${userId}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      }
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
     })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Cerrar modal de confirmación
-        closeDeleteModal();
-        // Mostrar modal de éxito
-        showSuccessModal(data.message);
-      } else {
-        // Mostrar error
-        alert(`Error: ${data.error}`);
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          // Cerrar modal de confirmación
+          closeDeleteModal();
+          // Mostrar modal de éxito
+          showSuccessModal(data.message);
+        } else {
+          // Mostrar error
+          alert(`Error: ${data.error}`);
+          // Restaurar botón
+          button.innerHTML = originalText;
+          button.disabled = false;
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("Error al eliminar el usuario. Por favor, intenta de nuevo.");
         // Restaurar botón
         button.innerHTML = originalText;
         button.disabled = false;
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Error al eliminar el usuario. Por favor, intenta de nuevo.');
-      // Restaurar botón
-      button.innerHTML = originalText;
-      button.disabled = false;
-    });
+      });
   };
 
   // Función para mostrar modal de éxito
   window.showSuccessModal = function (message) {
     // Configurar el mensaje principal
-    document.getElementById('successMessage').textContent = message;
-    
+    document.getElementById("successMessage").textContent = message;
+
     // Extraer información sobre elementos eliminados del mensaje
     const deletedItems = [];
-    
+
     // Buscar información sobre archivos eliminados
     const filesMatch = message.match(/(\d+) archivo\(s\)/);
     if (filesMatch) {
-      document.getElementById('deletedFiles').textContent = `${filesMatch[1]} archivo(s)`;
-      document.getElementById('deletedFiles').classList.remove('hidden');
-      deletedItems.push('files');
+      document.getElementById(
+        "deletedFiles"
+      ).textContent = `${filesMatch[1]} archivo(s)`;
+      document.getElementById("deletedFiles").classList.remove("hidden");
+      deletedItems.push("files");
     }
-    
+
     // Buscar información sobre carpetas eliminadas
     const foldersMatch = message.match(/(\d+) carpeta\(s\)/);
     if (foldersMatch) {
-      document.getElementById('deletedFolders').textContent = `${foldersMatch[1]} carpeta(s)`;
-      document.getElementById('deletedFolders').classList.remove('hidden');
-      deletedItems.push('folders');
+      document.getElementById(
+        "deletedFolders"
+      ).textContent = `${foldersMatch[1]} carpeta(s)`;
+      document.getElementById("deletedFolders").classList.remove("hidden");
+      deletedItems.push("folders");
     }
-    
+
     // Buscar información sobre beneficiarios eliminados
     const beneficiariesMatch = message.match(/(\d+) beneficiario\(s\)/);
     if (beneficiariesMatch) {
-      document.getElementById('deletedBeneficiaries').textContent = `${beneficiariesMatch[1]} beneficiario(s)`;
-      document.getElementById('deletedBeneficiaries').classList.remove('hidden');
-      deletedItems.push('beneficiaries');
+      document.getElementById(
+        "deletedBeneficiaries"
+      ).textContent = `${beneficiariesMatch[1]} beneficiario(s)`;
+      document
+        .getElementById("deletedBeneficiaries")
+        .classList.remove("hidden");
+      deletedItems.push("beneficiaries");
     }
-    
+
     // Mostrar sección de elementos eliminados si hay alguno
     if (deletedItems.length > 0) {
-      document.getElementById('deletedItems').classList.remove('hidden');
+      document.getElementById("deletedItems").classList.remove("hidden");
     }
-    
+
     // Mostrar el modal
-    document.getElementById('successDeleteModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    document.getElementById("successDeleteModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
   };
 
   // Función para cerrar modal de éxito
   window.closeSuccessModal = function () {
-    document.getElementById('successDeleteModal').classList.add('hidden');
-    document.body.style.overflow = 'auto';
-    
+    document.getElementById("successDeleteModal").classList.add("hidden");
+    document.body.style.overflow = "auto";
+
     // Limpiar elementos eliminados para la próxima vez
-    document.getElementById('deletedFiles').classList.add('hidden');
-    document.getElementById('deletedFolders').classList.add('hidden');
-    document.getElementById('deletedBeneficiaries').classList.add('hidden');
-    document.getElementById('deletedItems').classList.add('hidden');
-    
+    document.getElementById("deletedFiles").classList.add("hidden");
+    document.getElementById("deletedFolders").classList.add("hidden");
+    document.getElementById("deletedBeneficiaries").classList.add("hidden");
+    document.getElementById("deletedItems").classList.add("hidden");
+
     // Recargar la página para actualizar la lista
     window.location.reload();
   };
@@ -2653,21 +2709,23 @@ Inmigración OK{% endblock %} {% block styles %}
     );
 
     // Funcionalidad para mostrar/ocultar contraseñas
-    const passwordToggles = document.querySelectorAll('.password-toggle');
-    
-    passwordToggles.forEach(toggle => {
-      toggle.addEventListener('click', function() {
-        const input = this.parentElement.querySelector('input[type="password"], input[type="text"]');
-        const icon = this.querySelector('svg');
-        
-        if (input.type === 'password') {
-          input.type = 'text';
+    const passwordToggles = document.querySelectorAll(".password-toggle");
+
+    passwordToggles.forEach((toggle) => {
+      toggle.addEventListener("click", function () {
+        const input = this.parentElement.querySelector(
+          'input[type="password"], input[type="text"]'
+        );
+        const icon = this.querySelector("svg");
+
+        if (input.type === "password") {
+          input.type = "text";
           // Cambiar icono a ojo cerrado
           icon.innerHTML = `
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
           `;
         } else {
-          input.type = 'password';
+          input.type = "password";
           // Cambiar icono a ojo abierto
           icon.innerHTML = `
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

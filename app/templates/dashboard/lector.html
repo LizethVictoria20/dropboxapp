@@ -149,8 +149,9 @@ block content %}
         class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800"
       >
         <i class="fas fa-calendar mr-2"></i>
-        Registro: {{ current_user.fecha_registro.strftime('%d/%m/%Y') if
-        current_user.fecha_registro }}
+        Registro: {{
+        (current_user.fecha_registro|format_colombia_time).strftime('%d/%m/%Y')
+        if current_user.fecha_registro }}
       </span>
     </div>
   </div>

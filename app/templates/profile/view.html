@@ -73,7 +73,7 @@
                       d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                     />
                   </svg>
-                  Miembro desde {{ user.fecha_registro.strftime('%d %B, %Y') if
+                  Miembro desde {{ (user.fecha_registro|format_colombia_time).strftime('%d %B, %Y') if
                   user.fecha_registro else '' }}
                 </span>
               </div>
@@ -200,7 +200,7 @@
                         </div>
                         <div class="w-2/3">
                           <p class="text-base text-text">
-                            {{ user.fecha_registro.strftime('%d/%m/%Y') if
+                            {{ (user.fecha_registro|format_colombia_time).strftime('%d/%m/%Y') if
                             user.fecha_registro }}
                           </p>
                         </div>

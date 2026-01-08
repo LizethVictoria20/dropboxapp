@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import current_user
 from werkzeug.security import generate_password_hash
+from datetime import datetime
 from app import db
 from app.models import User
 from app.dropbox_utils import create_dropbox_folder
@@ -32,7 +33,13 @@ def register():
                 flash('Este correo electrónico ya está registrado. Por favor, inicia sesión si ya tienes una cuenta.', 'error')
             else:
                 try:
-                    user = User(email=email, password_hash=generate_password_hash(password), rol='cliente', activo=True)
+                    user = User(
+                        email=email,
+                        password_hash=generate_password_hash(password),
+                        rol='cliente',
+                        activo=True,
+                        fecha_registro=datetime.utcnow(),
+                    )
                     db.session.add(user)
                     db.session.commit()
                     # Crea carpeta en Dropbox

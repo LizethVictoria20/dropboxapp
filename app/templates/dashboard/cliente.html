@@ -61,8 +61,8 @@ current_user.nombre_completo }}{% endblock %} {% block extra_head %}
         <div class="text-right">
           <p class="text-sm text-gray-500">Miembro desde</p>
           <p class="font-semibold text-gray-900">
-            {{ current_user.fecha_registro.strftime('%B %Y') if
-            current_user.fecha_registro else 'N/A' }}
+            {{ (current_user.fecha_registro|format_colombia_time).strftime('%B
+            %Y') if current_user.fecha_registro else 'N/A' }}
           </p>
         </div>
       </div>
