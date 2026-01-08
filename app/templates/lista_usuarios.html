@@ -151,8 +151,8 @@ block content %}
               {% endif %}
             </td>
             <td class="px-2 text-xs text-gray-600 whitespace-nowrap">
-              {{ (u.fecha_registro|format_colombia_time).strftime('%d/%m/%Y
-              %H:%M') if u.fecha_registro else 'N/A' }}
+              {{ (u.fecha_registro|format_colombia_time).strftime('%d/%m/%Y') if
+              u.fecha_registro else 'N/A' }}
             </td>
             <td
               class="px-2 text-right"
@@ -314,8 +314,8 @@ block content %}
                       class="inline-block text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
                     >
                       {{
-                      (u.fecha_registro|format_colombia_time).strftime('%d/%m/%Y
-                      %H:%M') if u.fecha_registro else 'N/A' }}
+                      (u.fecha_registro|format_colombia_time).strftime('%d/%m/%Y')
+                      if u.fecha_registro else 'N/A' }}
                     </span>
                   </p>
                 </div>
