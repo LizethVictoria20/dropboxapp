@@ -32,7 +32,18 @@ class Config:
     # Carpeta base global para contener TODAS las operaciones en Dropbox
     DROPBOX_BASE_FOLDER = os.environ.get('DROPBOX_BASE_FOLDER')
     # (Opcional) Enlace compartido si se quiere resolver namespace desde un link
-    DROPBOX_BASE_SHARED_LINK = os.environ.get('DROPBOX_BASE_SHARED_LINK')
+    # Nota: Si se configura, la app resolverá el path real del folder a partir del shared link
+    # y TODAS las operaciones (crear/listar/subir/mover/descargar) quedarán contenidas allí.
+    # Requiere que el token configurado tenga acceso a esa carpeta (idealmente es tu Dropbox).
+    DROPBOX_BASE_SHARED_LINK = os.environ.get('DROPBOX_BASE_SHARED_LINK') or (
+        'https://www.dropbox.com/scl/fo/uavufxsleb5hgjod1uxrk/ABEx7zkb6khobUdZUQckNos?rlkey=gwei9du9k20r1spppgycdk03n&st=69d8xpav&dl=0'
+    )
+    # (Opcional) Contraseña del enlace compartido, si el link está protegido
+    DROPBOX_BASE_SHARED_LINK_PASSWORD = os.environ.get('DROPBOX_BASE_SHARED_LINK_PASSWORD')
+
+    # Subcarpeta del proyecto dentro de la carpeta base.
+    # Si está vacía, NO se agrega ninguna subcarpeta adicional.
+    DROPBOX_PROJECT_SUBFOLDER = os.environ.get('DROPBOX_PROJECT_SUBFOLDER') or ''
     
     # Configuración de logging
     LOG_LEVEL = 'INFO'

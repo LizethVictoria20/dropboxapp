@@ -79,6 +79,16 @@ def get_dropbox_base_folder():
     if _cached_base_folder is not None:
         return _cached_base_folder
 
+    def _join_under_base(base: str, segment: str | None) -> str:
+        seg = (segment or '').strip()
+        if not seg:
+            return _normalize_dropbox_path(base)
+        # Evitar que alguien pase un path completo; aquí solo queremos el nombre de carpeta
+        seg = seg.strip('/').strip('\\')
+        if not seg:
+            return _normalize_dropbox_path(base)
+        return _normalize_dropbox_path(f"{_normalize_dropbox_path(base)}/{sanitize_dropbox_segment(seg)}")
+
     def _clean_env_path(value: str | None) -> str | None:
         if value is None:
             return None
@@ -91,16 +101,12 @@ def get_dropbox_base_folder():
         return text or None
 
     try:
-        # 1) Revisar variable de entorno/config directa con el path deseado
-        base_folder = (
-            getattr(current_app, 'config', {}) and current_app.config.get('DROPBOX_BASE_FOLDER')
-        ) or os.environ.get('DROPBOX_BASE_FOLDER')
-        base_folder = _clean_env_path(base_folder)
-        if base_folder:
-            _cached_base_folder = _normalize_dropbox_path(base_folder)
-            return _cached_base_folder
+        # Subcarpeta del proyecto (opcional; si está vacía no se agrega nada)
+        project_subfolder = (
+            getattr(current_app, 'config', {}) and current_app.config.get('DROPBOX_PROJECT_SUBFOLDER')
+        ) or os.environ.get('DROPBOX_PROJECT_SUBFOLDER') or ''
 
-        # 2) Intentar resolver desde un enlace compartido si está configurado
+        # 1) Intentar resolver desde un enlace compartido si está configurado (tiene prioridad)
         shared_link = (
             getattr(current_app, 'config', {}) and current_app.config.get('DROPBOX_BASE_SHARED_LINK')
         ) or os.environ.get('DROPBOX_BASE_SHARED_LINK')
@@ -124,7 +130,7 @@ def get_dropbox_base_folder():
                 path_lower = getattr(meta, 'path_lower', None)
                 final_path = path_display or path_lower
                 if final_path:
-                    _cached_base_folder = _normalize_dropbox_path(final_path)
+                    _cached_base_folder = _join_under_base(_normalize_dropbox_path(final_path), project_subfolder)
                     return _cached_base_folder
                 # Si no hay path (p.ej. carpeta ajena sin montar), no podemos fijar path-root aquí
                 logger.warning("No se pudo resolver path desde el enlace compartido; usando raíz '/'")
@@ -132,8 +138,17 @@ def get_dropbox_base_folder():
                 logger.error(f"Error resolviendo carpeta base desde enlace compartido: {e}")
                 # Continuar con fallback a '/'
 
+        # 2) Revisar variable de entorno/config directa con el path deseado
+        base_folder = (
+            getattr(current_app, 'config', {}) and current_app.config.get('DROPBOX_BASE_FOLDER')
+        ) or os.environ.get('DROPBOX_BASE_FOLDER')
+        base_folder = _clean_env_path(base_folder)
+        if base_folder:
+            _cached_base_folder = _join_under_base(_normalize_dropbox_path(base_folder), project_subfolder)
+            return _cached_base_folder
+
         # 3) Fallback: raíz
-        _cached_base_folder = '/'
+        _cached_base_folder = _join_under_base('/', project_subfolder)
         return _cached_base_folder
     except Exception as e:
         logger.error(f"Error obteniendo carpeta base: {e}")
