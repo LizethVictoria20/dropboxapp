@@ -6,5 +6,6 @@ Flask-Mail
 psycopg2-binary
 dropbox
 python-dotenv
+email-validator
 gunicorn
 twilio

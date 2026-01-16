@@ -12,6 +12,11 @@ import re
 
 logger = logging.getLogger(__name__)
 
+# Cuando hay DROPBOX_BASE_SHARED_LINK pero Dropbox no entrega path_display/path_lower
+# (por ejemplo, carpeta no montada con "Agregar a Dropbox"), no es posible operar por rutas
+# con files_* dentro de esa carpeta. Marcamos un estado inválido para evitar fallbacks silenciosos.
+_UNRESOLVED_SHARED_LINK_SENTINEL = '::UNRESOLVED_SHARED_LINK::'
+
 # Cache simple en memoria para la carpeta base resuelta
 _cached_base_folder = None
 
@@ -132,8 +137,18 @@ def get_dropbox_base_folder():
                 if final_path:
                     _cached_base_folder = _join_under_base(_normalize_dropbox_path(final_path), project_subfolder)
                     return _cached_base_folder
-                # Si no hay path (p.ej. carpeta ajena sin montar), no podemos fijar path-root aquí
-                logger.warning("No se pudo resolver path desde el enlace compartido; usando raíz '/'")
+                # Si no hay path (p.ej. carpeta ajena sin montar), no podemos operar por path dentro de files_*.
+                shared_folder_id = getattr(meta, 'shared_folder_id', None)
+                logger.warning(
+                    "No se pudo resolver path_display/path_lower desde el enlace compartido. "
+                    "Esto suele pasar cuando la carpeta del enlace NO está 'montada' (Agregar a Dropbox) "
+                    "en la cuenta del token. Solución: abre el enlace y usa 'Agregar a Dropbox', "
+                    "o configura DROPBOX_BASE_FOLDER con la ruta real de esa carpeta en TU Dropbox. "
+                    f"shared_folder_id={shared_folder_id}"
+                )
+                # No hacer fallback a DROPBOX_BASE_FOLDER para evitar escribir en una ruta distinta
+                _cached_base_folder = _UNRESOLVED_SHARED_LINK_SENTINEL
+                return _cached_base_folder
             except Exception as e:
                 logger.error(f"Error resolviendo carpeta base desde enlace compartido: {e}")
                 # Continuar con fallback a '/'
@@ -161,7 +176,11 @@ def create_dropbox_folder(folder_path):
         if dbx is None:
             logger.error("Cliente de Dropbox no disponible para crear carpeta")
             return False
-        path = with_base_folder(folder_path)
+        try:
+            path = with_base_folder(folder_path)
+        except Exception as e:
+            logger.error(f"No se pudo resolver carpeta base para crear {folder_path}: {e}")
+            return False
         try:
             dbx.files_create_folder_v2(path)
             return True
@@ -195,9 +214,42 @@ def get_dropbox_client():
             logger.error("No hay token de Dropbox válido disponible (refresh revocado o access token ausente)")
             return None
 
+        def _get_path_root_mode() -> str:
+            try:
+                mode = (
+                    getattr(current_app, 'config', {}) and current_app.config.get('DROPBOX_PATH_ROOT_MODE')
+                ) or os.environ.get('DROPBOX_PATH_ROOT_MODE')
+                return (mode or '').strip().lower()
+            except Exception:
+                return ''
+
+        def _apply_path_root(client: dropbox.Dropbox, acct) -> dropbox.Dropbox:
+            """Aplica path_root para cuentas Business/Team cuando se solicita.
+
+            En Dropbox Business es común que la UI muestre el 'Team space' mientras que
+            la API por defecto opera en el 'home namespace'. Con path_root=root, la API
+            ve el mismo árbol que la UI (por ejemplo, /IOK alfa/Casos App IOK).
+
+            Configuración: DROPBOX_PATH_ROOT_MODE=root
+            """
+            mode = _get_path_root_mode()
+            if mode != 'root':
+                return client
+            try:
+                root_info = getattr(acct, 'root_info', None)
+                root_ns = getattr(root_info, 'root_namespace_id', None)
+                if not root_ns:
+                    logger.warning("DROPBOX_PATH_ROOT_MODE=root pero no hay root_namespace_id disponible")
+                    return client
+                return client.with_path_root(dropbox.common.PathRoot.root(root_ns))
+            except Exception as e:
+                logger.warning(f"No se pudo aplicar path_root=root: {e}")
+                return client
+
         def _build_and_verify(access_token: str):
             client = dropbox.Dropbox(access_token)
-            client.users_get_current_account()
+            acct = client.users_get_current_account()
+            client = _apply_path_root(client, acct)
             return client
 
         try:
@@ -227,6 +279,12 @@ def get_dbx():
 def with_base_folder(path):
     """Agrega la carpeta base al path"""
     base_folder = get_dropbox_base_folder()
+    if base_folder == _UNRESOLVED_SHARED_LINK_SENTINEL:
+        raise RuntimeError(
+            "DROPBOX_BASE_SHARED_LINK está configurado pero no se pudo resolver a una ruta (path_display/path_lower). "
+            "Solución: abre el enlace y usa 'Agregar a Dropbox' en la cuenta del token, o configura DROPBOX_BASE_FOLDER "
+            "con la ruta real dentro de tu Dropbox."
+        )
     if base_folder == '/' or not base_folder:
         return _normalize_dropbox_path(path)
     
@@ -239,6 +297,9 @@ def with_base_folder(path):
 def without_base_folder(path):
     """Remueve la carpeta base del path"""
     base_folder = get_dropbox_base_folder()
+    if base_folder == _UNRESOLVED_SHARED_LINK_SENTINEL:
+        # No se puede calcular el path lógico si no hay carpeta base resolvible
+        return _normalize_dropbox_path(path)
     if base_folder == '/' or not base_folder:
         return _normalize_dropbox_path(path)
     

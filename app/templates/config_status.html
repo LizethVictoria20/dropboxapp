@@ -79,6 +79,61 @@
               <p class="text-sm text-gray-700">{{ dropbox_status }}</p>
             </div>
           </div>
+
+          <!-- Carpeta Base de Dropbox -->
+          <div class="border-t pt-4 mt-4">
+            <h3 class="text-lg font-medium text-gray-800 mb-2">
+              Carpeta Base (Destino de carpetas/archivos)
+            </h3>
+            <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+              {% if dropbox_account_info is defined and dropbox_account_info %}
+              <p class="text-sm text-gray-700">
+                <span class="font-medium">Cuenta del token:</span>
+                {% if dropbox_account_info.error %} (no disponible: {{
+                dropbox_account_info.error }}) {% else %} {{
+                dropbox_account_info.email or '(sin email)' }} {% if
+                dropbox_account_info.account_type %} ({{
+                dropbox_account_info.account_type }}) {% endif %} {% if
+                dropbox_account_info.team_name %} - Team: {{
+                dropbox_account_info.team_name }} {% endif %} {% endif %}
+              </p>
+              {% endif %}
+              <p class="text-sm text-gray-700">
+                <span class="font-medium">Shared link:</span>
+                {{ (base_info.DROPBOX_BASE_SHARED_LINK[:60] ~ '...') if
+                base_info is defined and base_info.DROPBOX_BASE_SHARED_LINK else
+                'No configurado' }}
+              </p>
+              <p class="text-sm text-gray-700">
+                <span class="font-medium">Base folder (path):</span>
+                {{ base_info.DROPBOX_BASE_FOLDER if base_info is defined and
+                base_info.DROPBOX_BASE_FOLDER else 'No configurado' }}
+              </p>
+              <p class="text-sm text-gray-700">
+                <span class="font-medium">Subcarpeta proyecto:</span>
+                {{ base_info.DROPBOX_PROJECT_SUBFOLDER if base_info is defined
+                and base_info.DROPBOX_PROJECT_SUBFOLDER else '(vacía)' }}
+              </p>
+              <p class="text-sm text-gray-700">
+                <span class="font-medium">Carpeta base resuelta:</span>
+                {{ resolved_base_folder if resolved_base_folder else '(no
+                disponible)' }}
+              </p>
+              {% if base_folder_check is defined %}
+              <p
+                class="text-sm {% if base_folder_check.ok %}text-green-700{% else %}text-red-700{% endif %}"
+              >
+                {{ '✅ ' if base_folder_check.ok else '❌ ' }}{{
+                base_folder_check.message }}
+              </p>
+              {% endif %}
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+              Si las carpetas de usuarios no aparecen en el enlace compartido,
+              revisa que el token de Dropbox tenga permisos de escritura en esa
+              carpeta.
+            </p>
+          </div>
         </div>
 
         <!-- Variables de Entorno -->
@@ -151,27 +206,47 @@
 
           <div class="space-y-4">
             <!-- Estado del Auto Refresh -->
-            <div class="flex items-center justify-between p-4 border rounded-lg {% if auto_refresh_enabled %}border-green-200 bg-green-50{% else %}border-yellow-200 bg-yellow-50{% endif %}">
+            <div
+              class="flex items-center justify-between p-4 border rounded-lg {% if auto_refresh_enabled %}border-green-200 bg-green-50{% else %}border-yellow-200 bg-yellow-50{% endif %}"
+            >
               <div>
                 <h3 class="text-sm font-medium text-gray-900">
                   Renovación Automática
                 </h3>
                 <p class="text-sm text-gray-600 mt-1">
-                  {% if auto_refresh_enabled %}
-                    ✅ Habilitada - Los tokens se renuevan automáticamente cada 45 minutos
-                  {% else %}
-                    ⚠️ Deshabilitada - Se requiere renovación manual
-                  {% endif %}
+                  {% if auto_refresh_enabled %} ✅ Habilitada - Los tokens se
+                  renuevan automáticamente cada 45 minutos {% else %} ⚠️
+                  Deshabilitada - Se requiere renovación manual {% endif %}
                 </p>
               </div>
               <div class="flex-shrink-0">
                 {% if auto_refresh_enabled %}
-                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  class="w-6 h-6 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  ></path>
                 </svg>
                 {% else %}
-                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                <svg
+                  class="w-6 h-6 text-yellow-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  ></path>
                 </svg>
                 {% endif %}
               </div>
@@ -180,7 +255,9 @@
             <!-- Información de Renovación -->
             {% if last_refresh %}
             <div class="bg-gray-50 rounded-lg p-4">
-              <h3 class="text-sm font-medium text-gray-900 mb-2">Información de Renovación</h3>
+              <h3 class="text-sm font-medium text-gray-900 mb-2">
+                Información de Renovación
+              </h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
                   <p class="text-gray-600">Última renovación:</p>
@@ -198,13 +275,21 @@
 
             <!-- Botón de Renovación Manual -->
             <div class="border-t pt-4">
-              <form method="POST" action="{{ url_for('main.refresh_dropbox_token') }}" class="inline">
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+              <form
+                method="POST"
+                action="{{ url_for('main.refresh_dropbox_token') }}"
+                class="inline"
+              >
+                <button
+                  type="submit"
+                  class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                >
                   🔄 Renovar Token Manualmente
                 </button>
               </form>
               <p class="text-xs text-gray-500 mt-2">
-                Usa este botón para renovar el token inmediatamente si hay problemas de conectividad
+                Usa este botón para renovar el token inmediatamente si hay
+                problemas de conectividad
               </p>
             </div>
           </div>
@@ -240,7 +325,8 @@
                   Dropbox
                 </li>
                 <li>
-                  <strong>DROPBOX_REFRESH_TOKEN:</strong> Token de renovación para renovación automática (recomendado)
+                  <strong>DROPBOX_REFRESH_TOKEN:</strong> Token de renovación
+                  para renovación automática (recomendado)
                 </li>
               </ul>
             </div>

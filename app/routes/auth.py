@@ -209,7 +209,9 @@ def register():
                 try:
                     from app.dropbox_utils import create_dropbox_folder
                     path = f"/{user.email}"
-                    create_dropbox_folder(path)
+                    ok = create_dropbox_folder(path)
+                    if not ok:
+                        raise RuntimeError('No se pudo crear la carpeta en Dropbox. Revisa token y carpeta base.')
                     
                     # SINCRONIZACIÓN: Crear entrada de carpeta raíz en la BD después de obtener el user.id
                     from app.models import Folder

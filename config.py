@@ -30,14 +30,13 @@ class Config:
     DROPBOX_REFRESH_TOKEN = os.environ.get('DROPBOX_REFRESH_TOKEN')
     DROPBOX_API_KEY = os.environ.get('DROPBOX_API_KEY')
     # Carpeta base global para contener TODAS las operaciones en Dropbox
-    DROPBOX_BASE_FOLDER = os.environ.get('DROPBOX_BASE_FOLDER')
     # (Opcional) Enlace compartido si se quiere resolver namespace desde un link
     # Nota: Si se configura, la app resolverá el path real del folder a partir del shared link
     # y TODAS las operaciones (crear/listar/subir/mover/descargar) quedarán contenidas allí.
     # Requiere que el token configurado tenga acceso a esa carpeta (idealmente es tu Dropbox).
-    DROPBOX_BASE_SHARED_LINK = os.environ.get('DROPBOX_BASE_SHARED_LINK') or (
-        'https://www.dropbox.com/scl/fo/uavufxsleb5hgjod1uxrk/ABEx7zkb6khobUdZUQckNos?rlkey=gwei9du9k20r1spppgycdk03n&st=69d8xpav&dl=0'
-    )
+    # IMPORTANTE: No hardcodear un shared link aquí.
+    # Si se define, se debe hacer únicamente por variable de entorno.
+    DROPBOX_BASE_SHARED_LINK = os.environ.get('DROPBOX_BASE_SHARED_LINK')
     # (Opcional) Contraseña del enlace compartido, si el link está protegido
     DROPBOX_BASE_SHARED_LINK_PASSWORD = os.environ.get('DROPBOX_BASE_SHARED_LINK_PASSWORD')
 

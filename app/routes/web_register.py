@@ -44,7 +44,9 @@ def register():
                     db.session.commit()
                     # Crea carpeta en Dropbox
                     path = f"/{email}"
-                    create_dropbox_folder(path)
+                    ok = create_dropbox_folder(path)
+                    if not ok:
+                        raise RuntimeError('No se pudo crear la carpeta en Dropbox. Revisa token y carpeta base.')
                     user.dropbox_folder_path = path
                     db.session.commit()
                     success = "Usuario creado exitosamente."

@@ -25,7 +25,9 @@ def create_user():
 
     # Crea carpeta en Dropbox
     path = f"/{email}"
-    create_dropbox_folder(path)
+    ok = create_dropbox_folder(path)
+    if not ok:
+        return jsonify({'error': 'No se pudo crear la carpeta en Dropbox. Revisa token y carpeta base.'}), 500
     user.dropbox_folder_path = path
     db.session.commit()
     return jsonify({'message': 'Usuario y carpeta creados'}), 201
@@ -299,7 +301,9 @@ def crear_usuario():
             # Crear carpeta en Dropbox
             try:
                 path = f"/{email}"
-                create_dropbox_folder(path)
+                ok = create_dropbox_folder(path)
+                if not ok:
+                    raise RuntimeError('No se pudo crear la carpeta en Dropbox. Revisa token y carpeta base.')
                 user.dropbox_folder_path = path
                 
                 # Agregar usuario a la BD primero para obtener el ID

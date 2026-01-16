@@ -1268,6 +1268,81 @@ def dropbox_config_status():
         
         # Verificar si todas están configuradas
         todas_configuradas = all(var['configurado'] for var in config_status.values())
+
+        # Información de carpeta base (dónde se crean carpetas/archivos)
+        base_info = {
+            'DROPBOX_BASE_SHARED_LINK': os.environ.get('DROPBOX_BASE_SHARED_LINK') or '',
+            'DROPBOX_BASE_FOLDER': os.environ.get('DROPBOX_BASE_FOLDER') or '',
+            'DROPBOX_PROJECT_SUBFOLDER': os.environ.get('DROPBOX_PROJECT_SUBFOLDER') or '',
+        }
+
+        dropbox_account_info = None
+
+        resolved_base_folder = None
+        base_folder_check = {'ok': False, 'message': ''}
+        try:
+            from app.dropbox_utils import clear_base_folder_cache, get_dropbox_base_folder, get_dbx
+            clear_base_folder_cache()
+            resolved_base_folder = get_dropbox_base_folder()
+            if resolved_base_folder == '::UNRESOLVED_SHARED_LINK::':
+                base_folder_check = {
+                    'ok': False,
+                    'message': "El enlace compartido no está montado (no hay path_display/path_lower). Abre el enlace y usa 'Agregar a Dropbox' con la cuenta del token."
+                }
+            else:
+                dbx = get_dbx()
+                if dbx is None:
+                    base_folder_check = {
+                        'ok': False,
+                        'message': 'No se pudo crear cliente Dropbox (token inválido o no configurado)'
+                    }
+                else:
+                    # Mostrar cuenta conectada (útil para detectar si el token es personal vs business/team)
+                    try:
+                        acct = dbx.users_get_current_account()
+                        acct_type = None
+                        acct_type_obj = getattr(acct, 'account_type', None)
+                        if acct_type_obj is not None:
+                            if hasattr(acct_type_obj, 'is_business') and acct_type_obj.is_business():
+                                acct_type = 'business'
+                            elif hasattr(acct_type_obj, 'is_pro') and acct_type_obj.is_pro():
+                                acct_type = 'pro'
+                            elif hasattr(acct_type_obj, 'is_basic') and acct_type_obj.is_basic():
+                                acct_type = 'basic'
+
+                        team_name = None
+                        team_obj = getattr(acct, 'team', None)
+                        if team_obj is not None:
+                            team_name = getattr(team_obj, 'name', None)
+
+                        dropbox_account_info = {
+                            'email': getattr(acct, 'email', None),
+                            'account_id': getattr(acct, 'account_id', None),
+                            'account_type': acct_type,
+                            'team_name': team_name,
+                        }
+                    except Exception as e:
+                        dropbox_account_info = {
+                            'error': str(e)
+                        }
+
+                    try:
+                        md = dbx.files_get_metadata(resolved_base_folder)
+                        name = getattr(md, 'name', resolved_base_folder)
+                        base_folder_check = {
+                            'ok': True,
+                            'message': f"Acceso OK a la carpeta base: {name}"
+                        }
+                    except Exception as e:
+                        base_folder_check = {
+                            'ok': False,
+                            'message': f"No se pudo acceder a la carpeta base resuelta ({resolved_base_folder}): {e}"
+                        }
+        except Exception as e:
+            base_folder_check = {
+                'ok': False,
+                'message': f"Error resolviendo carpeta base: {e}"
+            }
         
         # Sistema de renovación automática
         auto_refresh_enabled = status.get('refresh_token_configured', False)
@@ -1288,7 +1363,11 @@ def dropbox_config_status():
                              auto_refresh_enabled=auto_refresh_enabled,
                              last_refresh=last_refresh,
                              next_refresh=next_refresh,
-                             validation_status=validation_status)
+                             validation_status=validation_status,
+                             base_info=base_info,
+                             resolved_base_folder=resolved_base_folder,
+                             base_folder_check=base_folder_check,
+                             dropbox_account_info=dropbox_account_info)
     except Exception as e:
         logger.error(f"Error en config status: {e}")
         flash(f'Error al obtener estado: {str(e)}', 'error')
